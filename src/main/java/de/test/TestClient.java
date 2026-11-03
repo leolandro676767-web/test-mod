@@ -19,6 +19,9 @@ public class TestClient implements ClientModInitializer {
     public static boolean sprint = false;
     public static boolean sprintJump = false;
     public static boolean autoMine = true;
+    public static boolean autoLogout = true;
+
+    private static final float LOGOUT_HEALTH = 4.0f;
 
     public static KeyMapping toggleKey;
     public static KeyMapping guiKey;
@@ -61,6 +64,20 @@ public class TestClient implements ClientModInitializer {
             walking = false;
             phase = Phase.WALK;
             applied = false;
+            return;
+        }
+
+        float health = mc.player.getHealth();
+        if (autoLogout && health > 0.0f && health <= LOGOUT_HEALTH) {
+            walking = false;
+            phase = Phase.WALK;
+            applied = false;
+            releaseAll(mc);
+            var connection = mc.getConnection();
+            if (connection != null) {
+                connection.getConnection().disconnect(
+                        Component.literal("Test: Auto-Logout bei 2 Herzen"));
+            }
             return;
         }
 
