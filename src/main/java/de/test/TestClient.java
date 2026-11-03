@@ -15,8 +15,6 @@ import net.minecraft.world.level.Level;
 import org.lwjgl.glfw.GLFW;
 
 public class TestClient implements ClientModInitializer {
-    public static ModConfig CONFIG;
-
     public static boolean walking = false;
     public static boolean sprint = false;
     public static boolean sprintJump = false;
@@ -37,14 +35,6 @@ public class TestClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // Konfiguration beim Start laden und Werte zuweisen
-        CONFIG = ModConfig.load();
-        walking = CONFIG.walking;
-        sprint = CONFIG.sprint;
-        sprintJump = CONFIG.sprintJump;
-        autoMine = CONFIG.autoMine;
-        autoLogout = CONFIG.autoLogout;
-
         KeyMapping.Category category =
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath("test", "main"));
 
@@ -56,22 +46,9 @@ public class TestClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(TestClient::onTick);
     }
 
-    public static void saveConfig() {
-        if (CONFIG == null) {
-            CONFIG = new ModConfig();
-        }
-        CONFIG.walking = walking;
-        CONFIG.sprint = sprint;
-        CONFIG.sprintJump = sprintJump;
-        CONFIG.autoMine = autoMine;
-        CONFIG.autoLogout = autoLogout;
-        CONFIG.save();
-    }
-
     private static void onTick(Minecraft mc) {
         while (toggleKey.consumeClick()) {
             walking = !walking;
-            saveConfig(); // Speichert direkt, wenn man die Taste (G) drückt
             if (mc.player != null) {
                 mc.player.sendSystemMessage(
                         Component.literal("Test: " + (walking ? "AN" : "AUS")));
@@ -156,7 +133,53 @@ public class TestClient implements ClientModInitializer {
         if (autoMine) mc.options.keyAttack.setDown(false);
     }
 
-    private static void stopMove(mc) { // (Hinweis: falls Minecraft-Version hier ein Minecraft-Objekt erwartet)
-        // Bleibt im Originalcode exakt so wie bei dir:
+    private static void stopMove(Minecraft mc) {
+        mc.options.keyUp.setDown(false);
+        mc.options.keySprint.setDown(false);
+        mc.options.keyJump.setDown(false);
     }
-    // ... restliche Methoden bleiben unverändert ...
+
+    private static void releaseAll(Minecraft mc) {
+        stopMove(mc);
+        mc.options.keyAttack.setDown(false);
+    }
+
+    private static BlockPos findObstacle(Level level, Entity p, float yaw) {
+        double rad = Math.toRadians(yaw);
+        double x = p.getX() + (-Math.sin(rad)) * 0.8;
+        double z = p.getZ() + Math.cos(rad) * 0.8;
+        BlockPos head = BlockPos.containing(x, p.getY() + 1.1, z);
+        BlockPos feet = BlockPos.containing(x, p.getY() + 0.1, z);
+        if (isMineable(level, head)) return head;
+        if (isMineable(level, feet)) return feet;
+        return null;
+    }
+
+    private static boolean isMineable(Level level, BlockPos pos) {
+        var bs = level.getBlockState(pos);
+        if (bs.isAir()) return false;
+        if (bs.getCollisionShape(level, pos).isEmpty()) return false;
+        return bs.getDestroySpeed(level, pos) >= 0.0f;
+    }
+
+    private static boolean aimAt(Entity p, BlockPos target) {
+        double dx = target.getX() + 0.5 - p.getX();
+        double dy = target.getY() + 0.5 - p.getEyeY();
+        double dz = target.getZ() + 0.5 - p.getZ();
+        float targetYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
+        float targetPitch = (float) (-Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz))));
+        return rotateTo(p, targetYaw, targetPitch, 4.0f);
+    }
+
+    private static boolean rotateTo(Entity p, float targetYaw, float targetPitch, float tolerance) {
+        float yaw = p.getYRot();
+        float pitch = p.getXRot();
+        float dy = Mth.wrapDegrees(targetYaw - yaw);
+        float dp = targetPitch - pitch;
+        yaw += Math.abs(dy) < 1.0f ? dy : Mth.clamp(dy * 0.3f, -12.0f, 12.0f);
+        pitch += Math.abs(dp) < 1.0f ? dp : Mth.clamp(dp * 0.3f, -8.0f, 8.0f);
+        p.setYRot(yaw);
+        p.setXRot(Mth.clamp(pitch, -90.0f, 90.0f));
+        return Math.abs(dy) < tolerance && Math.abs(dp) < tolerance;
+    }
+}
