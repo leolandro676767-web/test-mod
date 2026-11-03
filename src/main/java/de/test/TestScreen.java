@@ -24,8 +24,6 @@ public class TestScreen extends Screen {
         addRenderableWidget(Button.builder(label(name, value.getAsBoolean()), b -> {
             flip.run();
             b.setMessage(label(name, value.getAsBoolean()));
-            // Speichert die Konfiguration sofort bei Änderung
-            TestClient.saveConfig();
         }).bounds(x, y, 200, 20).build());
     }
 
@@ -58,8 +56,6 @@ public class TestScreen extends Screen {
 
     @Override
     public void onClose() {
-        // Speichert auch beim Schließen des Menüs
-        TestClient.saveConfig();
         this.minecraft.gui.setScreen(parent);
     }
 }
