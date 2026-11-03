@@ -3,7 +3,7 @@ package de.test;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -23,9 +23,9 @@ public class TestClient implements ClientModInitializer {
         KeyMapping.Category category =
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath("test", "main"));
 
-        toggleKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        toggleKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.toggle", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, category));
-        guiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        guiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.gui", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, category));
 
         ClientTickEvents.END_CLIENT_TICK.register(TestClient::onTick);
@@ -35,12 +35,12 @@ public class TestClient implements ClientModInitializer {
         while (toggleKey.consumeClick()) {
             walking = !walking;
             if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("Test: " + (walking ? "AN" : "AUS")), true);
+                mc.player.sendSystemMessage(
+                        Component.literal("Test: " + (walking ? "AN" : "AUS")));
             }
         }
         while (guiKey.consumeClick()) {
-            mc.setScreen(new TestScreen(mc.screen));
+            mc.gui.setScreen(new TestScreen(mc.gui.screen()));
         }
 
         if (mc.player == null) {
@@ -49,7 +49,7 @@ public class TestClient implements ClientModInitializer {
             return;
         }
 
-        if (walking && mc.screen == null) {
+        if (walking && mc.gui.screen() == null) {
             mc.options.keyUp.setDown(true);
             if (sprint) mc.options.keySprint.setDown(true);
             appliedLastTick = true;
