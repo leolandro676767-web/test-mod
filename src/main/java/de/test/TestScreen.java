@@ -30,7 +30,7 @@ public class TestScreen extends Screen {
     @Override
     protected void init() {
         int x = this.width / 2 - 100;
-        int y = this.height / 2 - 92;
+        int y = this.height / 2 - 104;
 
         addToggle(x, y, "AutoWalk", () -> TestClient.walking,
                 () -> TestClient.walking = !TestClient.walking);
@@ -43,15 +43,19 @@ public class TestScreen extends Screen {
         addToggle(x, y + 96, "Auto-Logout (2 Herzen)", () -> TestClient.autoLogout,
                 () -> TestClient.autoLogout = !TestClient.autoLogout);
 
+        addRenderableWidget(Button.builder(Component.literal("Bereich abbauen..."),
+                b -> this.minecraft.gui.setScreen(new AreaScreen(this)))
+                .bounds(x, y + 124, 200, 20).build());
+
         String keys = TestClient.toggleKey.getTranslatedKeyMessage().getString()
                 + " / " + TestClient.guiKey.getTranslatedKeyMessage().getString();
         addRenderableWidget(Button.builder(
                 Component.literal("Tasten \u00e4ndern (" + keys + ")"),
                 b -> this.minecraft.gui.setScreen(new KeyBindsScreen(this, this.minecraft.options)))
-                .bounds(x, y + 124, 200, 20).build());
+                .bounds(x, y + 148, 200, 20).build());
 
         addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
-                .bounds(x, y + 152, 200, 20).build());
+                .bounds(x, y + 176, 200, 20).build());
     }
 
     @Override
