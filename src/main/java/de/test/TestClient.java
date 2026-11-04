@@ -1,5 +1,8 @@
 package de.test;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -11,7 +14,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
 public class TestClient implements ClientModInitializer {
@@ -20,6 +25,15 @@ public class TestClient implements ClientModInitializer {
     public static boolean sprintJump = false;
     public static boolean autoMine = true;
     public static boolean autoLogout = true;
+
+    // Bereichs-Modus
+    public static boolean areaActive = false;
+    public static int ax1 = 0, ay1 = 0, az1 = 0, ax2 = 0, ay2 = 0, az2 = 0;
+    private static final long MAX_AREA_VOLUME = 50000L;
+    private static int minX, minY, minZ, maxX, maxY, maxZ;
+    private static BlockPos areaTarget = null;
+    private static int walkTicks = 0;
+    private static final Set<Long> skipped = new HashSet<>();
 
     private static final float LOGOUT_HEALTH = 4.0f;
 
@@ -46,12 +60,51 @@ public class TestClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(TestClient::onTick);
     }
 
+    // ---------- Bereichs-Modus: Start / Stop ----------
+
+    public static String startArea(Minecraft mc) {
+        minX = Math.min(ax1, ax2);
+        maxX = Math.max(ax1, ax2);
+        minY = Math.min(ay1, ay2);
+        maxY = Math.max(ay1, ay2);
+        minZ = Math.min(az1, az2);
+        maxZ = Math.max(az1, az2);
+        long volume = (long) (maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1);
+        if (volume > MAX_AREA_VOLUME) {
+            return "Zu gro\u00df (max. 50000 Bl\u00f6cke)";
+        }
+        skipped.clear();
+        areaTarget = null;
+        walkTicks = 0;
+        walking = false;
+        phase = Phase.WALK;
+        applied = true;
+        areaActive = true;
+        return null;
+    }
+
+    public static void stopArea(Minecraft mc, String message) {
+        areaActive = false;
+        areaTarget = null;
+        releaseAll(mc);
+        applied = false;
+        if (mc.player != null && message != null) {
+            mc.player.sendSystemMessage(Component.literal("Test: " + message));
+        }
+    }
+
+    // ---------- Tick ----------
+
     private static void onTick(Minecraft mc) {
         while (toggleKey.consumeClick()) {
-            walking = !walking;
-            if (mc.player != null) {
-                mc.player.sendSystemMessage(
-                        Component.literal("Test: " + (walking ? "AN" : "AUS")));
+            if (areaActive) {
+                stopArea(mc, "Bereich abgebrochen");
+            } else {
+                walking = !walking;
+                if (mc.player != null) {
+                    mc.player.sendSystemMessage(
+                            Component.literal("Test: " + (walking ? "AN" : "AUS")));
+                }
             }
         }
         while (guiKey.consumeClick()) {
@@ -62,6 +115,7 @@ public class TestClient implements ClientModInitializer {
         Level level = mc.level;
         if (player == null || level == null) {
             walking = false;
+            areaActive = false;
             phase = Phase.WALK;
             applied = false;
             return;
@@ -70,6 +124,7 @@ public class TestClient implements ClientModInitializer {
         float health = mc.player.getHealth();
         if (autoLogout && health > 0.0f && health <= LOGOUT_HEALTH) {
             walking = false;
+            areaActive = false;
             phase = Phase.WALK;
             applied = false;
             releaseAll(mc);
@@ -78,6 +133,11 @@ public class TestClient implements ClientModInitializer {
                 connection.getConnection().disconnect(
                         Component.literal("Test: Auto-Logout bei 2 Herzen"));
             }
+            return;
+        }
+
+        if (areaActive) {
+            runArea(mc, level, player);
             return;
         }
 
@@ -125,6 +185,109 @@ public class TestClient implements ClientModInitializer {
             }
         }
     }
+
+    // ---------- Bereichs-Modus: Ablauf ----------
+
+    private static void runArea(Minecraft mc, Level level, Entity player) {
+        applied = true;
+        if (mc.gui.screen() != null) {
+            releaseAll(mc);
+            return;
+        }
+
+        if (areaTarget != null && !isMineable(level, areaTarget)) {
+            areaTarget = null;
+        }
+        if (areaTarget == null) {
+            areaTarget = nextTarget(level, player);
+            walkTicks = 0;
+            if (areaTarget == null) {
+                stopArea(mc, "Bereich fertig");
+                return;
+            }
+        }
+
+        double dx = areaTarget.getX() + 0.5 - player.getX();
+        double dy = areaTarget.getY() + 0.5 - player.getEyeY();
+        double dz = areaTarget.getZ() + 0.5 - player.getZ();
+        boolean inReach = dx * dx + dy * dy + dz * dz <= 16.0
+                && canSee(level, player, areaTarget);
+
+        if (inReach) {
+            stopMove(mc);
+            walkTicks = 0;
+            boolean aimed = aimAt(player, areaTarget);
+            mc.options.keyAttack.setDown(aimed);
+        } else {
+            mc.options.keyAttack.setDown(false);
+            walkTicks++;
+            if (walkTicks > 400) {
+                skipped.add(areaTarget.asLong());
+                areaTarget = null;
+                walkTicks = 0;
+                stopMove(mc);
+                return;
+            }
+            float targetYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
+            boolean aligned = rotateTo(player, targetYaw, 10.0f, 15.0f);
+            mc.options.keyUp.setDown(aligned);
+            mc.options.keyJump.setDown(aligned);
+            mc.options.keySprint.setDown(false);
+        }
+    }
+
+    private static BlockPos nextTarget(Level level, Entity p) {
+        BlockPos bestExposed = null;
+        double bestExposedScore = Double.MAX_VALUE;
+        BlockPos bestAny = null;
+        double bestAnyScore = Double.MAX_VALUE;
+        double px = p.getX();
+        double py = p.getEyeY();
+        double pz = p.getZ();
+
+        for (int y = maxY; y >= minY; y--) {
+            for (int x = minX; x <= maxX; x++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    if (skipped.contains(pos.asLong())) continue;
+                    if (!isMineable(level, pos)) continue;
+                    double dx = x + 0.5 - px;
+                    double dy = y + 0.5 - py;
+                    double dz = z + 0.5 - pz;
+                    double score = (maxY - y) * 10000.0 + dx * dx + dy * dy + dz * dz;
+                    if (score < bestAnyScore) {
+                        bestAnyScore = score;
+                        bestAny = pos;
+                    }
+                    if (score < bestExposedScore && isExposed(level, pos)) {
+                        bestExposedScore = score;
+                        bestExposed = pos;
+                    }
+                }
+            }
+        }
+        return bestExposed != null ? bestExposed : bestAny;
+    }
+
+    private static boolean isOpen(Level level, BlockPos n) {
+        return level.getBlockState(n).getCollisionShape(level, n).isEmpty();
+    }
+
+    private static boolean isExposed(Level level, BlockPos p) {
+        return isOpen(level, p.above()) || isOpen(level, p.below())
+                || isOpen(level, p.north()) || isOpen(level, p.south())
+                || isOpen(level, p.east()) || isOpen(level, p.west());
+    }
+
+    private static boolean canSee(Level level, Entity p, BlockPos target) {
+        var from = p.getEyePosition();
+        var to = new Vec3(target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5);
+        var hit = level.clip(new ClipContext(
+                from, to, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, p));
+        return hit.getBlockPos().equals(target);
+    }
+
+    // ---------- Bewegung und Zielen ----------
 
     private static void pressMove(Minecraft mc) {
         mc.options.keyUp.setDown(true);
