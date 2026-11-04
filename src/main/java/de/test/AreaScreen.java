@@ -20,9 +20,13 @@ public class AreaScreen extends Screen {
     private EditBox box(int x, int y, int w, String hint, int value) {
         EditBox b = new EditBox(this.font, x, y, w, 20, Component.literal(hint));
         b.setMaxLength(8);
-        b.setFilter(s -> s.matches("-?\\d*"));
         b.setHint(Component.literal(hint));
         b.setValue(Integer.toString(value));
+        b.setResponder(s -> {
+            if (!s.matches("-?\\d*")) {
+                b.setValue((s.startsWith("-") ? "-" : "") + s.replaceAll("[^0-9]", ""));
+            }
+        });
         addRenderableWidget(b);
         return b;
     }
