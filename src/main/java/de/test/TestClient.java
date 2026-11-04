@@ -5,6 +5,7 @@ import java.util.Set;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
@@ -60,6 +61,8 @@ public class TestClient implements ClientModInitializer {
         guiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.gui", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, category));
 
+        TestConfig.load();
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> TestConfig.save());
         ClientTickEvents.END_CLIENT_TICK.register(TestClient::onTick);
     }
 
@@ -76,6 +79,7 @@ public class TestClient implements ClientModInitializer {
         if (volume > MAX_AREA_VOLUME) {
             return "Zu gro\u00df (max. 50000 Bl\u00f6cke)";
         }
+        TestConfig.save();
         skipped.clear();
         areaTarget = null;
         walkTicks = 0;
