@@ -71,20 +71,32 @@ public class AreaScreen extends Screen {
                 .bounds(x, y + 88, 220, 20).build());
     }
 
+    /** Uebernimmt die Feldwerte nach TestClient. Gibt false zurueck, wenn ein Feld ungueltig ist. */
+    private boolean applyFields() {
+        try {
+            int[] v = new int[6];
+            for (int i = 0; i < 6; i++) {
+                v[i] = Integer.parseInt(fields[i].getValue());
+            }
+            TestClient.ax1 = v[0];
+            TestClient.ay1 = v[1];
+            TestClient.az1 = v[2];
+            TestClient.ax2 = v[3];
+            TestClient.ay2 = v[4];
+            TestClient.az2 = v[5];
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     private void startOrStop() {
         if (TestClient.areaActive) {
             TestClient.stopArea(this.minecraft, "Bereich abgebrochen");
             startButton.setMessage(startLabel());
             return;
         }
-        try {
-            TestClient.ax1 = Integer.parseInt(fields[0].getValue());
-            TestClient.ay1 = Integer.parseInt(fields[1].getValue());
-            TestClient.az1 = Integer.parseInt(fields[2].getValue());
-            TestClient.ax2 = Integer.parseInt(fields[3].getValue());
-            TestClient.ay2 = Integer.parseInt(fields[4].getValue());
-            TestClient.az2 = Integer.parseInt(fields[5].getValue());
-        } catch (NumberFormatException e) {
+        if (!applyFields()) {
             startButton.setMessage(Component.literal("Bitte alle Felder mit Zahlen f\u00fcllen"));
             return;
         }
@@ -98,6 +110,9 @@ public class AreaScreen extends Screen {
 
     @Override
     public void onClose() {
+        if (applyFields()) {
+            TestConfig.save();
+        }
         this.minecraft.gui.setScreen(parent);
     }
 }
