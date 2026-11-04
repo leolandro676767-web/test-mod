@@ -1,6 +1,9 @@
 package de.test;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -34,6 +37,9 @@ public class TestClient implements ClientModInitializer {
     private static int minX, minY, minZ, maxX, maxY, maxZ;
     private static BlockPos areaTarget = null;
     private static int walkTicks = 0;
+    private static int stuckTicks = 0;
+    private static double lastX = 0.0;
+    private static double lastZ = 0.0;
     private static final Set<Long> skipped = new HashSet<>();
 
     private static final float LOGOUT_HEALTH = 4.0f;
@@ -83,6 +89,7 @@ public class TestClient implements ClientModInitializer {
         skipped.clear();
         areaTarget = null;
         walkTicks = 0;
+        stuckTicks = 0;
         walking = false;
         phase = Phase.WALK;
         applied = true;
@@ -199,6 +206,28 @@ public class TestClient implements ClientModInitializer {
 
     // ---------- Bereichs-Modus: Ablauf ----------
 
+    private static final double REACH_SQ = 16.0;
+
+    private static double eyeDist2(Entity p, BlockPos b) {
+        double dx = b.getX() + 0.5 - p.getX();
+        double dy = b.getY() + 0.5 - p.getEyeY();
+        double dz = b.getZ() + 0.5 - p.getZ();
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    private static boolean inReach(Level level, Entity p, BlockPos b) {
+        return eyeDist2(p, b) <= REACH_SQ && canSee(level, p, b);
+    }
+
+    private static void skipTarget(Minecraft mc) {
+        if (areaTarget != null) skipped.add(areaTarget.asLong());
+        areaTarget = null;
+        walkTicks = 0;
+        stuckTicks = 0;
+        stopMove(mc);
+        mc.options.keyAttack.setDown(false);
+    }
+
     private static void runArea(Minecraft mc, Level level, Entity player) {
         applied = true;
         if (mc.gui.screen() != null) {
@@ -208,86 +237,132 @@ public class TestClient implements ClientModInitializer {
 
         if (areaTarget != null && !isMineable(level, areaTarget)) {
             areaTarget = null;
-        }
-        if (areaTarget == null) {
-            areaTarget = nextTarget(level, player);
             walkTicks = 0;
+            stuckTicks = 0;
+        }
+
+        // 1. Ist das aktuelle Ziel in Reichweite? Sonst den naechsten erreichbaren Block suchen.
+        boolean reach = areaTarget != null && inReach(level, player, areaTarget);
+        if (!reach) {
+            BlockPos near = nearestReachable(level, player);
+            if (near != null) {
+                areaTarget = near;
+                reach = true;
+                walkTicks = 0;
+                stuckTicks = 0;
+            }
+        }
+
+        // 2. Nichts in Reichweite: naechsten Block im Bereich als Laufziel waehlen.
+        if (areaTarget == null) {
+            areaTarget = nearestOverall(level, player);
+            walkTicks = 0;
+            stuckTicks = 0;
             if (areaTarget == null) {
-                stopArea(mc, "Bereich fertig");
+                stopArea(mc, skipped.isEmpty() ? "Bereich fertig"
+                        : "Bereich fertig (" + skipped.size() + " Bl\u00f6cke nicht erreichbar)");
                 return;
             }
+        }
+
+        // 3. Abbauen
+        if (reach) {
+            stopMove(mc);
+            boolean aimed = aimAt(player, areaTarget);
+            mc.options.keyAttack.setDown(aimed);
+            return;
+        }
+
+        // 4. Hinlaufen - Hindernisse auf dem Weg werden abgebaut statt dagegen zu springen
+        walkTicks++;
+        if (walkTicks > 600) {
+            skipTarget(mc);
+            return;
         }
 
         double dx = areaTarget.getX() + 0.5 - player.getX();
-        double dy = areaTarget.getY() + 0.5 - player.getEyeY();
         double dz = areaTarget.getZ() + 0.5 - player.getZ();
-        boolean inReach = dx * dx + dy * dy + dz * dz <= 16.0
-                && canSee(level, player, areaTarget);
+        float targetYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
 
-        if (inReach) {
+        // erst nur die Blickrichtung drehen (Pitch bleibt, sonst Hin-und-Her mit dem Zielen)
+        boolean aligned = rotateTo(player, targetYaw, player.getXRot(), 15.0f);
+        if (!aligned) {
             stopMove(mc);
-            walkTicks = 0;
-            boolean aimed = aimAt(player, areaTarget);
-            mc.options.keyAttack.setDown(aimed);
-        } else {
             mc.options.keyAttack.setDown(false);
-            walkTicks++;
-            if (walkTicks > 400) {
-                skipped.add(areaTarget.asLong());
-                areaTarget = null;
-                walkTicks = 0;
-                stopMove(mc);
-                return;
-            }
-            float targetYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
-            boolean aligned = rotateTo(player, targetYaw, 10.0f, 15.0f);
-            mc.options.keyUp.setDown(aligned);
-            mc.options.keyJump.setDown(aligned);
-            mc.options.keySprint.setDown(false);
+            return;
         }
+
+        BlockPos obstacle = findObstacle(level, player, player.getYRot());
+        if (obstacle != null) {
+            stopMove(mc);
+            boolean aimed = aimAt(player, obstacle);
+            mc.options.keyAttack.setDown(aimed);
+            stuckTicks = 0;
+            return;
+        }
+
+        mc.options.keyAttack.setDown(false);
+        rotateTo(player, targetYaw, 10.0f, 15.0f);
+
+        double moved = Math.abs(player.getX() - lastX) + Math.abs(player.getZ() - lastZ);
+        lastX = player.getX();
+        lastZ = player.getZ();
+        if (moved < 0.02) {
+            stuckTicks++;
+        } else {
+            stuckTicks = 0;
+        }
+        if (stuckTicks > 80) {
+            skipTarget(mc);
+            return;
+        }
+        mc.options.keyUp.setDown(true);
+        mc.options.keyJump.setDown(stuckTicks > 8);
+        mc.options.keySprint.setDown(false);
     }
 
-    private static BlockPos nextTarget(Level level, Entity p) {
-        BlockPos bestExposed = null;
-        double bestExposedScore = Double.MAX_VALUE;
-        BlockPos bestAny = null;
-        double bestAnyScore = Double.MAX_VALUE;
-        double px = p.getX();
-        double py = p.getEyeY();
-        double pz = p.getZ();
+    /** Naechster Block in Reichweite, den man wirklich sehen kann. */
+    private static BlockPos nearestReachable(Level level, Entity p) {
+        BlockPos c = p.blockPosition();
+        int r = 4;
+        List<BlockPos> candidates = new ArrayList<>();
+        for (int x = Math.max(minX, c.getX() - r); x <= Math.min(maxX, c.getX() + r); x++) {
+            for (int y = Math.max(minY, c.getY() - r); y <= Math.min(maxY, c.getY() + r + 1); y++) {
+                for (int z = Math.max(minZ, c.getZ() - r); z <= Math.min(maxZ, c.getZ() + r); z++) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    if (skipped.contains(pos.asLong())) continue;
+                    if (!isMineable(level, pos)) continue;
+                    if (eyeDist2(p, pos) > REACH_SQ) continue;
+                    candidates.add(pos);
+                }
+            }
+        }
+        candidates.sort(Comparator.comparingDouble(pos -> eyeDist2(p, pos)));
+        for (BlockPos pos : candidates) {
+            if (canSee(level, p, pos)) return pos;
+        }
+        return null;
+    }
 
-        for (int y = maxY; y >= minY; y--) {
+    /** Naechster abbaubarer Block im ganzen Bereich (zum Hinlaufen). */
+    private static BlockPos nearestOverall(Level level, Entity p) {
+        BlockPos best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (int y = minY; y <= maxY; y++) {
             for (int x = minX; x <= maxX; x++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     BlockPos pos = new BlockPos(x, y, z);
                     if (skipped.contains(pos.asLong())) continue;
                     if (!isMineable(level, pos)) continue;
-                    double dx = x + 0.5 - px;
-                    double dy = y + 0.5 - py;
-                    double dz = z + 0.5 - pz;
-                    double score = (maxY - y) * 10000.0 + dx * dx + dy * dy + dz * dz;
-                    if (score < bestAnyScore) {
-                        bestAnyScore = score;
-                        bestAny = pos;
-                    }
-                    if (score < bestExposedScore && isExposed(level, pos)) {
-                        bestExposedScore = score;
-                        bestExposed = pos;
+                    double score = eyeDist2(p, pos);
+                    if (score < bestScore) {
+                        bestScore = score;
+                        best = pos;
                     }
                 }
             }
         }
-        return bestExposed != null ? bestExposed : bestAny;
-    }
-
-    private static boolean isOpen(Level level, BlockPos n) {
-        return level.getBlockState(n).getCollisionShape(level, n).isEmpty();
-    }
-
-    private static boolean isExposed(Level level, BlockPos p) {
-        return isOpen(level, p.above()) || isOpen(level, p.below())
-                || isOpen(level, p.north()) || isOpen(level, p.south())
-                || isOpen(level, p.east()) || isOpen(level, p.west());
+        return best;
     }
 
     private static boolean canSee(Level level, Entity p, BlockPos target) {
