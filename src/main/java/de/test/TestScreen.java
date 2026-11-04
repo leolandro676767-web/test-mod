@@ -23,6 +23,7 @@ public class TestScreen extends Screen {
     private void addToggle(int x, int y, String name, BooleanSupplier value, Runnable flip) {
         addRenderableWidget(Button.builder(label(name, value.getAsBoolean()), b -> {
             flip.run();
+            TestConfig.save();
             b.setMessage(label(name, value.getAsBoolean()));
         }).bounds(x, y, 200, 20).build());
     }
@@ -60,6 +61,7 @@ public class TestScreen extends Screen {
 
     @Override
     public void onClose() {
+        TestConfig.save();
         this.minecraft.gui.setScreen(parent);
     }
 }
