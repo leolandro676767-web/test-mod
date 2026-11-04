@@ -36,6 +36,9 @@ public class TestClient implements ClientModInitializer {
     private static final Set<Long> skipped = new HashSet<>();
 
     private static final float LOGOUT_HEALTH = 4.0f;
+    // Verhindert Logout-Schleife: erst wieder aktiv, wenn die Gesundheit
+    // nach einem Auto-Logout ueber der Schwelle war.
+    private static boolean logoutArmed = true;
 
     public static KeyMapping toggleKey;
     public static KeyMapping guiKey;
@@ -122,7 +125,11 @@ public class TestClient implements ClientModInitializer {
         }
 
         float health = mc.player.getHealth();
-        if (autoLogout && health > 0.0f && health <= LOGOUT_HEALTH) {
+        if (health > LOGOUT_HEALTH) {
+            logoutArmed = true;
+        }
+        if (autoLogout && logoutArmed && health > 0.0f && health <= LOGOUT_HEALTH) {
+            logoutArmed = false;
             walking = false;
             areaActive = false;
             phase = Phase.WALK;
