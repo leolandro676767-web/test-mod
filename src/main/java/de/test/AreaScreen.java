@@ -23,6 +23,9 @@ public class AreaScreen extends Screen {
         b.setHint(Component.literal(hint));
         b.setValue(Integer.toString(value));
         b.setResponder(s -> {
+            if (startButton != null && !TestClient.areaActive) {
+                startButton.setMessage(startLabel());
+            }
             if (!s.matches("-?\\d*")) {
                 b.setValue((s.startsWith("-") ? "-" : "") + s.replaceAll("[^0-9]", ""));
             }
