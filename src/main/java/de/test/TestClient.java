@@ -14,6 +14,9 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -32,6 +35,12 @@ public class TestClient implements ClientModInitializer {
 
     // Bereichs-Modus
     public static boolean areaActive = false;
+
+    // Block-Modus: einen Blocktyp waehlen, in der Naehe suchen, hinlaufen und abbauen
+    public static boolean blockMode = false;
+    public static Block selectedBlock = null;
+    private static final int SEARCH_RADIUS = 24;
+    private static final int SEARCH_HEIGHT = 12;
     public static int ax1 = 0, ay1 = 0, az1 = 0, ax2 = 0, ay2 = 0, az2 = 0;
     private static final long MAX_AREA_VOLUME = 50000L;
     private static int minX, minY, minZ, maxX, maxY, maxZ;
@@ -61,6 +70,7 @@ public class TestClient implements ClientModInitializer {
 
     public static KeyMapping toggleKey;
     public static KeyMapping guiKey;
+    public static KeyMapping selectKey;
 
     private enum Phase { WALK, MINE, RETURN }
 
@@ -78,6 +88,9 @@ public class TestClient implements ClientModInitializer {
                 "key.test.toggle", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, category));
         guiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.gui", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, category));
+
+        selectKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.test.select", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, category));
 
         TestConfig.load();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> TestConfig.save());
@@ -98,6 +111,7 @@ public class TestClient implements ClientModInitializer {
             return "Zu gro\u00df (max. 50000 Bl\u00f6cke)";
         }
         TestConfig.save();
+        blockMode = false;
         skipped.clear();
         hopeless.clear();
         badObstacles.clear();
@@ -110,8 +124,68 @@ public class TestClient implements ClientModInitializer {
         return null;
     }
 
+    /** Waehlt den Block, auf den man gerade schaut. */
+    public static boolean selectLookedAt(Minecraft mc) {
+        if (mc.player == null || mc.level == null) return false;
+        if (!(mc.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
+            mc.player.sendSystemMessage(Component.literal("Test: Kein Block anvisiert"));
+            return false;
+        }
+        selectedBlock = mc.level.getBlockState(hit.getBlockPos()).getBlock();
+        TestConfig.save();
+        mc.player.sendSystemMessage(Component.literal("Test: Block gew\u00e4hlt: ")
+                .append(selectedBlock.getName()));
+        return true;
+    }
+
+    public static String selectedBlockName() {
+        return selectedBlock == null ? "keiner" : selectedBlock.getName().getString();
+    }
+
+    /** Startet den Block-Modus. Gibt eine Fehlermeldung zurueck oder null bei Erfolg. */
+    public static String startBlock(Minecraft mc) {
+        if (selectedBlock == null) return "Erst einen Block w\u00e4hlen";
+        if (mc.player == null || mc.level == null) return "Nicht im Spiel";
+        skipped.clear();
+        hopeless.clear();
+        badObstacles.clear();
+        retried = false;
+        setTarget(null);
+        walking = false;
+        blockMode = true;
+        updateBounds(mc.player);
+        if (nearestOverall(mc.level, mc.player) == null) {
+            blockMode = false;
+            String msg = selectedBlockName() + " nicht in der N\u00e4he gefunden";
+            mc.player.sendSystemMessage(Component.literal("Test: " + msg));
+            return msg;
+        }
+        phase = Phase.WALK;
+        applied = true;
+        areaActive = true;
+        return null;
+    }
+
+    /** Suchbereich folgt dem Spieler. */
+    private static void updateBounds(Entity p) {
+        BlockPos c = p.blockPosition();
+        minX = c.getX() - SEARCH_RADIUS;
+        maxX = c.getX() + SEARCH_RADIUS;
+        minY = c.getY() - SEARCH_HEIGHT;
+        maxY = c.getY() + SEARCH_HEIGHT;
+        minZ = c.getZ() - SEARCH_RADIUS;
+        maxZ = c.getZ() + SEARCH_RADIUS;
+    }
+
+    /** Abbaubar und (im Block-Modus) vom gewaehlten Typ. */
+    private static boolean isWanted(Level level, BlockPos pos) {
+        if (!isMineable(level, pos)) return false;
+        return !blockMode || level.getBlockState(pos).is(selectedBlock);
+    }
+
     public static void stopArea(Minecraft mc, String message) {
         areaActive = false;
+        blockMode = false;
         setTarget(null);
         releaseAll(mc);
         applied = false;
@@ -125,7 +199,7 @@ public class TestClient implements ClientModInitializer {
     private static void onTick(Minecraft mc) {
         while (toggleKey.consumeClick()) {
             if (areaActive) {
-                stopArea(mc, "Bereich abgebrochen");
+                stopArea(mc, blockMode ? "Abbau gestoppt" : "Bereich abgebrochen");
             } else {
                 walking = !walking;
                 if (mc.player != null) {
@@ -133,6 +207,9 @@ public class TestClient implements ClientModInitializer {
                             Component.literal("Test: " + (walking ? "AN" : "AUS")));
                 }
             }
+        }
+        while (selectKey.consumeClick()) {
+            selectLookedAt(mc);
         }
         while (guiKey.consumeClick()) {
             mc.gui.setScreen(new TestScreen(mc.gui.screen()));
@@ -263,10 +340,15 @@ public class TestClient implements ClientModInitializer {
     private static String finishMessage(Level level) {
         Set<Long> left = new HashSet<>();
         for (long l : skipped) {
-            if (isMineable(level, BlockPos.of(l))) left.add(l);
+            if (isWanted(level, BlockPos.of(l))) left.add(l);
         }
         for (long l : hopeless) {
-            if (isMineable(level, BlockPos.of(l))) left.add(l);
+            if (isWanted(level, BlockPos.of(l))) left.add(l);
+        }
+        if (blockMode) {
+            String name = selectedBlockName();
+            if (left.isEmpty()) return "Kein " + name + " mehr in der N\u00e4he";
+            return "Kein erreichbarer " + name + " mehr in der N\u00e4he (" + left.size() + " nicht erreichbar)";
         }
         if (left.isEmpty()) return "Bereich fertig";
         return "Bereich fertig (" + left.size() + " Bl\u00f6cke nicht erreichbar)";
@@ -278,13 +360,14 @@ public class TestClient implements ClientModInitializer {
             releaseAll(mc);
             return;
         }
+        if (blockMode) updateBounds(player);
 
         // Bewegung seit dem letzten Tick (fuer die Haengen-Erkennung)
         double moved = Math.abs(player.getX() - lastX) + Math.abs(player.getZ() - lastZ);
         lastX = player.getX();
         lastZ = player.getZ();
 
-        if (areaTarget != null && !isMineable(level, areaTarget)) {
+        if (areaTarget != null && !isWanted(level, areaTarget)) {
             setTarget(null);
         }
 
@@ -446,7 +529,7 @@ public class TestClient implements ClientModInitializer {
                 for (int z = Math.max(minZ, c.getZ() - r); z <= Math.min(maxZ, c.getZ() + r); z++) {
                     BlockPos pos = new BlockPos(x, y, z);
                     if (hopeless.contains(pos.asLong())) continue;
-                    if (!isMineable(level, pos)) continue;
+                    if (!isWanted(level, pos)) continue;
                     if (eyeDist2(p, pos) > CULL_SQ) continue;
                     candidates.add(pos);
                 }
@@ -473,7 +556,7 @@ public class TestClient implements ClientModInitializer {
                     BlockPos pos = new BlockPos(x, y, z);
                     long key = pos.asLong();
                     if (skipped.contains(key) || hopeless.contains(key)) continue;
-                    if (!isMineable(level, pos)) continue;
+                    if (!isWanted(level, pos)) continue;
                     double score = eyeDist2(p, pos);
                     if (score < bestScore) {
                         bestScore = score;

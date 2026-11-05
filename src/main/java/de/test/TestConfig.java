@@ -8,6 +8,10 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
 /** Speichert und laedt alle Einstellungen in config/test.properties. */
 public final class TestConfig {
@@ -29,6 +33,14 @@ public final class TestConfig {
         TestClient.sprintJump = bool(p, "sprintJump", TestClient.sprintJump);
         TestClient.autoMine = bool(p, "autoMine", TestClient.autoMine);
         TestClient.autoLogout = bool(p, "autoLogout", TestClient.autoLogout);
+        String blockId = p.getProperty("block");
+        if (blockId != null) {
+            Identifier id = Identifier.tryParse(blockId.trim());
+            if (id != null) {
+                Block b = BuiltInRegistries.BLOCK.getValue(id);
+                TestClient.selectedBlock = b == Blocks.AIR ? null : b;
+            }
+        }
         TestClient.ax1 = num(p, "ax1", TestClient.ax1);
         TestClient.ay1 = num(p, "ay1", TestClient.ay1);
         TestClient.az1 = num(p, "az1", TestClient.az1);
@@ -43,6 +55,9 @@ public final class TestConfig {
         p.setProperty("sprintJump", Boolean.toString(TestClient.sprintJump));
         p.setProperty("autoMine", Boolean.toString(TestClient.autoMine));
         p.setProperty("autoLogout", Boolean.toString(TestClient.autoLogout));
+        if (TestClient.selectedBlock != null) {
+            p.setProperty("block", BuiltInRegistries.BLOCK.getKey(TestClient.selectedBlock).toString());
+        }
         p.setProperty("ax1", Integer.toString(TestClient.ax1));
         p.setProperty("ay1", Integer.toString(TestClient.ay1));
         p.setProperty("az1", Integer.toString(TestClient.az1));

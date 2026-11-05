@@ -1,5 +1,6 @@
 {
   "key.category.test.main": "Test",
   "key.test.toggle": "Test an/aus",
-  "key.test.gui": "Test-Menü öffnen"
+  "key.test.gui": "Test-Menü öffnen",
+  "key.test.select": "Block wählen (anvisierter Block)"
 }
