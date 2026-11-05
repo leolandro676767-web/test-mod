@@ -38,9 +38,21 @@ public class TestClient implements ClientModInitializer {
     private static BlockPos areaTarget = null;
     private static int walkTicks = 0;
     private static int stuckTicks = 0;
+    private static int mineTicks = 0;
+    private static int noProgressTicks = 0;
+    private static double bestDist = Double.MAX_VALUE;
+    private static BlockPos digPos = null;
+    private static int digTicks = 0;
+    private static boolean retried = false;
+    private static double[] reachPoint = null;
     private static double lastX = 0.0;
     private static double lastZ = 0.0;
+    // nicht erreichbar (nur fuer die Wegsuche gesperrt, werden aber mitgenommen, wenn sie spaeter in Reichweite sind)
     private static final Set<Long> skipped = new HashSet<>();
+    // lassen sich nicht abbauen (ueberall gesperrt)
+    private static final Set<Long> hopeless = new HashSet<>();
+    // Hindernisse auf dem Weg, die sich nicht abbauen lassen
+    private static final Set<Long> badObstacles = new HashSet<>();
 
     private static final float LOGOUT_HEALTH = 4.0f;
     // Verhindert Logout-Schleife: erst wieder aktiv, wenn die Gesundheit
@@ -87,9 +99,10 @@ public class TestClient implements ClientModInitializer {
         }
         TestConfig.save();
         skipped.clear();
-        areaTarget = null;
-        walkTicks = 0;
-        stuckTicks = 0;
+        hopeless.clear();
+        badObstacles.clear();
+        retried = false;
+        setTarget(null);
         walking = false;
         phase = Phase.WALK;
         applied = true;
@@ -99,7 +112,7 @@ public class TestClient implements ClientModInitializer {
 
     public static void stopArea(Minecraft mc, String message) {
         areaActive = false;
-        areaTarget = null;
+        setTarget(null);
         releaseAll(mc);
         applied = false;
         if (mc.player != null && message != null) {
@@ -206,7 +219,22 @@ public class TestClient implements ClientModInitializer {
 
     // ---------- Bereichs-Modus: Ablauf ----------
 
-    private static final double REACH_SQ = 16.0;
+    private static final double REACH = 4.3;
+    private static final double REACH_SQ = REACH * REACH;
+    // Block-Mittelpunkt hoechstens so weit weg, damit irgendein Punkt des Blocks noch in Reichweite sein kann
+    private static final double CULL_SQ = (REACH + 0.9) * (REACH + 0.9);
+    private static final double ARRIVE_DIST = 0.6;
+    private static final int MAX_MINE_TICKS = 600;
+    private static final int MAX_DIG_TICKS = 300;
+    private static final int MAX_STUCK_TICKS = 40;
+    private static final int MAX_NO_PROGRESS_TICKS = 120;
+    private static final int MAX_WALK_TICKS = 2400;
+
+    private static final int[][] DIRS = {
+            {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+    private static final double[][] FACE_POINTS = {
+            {0.5, 0.95, 0.5}, {0.5, 0.05, 0.5}, {0.95, 0.5, 0.5},
+            {0.05, 0.5, 0.5}, {0.5, 0.5, 0.95}, {0.5, 0.5, 0.05}};
 
     private static double eyeDist2(Entity p, BlockPos b) {
         double dx = b.getX() + 0.5 - p.getX();
@@ -215,17 +243,33 @@ public class TestClient implements ClientModInitializer {
         return dx * dx + dy * dy + dz * dz;
     }
 
-    private static boolean inReach(Level level, Entity p, BlockPos b) {
-        return eyeDist2(p, b) <= REACH_SQ && canSee(level, p, b);
+    private static void setTarget(BlockPos pos) {
+        areaTarget = pos;
+        walkTicks = 0;
+        stuckTicks = 0;
+        mineTicks = 0;
+        noProgressTicks = 0;
+        bestDist = Double.MAX_VALUE;
+        digPos = null;
+        digTicks = 0;
     }
 
     private static void skipTarget(Minecraft mc) {
         if (areaTarget != null) skipped.add(areaTarget.asLong());
-        areaTarget = null;
-        walkTicks = 0;
-        stuckTicks = 0;
-        stopMove(mc);
-        mc.options.keyAttack.setDown(false);
+        setTarget(null);
+        releaseAll(mc);
+    }
+
+    private static String finishMessage(Level level) {
+        Set<Long> left = new HashSet<>();
+        for (long l : skipped) {
+            if (isMineable(level, BlockPos.of(l))) left.add(l);
+        }
+        for (long l : hopeless) {
+            if (isMineable(level, BlockPos.of(l))) left.add(l);
+        }
+        if (left.isEmpty()) return "Bereich fertig";
+        return "Bereich fertig (" + left.size() + " Bl\u00f6cke nicht erreichbar)";
     }
 
     private static void runArea(Minecraft mc, Level level, Entity player) {
@@ -235,84 +279,122 @@ public class TestClient implements ClientModInitializer {
             return;
         }
 
+        // Bewegung seit dem letzten Tick (fuer die Haengen-Erkennung)
+        double moved = Math.abs(player.getX() - lastX) + Math.abs(player.getZ() - lastZ);
+        lastX = player.getX();
+        lastZ = player.getZ();
+
         if (areaTarget != null && !isMineable(level, areaTarget)) {
-            areaTarget = null;
-            walkTicks = 0;
-            stuckTicks = 0;
+            setTarget(null);
         }
 
         // 1. Ist das aktuelle Ziel in Reichweite? Sonst den naechsten erreichbaren Block suchen.
-        boolean reach = areaTarget != null && inReach(level, player, areaTarget);
-        if (!reach) {
+        double[] point = areaTarget != null ? visiblePoint(level, player, areaTarget) : null;
+        if (point == null) {
             BlockPos near = nearestReachable(level, player);
             if (near != null) {
-                areaTarget = near;
-                reach = true;
-                walkTicks = 0;
-                stuckTicks = 0;
+                if (!near.equals(areaTarget)) setTarget(near);
+                point = reachPoint;
             }
         }
 
-        // 2. Nichts in Reichweite: naechsten Block im Bereich als Laufziel waehlen.
-        if (areaTarget == null) {
-            areaTarget = nearestOverall(level, player);
-            walkTicks = 0;
-            stuckTicks = 0;
-            if (areaTarget == null) {
-                stopArea(mc, skipped.isEmpty() ? "Bereich fertig"
-                        : "Bereich fertig (" + skipped.size() + " Bl\u00f6cke nicht erreichbar)");
-                return;
-            }
-        }
-
-        // 3. Abbauen
-        if (reach) {
+        // 2. Abbauen
+        if (point != null) {
             stopMove(mc);
-            boolean aimed = aimAt(player, areaTarget);
+            digPos = null;
+            boolean aimed = aimAt(player, point[0], point[1], point[2]);
             mc.options.keyAttack.setDown(aimed);
+            mineTicks++;
+            if (mineTicks > MAX_MINE_TICKS) {
+                // laesst sich nicht abbauen - nicht noch einmal versuchen
+                hopeless.add(areaTarget.asLong());
+                skipTarget(mc);
+            }
             return;
         }
 
-        // 4. Hinlaufen - Hindernisse auf dem Weg werden abgebaut statt dagegen zu springen
+        // 3. Nichts in Reichweite: naechsten Block im Bereich als Laufziel waehlen.
+        if (areaTarget == null) {
+            BlockPos t = nearestOverall(level, player);
+            if (t == null && !skipped.isEmpty() && !retried) {
+                // zweiter Durchgang: vieles ist jetzt abgebaut und dadurch erreichbar
+                retried = true;
+                skipped.clear();
+                t = nearestOverall(level, player);
+            }
+            if (t == null) {
+                stopArea(mc, finishMessage(level));
+                return;
+            }
+            setTarget(t);
+        }
+
+        // 4. Hinlaufen
         walkTicks++;
-        if (walkTicks > 600) {
+        if (walkTicks > MAX_WALK_TICKS) {
+            skipTarget(mc);
+            return;
+        }
+
+        // Kommt der Block ueberhaupt naeher? Sonst (Kreislaufen, Haengen) ueberspringen.
+        double dist = Math.sqrt(eyeDist2(player, areaTarget));
+        if (dist < bestDist - 0.25) {
+            bestDist = dist;
+            noProgressTicks = 0;
+        } else if (++noProgressTicks > MAX_NO_PROGRESS_TICKS) {
             skipTarget(mc);
             return;
         }
 
         double dx = areaTarget.getX() + 0.5 - player.getX();
         double dz = areaTarget.getZ() + 0.5 - player.getZ();
+        double horiz = Math.sqrt(dx * dx + dz * dz);
+
+        // 4a. Direkt ueber/unter dem Ziel angekommen, aber noch nicht in Reichweite:
+        //     Nicht weiter drehen und laufen (das war das Im-Kreis-Drehen), sondern senkrecht handeln.
+        if (horiz < ARRIVE_DIST) {
+            if (areaTarget.getY() < player.blockPosition().getY()) {
+                // Ziel liegt tiefer: Block unter den Fuessen abbauen und nachrutschen
+                BlockPos under = player.blockPosition().below();
+                if (isMineable(level, under) && !badObstacles.contains(under.asLong())) {
+                    if (!safeToDigDown(level, under) || !digBlock(mc, player, under)) {
+                        skipTarget(mc);
+                    }
+                } else {
+                    // Luft unter den Fuessen: wir fallen gerade
+                    releaseAll(mc);
+                }
+            } else {
+                // Ziel liegt darueber/ist verdeckt und von hier nicht erreichbar
+                skipTarget(mc);
+            }
+            return;
+        }
+
         float targetYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
 
-        // erst nur die Blickrichtung drehen (Pitch bleibt, sonst Hin-und-Her mit dem Zielen)
-        boolean aligned = rotateTo(player, targetYaw, player.getXRot(), 15.0f);
-        if (!aligned) {
-            stopMove(mc);
-            mc.options.keyAttack.setDown(false);
-            return;
-        }
-
-        BlockPos obstacle = findObstacle(level, player, player.getYRot());
+        // 4b. Hindernisse auf dem Weg abbauen. Die Suche richtet sich nach der Laufrichtung
+        //     (nicht nach der aktuellen Blickrichtung), sonst arbeiten Zielen und Drehen gegeneinander.
+        BlockPos obstacle = findObstacle(level, player, targetYaw);
         if (obstacle != null) {
+            digBlock(mc, player, obstacle);
+            return;
+        }
+        digPos = null;
+        mc.options.keyAttack.setDown(false);
+
+        // 4c. In Laufrichtung drehen (steht dabei still) und loslaufen
+        if (!rotateTo(player, targetYaw, 10.0f, 15.0f)) {
             stopMove(mc);
-            boolean aimed = aimAt(player, obstacle);
-            mc.options.keyAttack.setDown(aimed);
-            stuckTicks = 0;
             return;
         }
 
-        mc.options.keyAttack.setDown(false);
-        rotateTo(player, targetYaw, 10.0f, 15.0f);
-
-        double moved = Math.abs(player.getX() - lastX) + Math.abs(player.getZ() - lastZ);
-        lastX = player.getX();
-        lastZ = player.getZ();
         if (moved < 0.02) {
             stuckTicks++;
         } else {
             stuckTicks = 0;
         }
-        if (stuckTicks > 80) {
+        if (stuckTicks > MAX_STUCK_TICKS) {
             skipTarget(mc);
             return;
         }
@@ -321,25 +403,62 @@ public class TestClient implements ClientModInitializer {
         mc.options.keySprint.setDown(false);
     }
 
-    /** Naechster Block in Reichweite, den man wirklich sehen kann. */
+    /** Baut einen Block auf dem Weg ab. Gibt false zurueck, wenn er sich nicht abbauen laesst. */
+    private static boolean digBlock(Minecraft mc, Entity player, BlockPos pos) {
+        stopMove(mc);
+        if (pos.equals(digPos)) {
+            digTicks++;
+        } else {
+            digPos = pos;
+            digTicks = 0;
+        }
+        if (digTicks > MAX_DIG_TICKS) {
+            badObstacles.add(pos.asLong());
+            digPos = null;
+            mc.options.keyAttack.setDown(false);
+            return false;
+        }
+        mc.options.keyAttack.setDown(aimAt(player, pos));
+        stuckTicks = 0;
+        noProgressTicks = 0;
+        return true;
+    }
+
+    /** Nicht nach unten graben, wenn darunter Fluessigkeit ist oder man tiefer als 3 Bloecke faellt. */
+    private static boolean safeToDigDown(Level level, BlockPos under) {
+        for (int i = 1; i <= 3; i++) {
+            BlockPos p = under.below(i);
+            var bs = level.getBlockState(p);
+            if (!bs.getFluidState().isEmpty()) return false;
+            if (!bs.getCollisionShape(level, p).isEmpty()) return true;
+        }
+        return false;
+    }
+
+    /** Naechster Block in Reichweite, den man wirklich sehen kann (setzt reachPoint). */
     private static BlockPos nearestReachable(Level level, Entity p) {
+        reachPoint = null;
         BlockPos c = p.blockPosition();
-        int r = 4;
+        int r = 5;
         List<BlockPos> candidates = new ArrayList<>();
         for (int x = Math.max(minX, c.getX() - r); x <= Math.min(maxX, c.getX() + r); x++) {
-            for (int y = Math.max(minY, c.getY() - r); y <= Math.min(maxY, c.getY() + r + 1); y++) {
+            for (int y = Math.max(minY, c.getY() - 4); y <= Math.min(maxY, c.getY() + 6); y++) {
                 for (int z = Math.max(minZ, c.getZ() - r); z <= Math.min(maxZ, c.getZ() + r); z++) {
                     BlockPos pos = new BlockPos(x, y, z);
-                    if (skipped.contains(pos.asLong())) continue;
+                    if (hopeless.contains(pos.asLong())) continue;
                     if (!isMineable(level, pos)) continue;
-                    if (eyeDist2(p, pos) > REACH_SQ) continue;
+                    if (eyeDist2(p, pos) > CULL_SQ) continue;
                     candidates.add(pos);
                 }
             }
         }
         candidates.sort(Comparator.comparingDouble(pos -> eyeDist2(p, pos)));
         for (BlockPos pos : candidates) {
-            if (canSee(level, p, pos)) return pos;
+            double[] pt = visiblePoint(level, p, pos);
+            if (pt != null) {
+                reachPoint = pt;
+                return pos;
+            }
         }
         return null;
     }
@@ -352,7 +471,8 @@ public class TestClient implements ClientModInitializer {
             for (int x = minX; x <= maxX; x++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     BlockPos pos = new BlockPos(x, y, z);
-                    if (skipped.contains(pos.asLong())) continue;
+                    long key = pos.asLong();
+                    if (skipped.contains(key) || hopeless.contains(key)) continue;
                     if (!isMineable(level, pos)) continue;
                     double score = eyeDist2(p, pos);
                     if (score < bestScore) {
@@ -365,9 +485,43 @@ public class TestClient implements ClientModInitializer {
         return best;
     }
 
-    private static boolean canSee(Level level, Entity p, BlockPos target) {
+    /**
+     * Sucht einen Punkt auf dem Block, der in Reichweite liegt und auf den man direkt sehen kann.
+     * Es wird nicht nur die Mitte geprueft, sondern auch die freiliegenden Seitenflaechen -
+     * so sind auch Bloecke erreichbar, die nur teilweise sichtbar sind.
+     */
+    private static double[] visiblePoint(Level level, Entity p, BlockPos b) {
+        boolean[] open = new boolean[6];
+        boolean any = false;
+        for (int i = 0; i < 6; i++) {
+            BlockPos n = b.offset(DIRS[i][0], DIRS[i][1], DIRS[i][2]);
+            open[i] = level.getBlockState(n).getCollisionShape(level, n).isEmpty();
+            any |= open[i];
+        }
+        if (!any) return null; // ringsum zu, also nicht sichtbar
+
+        double ex = p.getX();
+        double ey = p.getEyeY();
+        double ez = p.getZ();
+        for (int i = -1; i < 6; i++) {
+            if (i >= 0 && !open[i]) continue;
+            double px = b.getX() + (i < 0 ? 0.5 : FACE_POINTS[i][0]);
+            double py = b.getY() + (i < 0 ? 0.5 : FACE_POINTS[i][1]);
+            double pz = b.getZ() + (i < 0 ? 0.5 : FACE_POINTS[i][2]);
+            double dx = px - ex;
+            double dy = py - ey;
+            double dz = pz - ez;
+            if (dx * dx + dy * dy + dz * dz > REACH_SQ) continue;
+            if (clipHits(level, p, px, py, pz, b)) {
+                return new double[] {px, py, pz};
+            }
+        }
+        return null;
+    }
+
+    private static boolean clipHits(Level level, Entity p, double x, double y, double z, BlockPos target) {
         var from = p.getEyePosition();
-        var to = new Vec3(target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5);
+        var to = new Vec3(x, y, z);
         var hit = level.clip(new ClipContext(
                 from, to, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, p));
         return hit.getBlockPos().equals(target);
@@ -393,15 +547,29 @@ public class TestClient implements ClientModInitializer {
         mc.options.keyAttack.setDown(false);
     }
 
+    private static final double[][] OBSTACLE_PROBES = {
+            {0.9, 0.0}, {0.6, 0.0}, {0.9, 0.25}, {0.9, -0.25}};
+
+    /** Block, der in Laufrichtung (Kopf- oder Fusshoehe, auch an den Koerperkanten) im Weg ist. */
     private static BlockPos findObstacle(Level level, Entity p, float yaw) {
         double rad = Math.toRadians(yaw);
-        double x = p.getX() + (-Math.sin(rad)) * 0.8;
-        double z = p.getZ() + Math.cos(rad) * 0.8;
-        BlockPos head = BlockPos.containing(x, p.getY() + 1.1, z);
-        BlockPos feet = BlockPos.containing(x, p.getY() + 0.1, z);
-        if (isMineable(level, head)) return head;
-        if (isMineable(level, feet)) return feet;
+        double fx = -Math.sin(rad);
+        double fz = Math.cos(rad);
+        double lx = Math.cos(rad);
+        double lz = Math.sin(rad);
+        for (double[] probe : OBSTACLE_PROBES) {
+            double x = p.getX() + fx * probe[0] + lx * probe[1];
+            double z = p.getZ() + fz * probe[0] + lz * probe[1];
+            BlockPos head = BlockPos.containing(x, p.getY() + 1.1, z);
+            BlockPos feet = BlockPos.containing(x, p.getY() + 0.1, z);
+            if (isObstacle(level, head)) return head;
+            if (isObstacle(level, feet)) return feet;
+        }
         return null;
+    }
+
+    private static boolean isObstacle(Level level, BlockPos pos) {
+        return isMineable(level, pos) && !badObstacles.contains(pos.asLong());
     }
 
     private static boolean isMineable(Level level, BlockPos pos) {
@@ -412,11 +580,19 @@ public class TestClient implements ClientModInitializer {
     }
 
     private static boolean aimAt(Entity p, BlockPos target) {
-        double dx = target.getX() + 0.5 - p.getX();
-        double dy = target.getY() + 0.5 - p.getEyeY();
-        double dz = target.getZ() + 0.5 - p.getZ();
-        float targetYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
-        float targetPitch = (float) (-Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz))));
+        return aimAt(p, target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5);
+    }
+
+    private static boolean aimAt(Entity p, double x, double y, double z) {
+        double dx = x - p.getX();
+        double dy = y - p.getEyeY();
+        double dz = z - p.getZ();
+        double horiz = Math.sqrt(dx * dx + dz * dz);
+        // Blickt man fast senkrecht, ist die Drehrichtung egal - sonst dreht man sich im Kreis
+        float targetYaw = horiz < 0.1
+                ? p.getYRot()
+                : (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
+        float targetPitch = (float) (-Math.toDegrees(Math.atan2(dy, horiz)));
         return rotateTo(p, targetYaw, targetPitch, 4.0f);
     }
 
