@@ -14,6 +14,11 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -53,6 +58,16 @@ public class TestClient implements ClientModInitializer {
     private static BlockPos digPos = null;
     private static int digTicks = 0;
     private static boolean retried = false;
+    // selbst platzierte Bloecke (Bruecken/Saeulen): werden nicht wieder abgebaut
+    private static final Set<Long> placed = new HashSet<>();
+    private static final int NO_PILLAR = Integer.MIN_VALUE;
+    private static final int MAX_PILLAR_TICKS = 200;
+    private static final int MAX_STUCK_PILLARS = 3;
+    private static int pillarGoalY = NO_PILLAR;
+    private static int pillarTicks = 0;
+    private static int stuckPillars = 0;
+    private static BlockPos pillarBase = null;
+    private static boolean noBlocksWarned = false;
     private static double[] reachPoint = null;
     private static double lastX = 0.0;
     private static double lastZ = 0.0;
@@ -115,6 +130,8 @@ public class TestClient implements ClientModInitializer {
         skipped.clear();
         hopeless.clear();
         badObstacles.clear();
+        placed.clear();
+        noBlocksWarned = false;
         retried = false;
         setTarget(null);
         walking = false;
@@ -149,6 +166,8 @@ public class TestClient implements ClientModInitializer {
         skipped.clear();
         hopeless.clear();
         badObstacles.clear();
+        placed.clear();
+        noBlocksWarned = false;
         retried = false;
         setTarget(null);
         walking = false;
@@ -179,6 +198,7 @@ public class TestClient implements ClientModInitializer {
 
     /** Abbaubar und (im Block-Modus) vom gewaehlten Typ. */
     private static boolean isWanted(Level level, BlockPos pos) {
+        if (placed.contains(pos.asLong())) return false;
         if (!isMineable(level, pos)) return false;
         return !blockMode || level.getBlockState(pos).is(selectedBlock);
     }
@@ -329,6 +349,10 @@ public class TestClient implements ClientModInitializer {
         bestDist = Double.MAX_VALUE;
         digPos = null;
         digTicks = 0;
+        pillarGoalY = NO_PILLAR;
+        pillarTicks = 0;
+        stuckPillars = 0;
+        pillarBase = null;
     }
 
     private static void skipTarget(Minecraft mc) {
@@ -419,6 +443,14 @@ public class TestClient implements ClientModInitializer {
             return;
         }
 
+        // Gerade dabei, nach oben zu bauen
+        if (pillarGoalY != NO_PILLAR) {
+            if (!pillarStep(mc, level, player)) {
+                skipTarget(mc);
+            }
+            return;
+        }
+
         // Kommt der Block ueberhaupt naeher? Sonst (Kreislaufen, Haengen) ueberspringen.
         double dist = Math.sqrt(eyeDist2(player, areaTarget));
         if (dist < bestDist - 0.25) {
@@ -448,8 +480,13 @@ public class TestClient implements ClientModInitializer {
                     releaseAll(mc);
                 }
             } else {
-                // Ziel liegt darueber/ist verdeckt und von hier nicht erreichbar
-                skipTarget(mc);
+                // Ziel liegt darueber: hochbauen, wenn Baubloecke da sind
+                if (areaTarget.getY() > player.blockPosition().getY() && findBuildSlot(mc) >= 0) {
+                    pillarGoalY = areaTarget.getY();
+                    pillarTicks = 0;
+                } else {
+                    skipTarget(mc);
+                }
             }
             return;
         }
@@ -459,6 +496,12 @@ public class TestClient implements ClientModInitializer {
         // 4b. Hindernisse auf dem Weg abbauen. Die Suche richtet sich nach der Laufrichtung
         //     (nicht nach der aktuellen Blickrichtung), sonst arbeiten Zielen und Drehen gegeneinander.
         BlockPos obstacle = findObstacle(level, player, targetYaw);
+        boolean stepUp = false;
+        if (obstacle != null && canStepUp(level, player, targetYaw)) {
+            // Stufe von einem Block Hoehe: einfach hochspringen statt abbauen
+            obstacle = null;
+            stepUp = true;
+        }
         if (obstacle != null) {
             digBlock(mc, player, obstacle);
             return;
@@ -472,18 +515,156 @@ public class TestClient implements ClientModInitializer {
             return;
         }
 
+        // Luecke vor uns: Bruecke bauen
+        if (bridgeAhead(mc, level, player, targetYaw)) {
+            return;
+        }
+
         if (moved < 0.02) {
             stuckTicks++;
         } else {
             stuckTicks = 0;
         }
         if (stuckTicks > MAX_STUCK_TICKS) {
+            // Haengt an einer Wand: zwei Bloecke hochbauen und weiter
+            if (stuckPillars < MAX_STUCK_PILLARS
+                    && areaTarget.getY() >= player.blockPosition().getY() - 1
+                    && findBuildSlot(mc) >= 0) {
+                stuckPillars++;
+                pillarGoalY = player.blockPosition().getY() + 2;
+                pillarTicks = 0;
+                stuckTicks = 0;
+                return;
+            }
             skipTarget(mc);
             return;
         }
         mc.options.keyUp.setDown(true);
-        mc.options.keyJump.setDown(stuckTicks > 8);
+        mc.options.keyJump.setDown(stuckTicks > 8 || stepUp);
         mc.options.keySprint.setDown(false);
+    }
+
+    // ---------- Bauen (Bruecken und Saeulen) ----------
+
+    private static boolean solid(Level level, BlockPos pos) {
+        return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
+    }
+
+    /** Nur guenstige Bloecke zum Bauen verwenden, keine wertvollen. */
+    private static boolean isBuildBlock(Block b) {
+        return b == Blocks.COBBLESTONE || b == Blocks.DIRT || b == Blocks.NETHERRACK
+                || b == Blocks.COBBLED_DEEPSLATE || b == Blocks.STONE || b == Blocks.ANDESITE
+                || b == Blocks.DIORITE || b == Blocks.GRANITE || b == Blocks.TUFF
+                || b == Blocks.DEEPSLATE || b == Blocks.BLACKSTONE;
+    }
+
+    /** Hotbar-Slot mit einem Baublock oder -1. */
+    private static int findBuildSlot(Minecraft mc) {
+        if (mc.player == null) return -1;
+        var inv = mc.player.getInventory();
+        for (int i = 0; i < 9; i++) {
+            ItemStack st = inv.getItem(i);
+            if (!st.isEmpty() && st.getItem() instanceof BlockItem bi && isBuildBlock(bi.getBlock())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** Platziert einen Baublock an placePos, indem gegen 'against' geklickt wird. */
+    private static boolean placeBlock(Minecraft mc, BlockPos against, Direction face, Vec3 hitVec, BlockPos placePos) {
+        if (mc.player == null || mc.gameMode == null) return false;
+        int slot = findBuildSlot(mc);
+        if (slot < 0) {
+            if (!noBlocksWarned) {
+                noBlocksWarned = true;
+                mc.player.sendSystemMessage(Component.literal(
+                        "Test: Keine Baubl\u00f6cke (z.B. Bruchstein) in der Hotbar"));
+            }
+            return false;
+        }
+        var inv = mc.player.getInventory();
+        int prev = inv.getSelectedSlot();
+        inv.setSelectedSlot(slot);
+        BlockHitResult hit = new BlockHitResult(hitVec, face, against, false);
+        mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, hit);
+        mc.player.swing(InteractionHand.MAIN_HAND);
+        inv.setSelectedSlot(prev);
+        placed.add(placePos.asLong());
+        return true;
+    }
+
+    /** Ein Block hohe Stufe vor uns, darueber frei: springen reicht. */
+    private static boolean canStepUp(Level level, Entity p, float yaw) {
+        if (!p.onGround()) return false;
+        double rad = Math.toRadians(yaw);
+        double x = p.getX() - Math.sin(rad) * 0.9;
+        double z = p.getZ() + Math.cos(rad) * 0.9;
+        return solid(level, BlockPos.containing(x, p.getY() + 0.1, z))
+                && !solid(level, BlockPos.containing(x, p.getY() + 1.1, z))
+                && !solid(level, BlockPos.containing(x, p.getY() + 2.1, z));
+    }
+
+    /** Tiefe Luecke direkt vor uns (und das Ziel nicht tiefer): Block davor platzieren. */
+    private static boolean bridgeAhead(Minecraft mc, Level level, Entity p, float yaw) {
+        if (!p.onGround() || areaTarget == null) return false;
+        if (areaTarget.getY() < p.blockPosition().getY() - 1) return false;
+        BlockPos below = p.blockPosition().below();
+        if (!solid(level, below)) return false;
+        Direction d = Direction.fromYRot(yaw);
+        BlockPos ahead = below.relative(d);
+        if (solid(level, ahead) || solid(level, ahead.below()) || solid(level, ahead.below(2))) {
+            return false;
+        }
+        stopMove(mc);
+        stuckTicks = 0;
+        noProgressTicks = 0;
+        Vec3 face = Vec3.atCenterOf(below).add(d.getStepX() * 0.5, 0.0, d.getStepZ() * 0.5);
+        return placeBlock(mc, below, d, face, ahead);
+    }
+
+    /** Ein Schritt beim Hochbauen: springen und im Sprung den Block darunter setzen. */
+    private static boolean pillarStep(Minecraft mc, Level level, Entity p) {
+        if (p.onGround() && p.blockPosition().getY() >= pillarGoalY) {
+            pillarGoalY = NO_PILLAR;
+            pillarBase = null;
+            mc.options.keyJump.setDown(false);
+            return true;
+        }
+        if (++pillarTicks > MAX_PILLAR_TICKS) return false;
+        stopMove(mc);
+        mc.options.keyAttack.setDown(false);
+        stuckTicks = 0;
+        noProgressTicks = 0;
+
+        if (p.onGround()) {
+            BlockPos ceiling = p.blockPosition().above(2);
+            if (isMineable(level, ceiling) && !placed.contains(ceiling.asLong())) {
+                // Decke im Weg: erst abbauen
+                return digBlock(mc, p, ceiling);
+            }
+            pillarBase = p.blockPosition().below();
+            if (!solid(level, pillarBase)) {
+                pillarBase = null;
+                return true;
+            }
+            mc.options.keyJump.setDown(true);
+            return true;
+        }
+
+        // in der Luft: sobald hoch genug, den Block auf den Untergrund setzen
+        if (pillarBase != null && p.getY() >= pillarBase.getY() + 2.05) {
+            BlockPos placePos = pillarBase.above();
+            if (level.getBlockState(placePos).isAir()) {
+                Vec3 face = Vec3.atCenterOf(pillarBase).add(0.0, 0.5, 0.0);
+                if (!placeBlock(mc, pillarBase, Direction.UP, face, placePos)) {
+                    return false;
+                }
+            }
+            pillarBase = null;
+            mc.options.keyJump.setDown(false);
+        }
+        return true;
     }
 
     /** Baut einen Block auf dem Weg ab. Gibt false zurueck, wenn er sich nicht abbauen laesst. */
@@ -652,7 +833,8 @@ public class TestClient implements ClientModInitializer {
     }
 
     private static boolean isObstacle(Level level, BlockPos pos) {
-        return isMineable(level, pos) && !badObstacles.contains(pos.asLong());
+        return isMineable(level, pos) && !badObstacles.contains(pos.asLong())
+                && !placed.contains(pos.asLong());
     }
 
     private static boolean isMineable(Level level, BlockPos pos) {
