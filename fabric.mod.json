@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "test",
+  "version": "${version}",
+  "name": "1912 Client",
+  "description": "1912 Client",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["de.test.TestClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
