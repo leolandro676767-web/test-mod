@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "test",
   "version": "${version}",
-  "name": "Test",
-  "description": "Test",
+  "name": "1912 Client",
+  "description": "1912 Client",
   "environment": "client",
   "entrypoints": {
     "client": ["de.test.TestClient"]

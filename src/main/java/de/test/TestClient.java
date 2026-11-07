@@ -2,7 +2,9 @@ package de.test;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.lang.reflect.Method;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -13,6 +15,8 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.world.item.Item;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
@@ -26,6 +30,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -38,8 +44,32 @@ public class TestClient implements ClientModInitializer {
     public static boolean autoMine = true;
     public static boolean autoLogout = true;
 
+    // AutoClicker: schlaegt im Takt des Tool-Cooldowns, mit zufaelligem Abstand
+    public static boolean autoClicker = false;
+    public static int clickerRandom = 20;        // Prozent des Cooldowns
+    public static boolean clickerHold = true;    // nur bei gedrueckter Angriffstaste
+    public static boolean clickerEarly = false;  // auch vor vollem Cooldown schlagen
+    private static double clickerFactor = 0.0;   // gewuerfelter Faktor fuer den naechsten Schlag
+    private static int clickerReadyTicks = 0;
+    private static final java.util.Random CLICK_RNG = new java.util.Random();
+
+    // AutoDrop: gewaehlte Items werden automatisch aus dem Inventar gedroppt
+    public static boolean autoDrop = false;
+    public static final Set<Item> dropItems = new LinkedHashSet<>();
+    private static int dropCooldown = 0;
+    private static boolean dropFailedWarned = false;
+    private static Method clickMethod = null;
+    private static Object throwConstant = null;
+    private static boolean clickLookupDone = false;
+
     // Bereichs-Modus
     public static boolean areaActive = false;
+
+    // Koordinaten-Modus: zu einem festen Punkt laufen (nutzt areaActive als "aktiv"-Flag)
+    public static boolean gotoMode = false;
+    public static int gx = 0, gy = 64, gz = 0;
+    private static final int MAX_GOTO_TICKS = 12000;
+    private static final int MAX_GOTO_NO_PROGRESS = 200;
 
     // Block-Modus: einen Blocktyp waehlen, in der Naehe suchen, hinlaufen und abbauen
     public static boolean blockMode = false;
@@ -112,6 +142,109 @@ public class TestClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(TestClient::onTick);
     }
 
+    // ---------- AutoClicker ----------
+
+    private static void rollClickerFactor() {
+        double p = Math.max(0, Math.min(100, clickerRandom)) / 100.0;
+        // spaeter: 0..+p, mit "frueher": -p..+p
+        clickerFactor = clickerEarly ? (CLICK_RNG.nextDouble() * 2.0 - 1.0) * p : CLICK_RNG.nextDouble() * p;
+    }
+
+    private static void runAutoClicker(Minecraft mc) {
+        if (!autoClicker || areaActive) return;
+        if (mc.player == null || mc.gameMode == null || mc.level == null) return;
+        if (mc.gui.screen() != null || mc.player.isSpectator() || mc.player.isUsingItem()) return;
+        if (clickerHold && !mc.options.keyAttack.isDown()) return;
+
+        // Nur Lebewesen im Fadenkreuz (keine Rahmen, Boote usw.)
+        if (!(mc.hitResult instanceof EntityHitResult ehr) || ehr.getType() != HitResult.Type.ENTITY) return;
+        Entity target = ehr.getEntity();
+        if (!(target instanceof LivingEntity) || !target.isAlive()) return;
+
+        float scale = mc.player.getAttackStrengthScale(0.0f);
+        if (clickerFactor < 0) {
+            // frueher schlagen: schon bei z.B. 85 % Cooldown
+            if (scale < 1.0f + clickerFactor) return;
+        } else {
+            // voller Cooldown, danach noch eine zufaellige Wartezeit (Anteil der Cooldown-Dauer)
+            if (scale < 1.0f) {
+                clickerReadyTicks = 0;
+                return;
+            }
+            float delay = mc.player.getCurrentItemAttackStrengthDelay();
+            if (clickerReadyTicks++ < delay * clickerFactor) return;
+        }
+
+        mc.gameMode.attack(mc.player, target);
+        mc.player.swing(InteractionHand.MAIN_HAND);
+        clickerReadyTicks = 0;
+        rollClickerFactor();
+    }
+
+    // ---------- AutoDrop ----------
+
+    /**
+     * Sucht die Methode zum Inventar-Klick per Signatur (int, int, int, Enum, Player) und die
+     * Konstante THROW. Per Reflection, weil Mojang die Namen zwischen Versionen aendert
+     * (ClickType -> ContainerInput).
+     */
+    private static boolean initClick() {
+        if (clickLookupDone) return clickMethod != null;
+        clickLookupDone = true;
+        for (Method m : MultiPlayerGameMode.class.getMethods()) {
+            Class<?>[] p = m.getParameterTypes();
+            if (p.length != 5 || p[0] != int.class || p[1] != int.class || p[2] != int.class) continue;
+            if (!p[3].isEnum() || !p[4].isAssignableFrom(net.minecraft.client.player.LocalPlayer.class)) continue;
+            for (Object c : p[3].getEnumConstants()) {
+                if (((Enum<?>) c).name().equals("THROW")) {
+                    clickMethod = m;
+                    throwConstant = c;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Wirft den ganzen Stapel im angegebenen Slot des Spieler-Inventars (Menue-Slot-Nummer) aus. */
+    private static boolean dropMenuSlot(Minecraft mc, int menuSlot) {
+        if (!initClick()) return false;
+        try {
+            clickMethod.invoke(mc.gameMode, 0, menuSlot, 1, throwConstant, mc.player);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            System.err.println("[1912] AutoDrop fehlgeschlagen: " + e);
+            clickMethod = null;
+            return false;
+        }
+    }
+
+    private static void runAutoDrop(Minecraft mc) {
+        if (!autoDrop || dropItems.isEmpty()) return;
+        if (mc.player == null || mc.gameMode == null || mc.gui.screen() != null) return;
+        if (dropCooldown > 0) {
+            dropCooldown--;
+            return;
+        }
+        var inv = mc.player.getInventory();
+        // Inventar-Index 0-8 = Hotbar (Menue-Slot 36-44), 9-35 = Hauptinventar (Menue-Slot 9-35)
+        for (int i = 0; i < 36; i++) {
+            ItemStack st = inv.getItem(i);
+            if (st.isEmpty() || !dropItems.contains(st.getItem())) continue;
+            if (dropMenuSlot(mc, i < 9 ? 36 + i : i)) {
+                dropCooldown = 2;
+            } else {
+                autoDrop = false;
+                if (!dropFailedWarned) {
+                    dropFailedWarned = true;
+                    mc.player.sendSystemMessage(Component.literal(
+                            "1912: AutoDrop konnte nicht ausgef\u00fchrt werden und wurde ausgeschaltet"));
+                }
+            }
+            return;
+        }
+    }
+
     // ---------- Bereichs-Modus: Start / Stop ----------
 
     public static String startArea(Minecraft mc) {
@@ -127,6 +260,7 @@ public class TestClient implements ClientModInitializer {
         }
         TestConfig.save();
         blockMode = false;
+        gotoMode = false;
         skipped.clear();
         hopeless.clear();
         badObstacles.clear();
@@ -141,16 +275,38 @@ public class TestClient implements ClientModInitializer {
         return null;
     }
 
+    /** Startet den Koordinaten-Modus. Gibt eine Fehlermeldung zurueck oder null bei Erfolg. */
+    public static String startGoto(Minecraft mc) {
+        if (mc.player == null || mc.level == null) return "Nicht im Spiel";
+        TestConfig.save();
+        blockMode = false;
+        gotoMode = true;
+        skipped.clear();
+        hopeless.clear();
+        badObstacles.clear();
+        placed.clear();
+        noBlocksWarned = false;
+        retried = false;
+        setTarget(new BlockPos(gx, gy, gz));
+        lastX = mc.player.getX();
+        lastZ = mc.player.getZ();
+        walking = false;
+        phase = Phase.WALK;
+        applied = true;
+        areaActive = true;
+        return null;
+    }
+
     /** Waehlt den Block, auf den man gerade schaut. */
     public static boolean selectLookedAt(Minecraft mc) {
         if (mc.player == null || mc.level == null) return false;
         if (!(mc.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
-            mc.player.sendSystemMessage(Component.literal("Test: Kein Block anvisiert"));
+            mc.player.sendSystemMessage(Component.literal("1912: Kein Block anvisiert"));
             return false;
         }
         selectedBlock = mc.level.getBlockState(hit.getBlockPos()).getBlock();
         TestConfig.save();
-        mc.player.sendSystemMessage(Component.literal("Test: Block gew\u00e4hlt: ")
+        mc.player.sendSystemMessage(Component.literal("1912: Block gew\u00e4hlt: ")
                 .append(selectedBlock.getName()));
         return true;
     }
@@ -171,12 +327,13 @@ public class TestClient implements ClientModInitializer {
         retried = false;
         setTarget(null);
         walking = false;
+        gotoMode = false;
         blockMode = true;
         updateBounds(mc.player);
         if (nearestOverall(mc.level, mc.player) == null) {
             blockMode = false;
             String msg = selectedBlockName() + " nicht in der N\u00e4he gefunden";
-            mc.player.sendSystemMessage(Component.literal("Test: " + msg));
+            mc.player.sendSystemMessage(Component.literal("1912: " + msg));
             return msg;
         }
         phase = Phase.WALK;
@@ -206,11 +363,12 @@ public class TestClient implements ClientModInitializer {
     public static void stopArea(Minecraft mc, String message) {
         areaActive = false;
         blockMode = false;
+        gotoMode = false;
         setTarget(null);
         releaseAll(mc);
         applied = false;
         if (mc.player != null && message != null) {
-            mc.player.sendSystemMessage(Component.literal("Test: " + message));
+            mc.player.sendSystemMessage(Component.literal("1912: " + message));
         }
     }
 
@@ -219,12 +377,12 @@ public class TestClient implements ClientModInitializer {
     private static void onTick(Minecraft mc) {
         while (toggleKey.consumeClick()) {
             if (areaActive) {
-                stopArea(mc, blockMode ? "Abbau gestoppt" : "Bereich abgebrochen");
+                stopArea(mc, gotoMode ? "Gehen abgebrochen" : blockMode ? "Abbau gestoppt" : "Bereich abgebrochen");
             } else {
                 walking = !walking;
                 if (mc.player != null) {
                     mc.player.sendSystemMessage(
-                            Component.literal("Test: " + (walking ? "AN" : "AUS")));
+                            Component.literal("1912: " + (walking ? "AN" : "AUS")));
                 }
             }
         }
@@ -259,10 +417,13 @@ public class TestClient implements ClientModInitializer {
             var connection = mc.getConnection();
             if (connection != null) {
                 connection.getConnection().disconnect(
-                        Component.literal("Test: Auto-Logout bei 2 Herzen"));
+                        Component.literal("1912: Auto-Logout bei 2 Herzen"));
             }
             return;
         }
+
+        runAutoDrop(mc);
+        runAutoClicker(mc);
 
         if (areaActive) {
             runArea(mc, level, player);
@@ -378,7 +539,119 @@ public class TestClient implements ClientModInitializer {
         return "Bereich fertig (" + left.size() + " Bl\u00f6cke nicht erreichbar)";
     }
 
+    private static void runGoto(Minecraft mc, Level level, Entity player) {
+        applied = true;
+        if (mc.gui.screen() != null) {
+            releaseAll(mc);
+            return;
+        }
+        double moved = Math.abs(player.getX() - lastX) + Math.abs(player.getZ() - lastZ);
+        lastX = player.getX();
+        lastZ = player.getZ();
+
+        double dx = gx + 0.5 - player.getX();
+        double dz = gz + 0.5 - player.getZ();
+        double horiz = Math.sqrt(dx * dx + dz * dz);
+        int footY = player.blockPosition().getY();
+
+        if (horiz < 1.2 && Math.abs(footY - gy) <= 1) {
+            stopArea(mc, "Ziel erreicht");
+            return;
+        }
+        if (++walkTicks > MAX_GOTO_TICKS) {
+            stopArea(mc, "Ziel nicht erreichbar (Zeit abgelaufen)");
+            return;
+        }
+
+        // Gerade dabei, nach oben zu bauen
+        if (pillarGoalY != NO_PILLAR) {
+            if (!pillarStep(mc, level, player)) {
+                stopArea(mc, "Ziel nicht erreichbar (Hochbauen fehlgeschlagen)");
+            }
+            return;
+        }
+
+        // Direkt ueber/unter dem Ziel: senkrecht handeln
+        if (horiz < ARRIVE_DIST) {
+            noProgressTicks = 0;
+            if (gy < footY) {
+                BlockPos under = player.blockPosition().below();
+                if (isMineable(level, under) && !badObstacles.contains(under.asLong())) {
+                    if (!safeToDigDown(level, under) || !digBlock(mc, player, under)) {
+                        stopArea(mc, "Ziel nicht erreichbar (nach unten graben nicht m\u00f6glich)");
+                    }
+                } else {
+                    releaseAll(mc);
+                }
+            } else if (findBuildSlot(mc) >= 0) {
+                pillarGoalY = gy;
+                pillarTicks = 0;
+            } else {
+                stopArea(mc, "Ziel liegt h\u00f6her, aber keine Baubl\u00f6cke in der Hotbar");
+            }
+            return;
+        }
+
+        // Kommt das Ziel naeher? Sonst aufgeben.
+        if (horiz < bestDist - 0.25) {
+            bestDist = horiz;
+            noProgressTicks = 0;
+            stuckPillars = 0;
+        } else if (++noProgressTicks > MAX_GOTO_NO_PROGRESS) {
+            stopArea(mc, "Ziel nicht erreichbar (kein Fortschritt)");
+            return;
+        }
+
+        float targetYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
+
+        BlockPos obstacle = autoMine ? findObstacle(level, player, targetYaw) : null;
+        boolean stepUp = false;
+        if (obstacle != null && canStepUp(level, player, targetYaw)) {
+            obstacle = null;
+            stepUp = true;
+        }
+        if (obstacle != null) {
+            digBlock(mc, player, obstacle);
+            return;
+        }
+        digPos = null;
+        mc.options.keyAttack.setDown(false);
+
+        if (!rotateTo(player, targetYaw, 10.0f, 15.0f)) {
+            stopMove(mc);
+            return;
+        }
+
+        if (bridgeAhead(mc, level, player, targetYaw)) {
+            return;
+        }
+
+        if (moved < 0.02) {
+            stuckTicks++;
+        } else {
+            stuckTicks = 0;
+        }
+        if (stuckTicks > MAX_STUCK_TICKS) {
+            if (stuckPillars < MAX_STUCK_PILLARS && gy >= footY - 1 && findBuildSlot(mc) >= 0) {
+                stuckPillars++;
+                pillarGoalY = footY + 2;
+                pillarTicks = 0;
+                stuckTicks = 0;
+                return;
+            }
+            stopArea(mc, "Ziel nicht erreichbar (h\u00e4ngt fest)");
+            return;
+        }
+        mc.options.keyUp.setDown(true);
+        mc.options.keyJump.setDown(stuckTicks > 8 || stepUp);
+        mc.options.keySprint.setDown(sprint && stuckTicks == 0);
+    }
+
     private static void runArea(Minecraft mc, Level level, Entity player) {
+        if (gotoMode) {
+            runGoto(mc, level, player);
+            return;
+        }
         applied = true;
         if (mc.gui.screen() != null) {
             releaseAll(mc);
@@ -579,7 +852,7 @@ public class TestClient implements ClientModInitializer {
             if (!noBlocksWarned) {
                 noBlocksWarned = true;
                 mc.player.sendSystemMessage(Component.literal(
-                        "Test: Keine Baubl\u00f6cke (z.B. Bruchstein) in der Hotbar"));
+                        "1912: Keine Baubl\u00f6cke (z.B. Bruchstein) in der Hotbar"));
             }
             return false;
         }
