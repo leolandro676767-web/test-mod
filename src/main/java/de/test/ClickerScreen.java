@@ -38,6 +38,7 @@ public class ClickerScreen extends Screen {
 
     private void changePercent(int delta) {
         TestClient.clickerRandom = Math.max(0, Math.min(100, TestClient.clickerRandom + delta));
+        TestClient.rollClickerFactor();
         TestConfig.save();
         percentButton.setMessage(percentLabel());
     }
@@ -75,6 +76,7 @@ public class ClickerScreen extends Screen {
 
         add(Button.builder(onOff("Auch fr\u00fcher schlagen", TestClient.clickerEarly), b -> {
             TestClient.clickerEarly = !TestClient.clickerEarly;
+            TestClient.rollClickerFactor();
             TestConfig.save();
             b.setMessage(onOff("Auch fr\u00fcher schlagen", TestClient.clickerEarly));
         }).bounds(x, y + 78, 200, 20).build(), () -> TestClient.clickerEarly ? Ui.STYLE_ON : Ui.STYLE_NORMAL);

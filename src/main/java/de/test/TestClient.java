@@ -144,7 +144,7 @@ public class TestClient implements ClientModInitializer {
 
     // ---------- AutoClicker ----------
 
-    private static void rollClickerFactor() {
+    public static void rollClickerFactor() {
         double p = Math.max(0, Math.min(100, clickerRandom)) / 100.0;
         // spaeter: 0..+p, mit "frueher": -p..+p
         clickerFactor = clickerEarly ? (CLICK_RNG.nextDouble() * 2.0 - 1.0) * p : CLICK_RNG.nextDouble() * p;
@@ -248,6 +248,7 @@ public class TestClient implements ClientModInitializer {
     // ---------- Bereichs-Modus: Start / Stop ----------
 
     public static String startArea(Minecraft mc) {
+        if (mc.player == null || mc.level == null) return "Nicht im Spiel";
         minX = Math.min(ax1, ax2);
         maxX = Math.max(ax1, ax2);
         minY = Math.min(ay1, ay2);
@@ -268,6 +269,8 @@ public class TestClient implements ClientModInitializer {
         noBlocksWarned = false;
         retried = false;
         setTarget(null);
+        lastX = mc.player.getX();
+        lastZ = mc.player.getZ();
         walking = false;
         phase = Phase.WALK;
         applied = true;
@@ -336,6 +339,8 @@ public class TestClient implements ClientModInitializer {
             mc.player.sendSystemMessage(Component.literal("1912: " + msg));
             return msg;
         }
+        lastX = mc.player.getX();
+        lastZ = mc.player.getZ();
         phase = Phase.WALK;
         applied = true;
         areaActive = true;
@@ -398,6 +403,8 @@ public class TestClient implements ClientModInitializer {
         if (player == null || level == null) {
             walking = false;
             areaActive = false;
+            blockMode = false;
+            gotoMode = false;
             phase = Phase.WALK;
             applied = false;
             return;
@@ -411,6 +418,8 @@ public class TestClient implements ClientModInitializer {
             logoutArmed = false;
             walking = false;
             areaActive = false;
+            blockMode = false;
+            gotoMode = false;
             phase = Phase.WALK;
             applied = false;
             releaseAll(mc);
@@ -573,7 +582,11 @@ public class TestClient implements ClientModInitializer {
 
         // Direkt ueber/unter dem Ziel: senkrecht handeln
         if (horiz < ARRIVE_DIST) {
-            noProgressTicks = 0;
+            // digBlock/pillarStep setzen den Zaehler zurueck; nur Leerlauf (z.B. auf Bedrock) zaehlt hoch
+            if (++noProgressTicks > MAX_GOTO_NO_PROGRESS) {
+                stopArea(mc, "Ziel nicht erreichbar (kein Fortschritt)");
+                return;
+            }
             if (gy < footY) {
                 BlockPos under = player.blockPosition().below();
                 if (isMineable(level, under) && !badObstacles.contains(under.asLong())) {
