@@ -45,6 +45,7 @@ public class TestScreen extends Screen {
         final String title;
         final List<Entry> entries = new ArrayList<>();
         int x, y;
+        float open = 1f; // 0 = eingeklappt, 1 = ausgeklappt (animiert)
 
         Column(String title) {
             this.title = title;
@@ -128,13 +129,22 @@ public class TestScreen extends Screen {
             Column col = columns.get(c);
             col.x = x0 + c * (colW + GAP);
             col.y = y0;
+            col.open = Theme.isCollapsed(c) ? 0f : 1f;
+            final int ci = c;
+            // Klick auf die Kopfzeile klappt die Spalte ein bzw. aus
+            addWidget(Button.builder(Component.empty(), b -> {
+                Theme.toggleCollapsed(ci);
+                TestConfig.save();
+            }).bounds(col.x, col.y, colW, HEADER_H).build());
             for (int e = 0; e < col.entries.size(); e++) {
                 Entry en = col.entries.get(e);
                 en.x = col.x;
                 en.y = col.y + HEADER_H + e * ENTRY_H;
                 en.last = e == col.entries.size() - 1;
                 en.anim = en.state != null && en.state.getAsBoolean() ? 1f : 0f;
-                Runnable action = en.action;
+                Runnable action = () -> {
+                    if (!Theme.isCollapsed(ci)) en.action.run();
+                };
                 // Unsichtbarer Klick-Bereich (wird nicht gezeichnet, nur fuer Mausklicks)
                 addWidget(Button.builder(Component.empty(), b -> action.run())
                         .bounds(en.x, en.y, colW, ENTRY_H).build());
@@ -182,6 +192,7 @@ public class TestScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         super.extractRenderState(g, mouseX, mouseY, delta);
+        Ui.beginFrame();
 
         float t = Math.min(1f, (System.currentTimeMillis() - openedAt) / 180f);
         float ease = 1f - (1f - t) * (1f - t);
@@ -203,19 +214,30 @@ public class TestScreen extends Screen {
         }
 
         for (Column col : columns) {
-            int bodyH = col.entries.size() * ENTRY_H;
-            int bottom = col.y + HEADER_H + bodyH;
+            int colIndex = columns.indexOf(col);
+            float openTarget = Theme.isCollapsed(colIndex) ? 0f : 1f;
+            col.open += (openTarget - col.open) * Ui.step(0.3f);
+            if (Math.abs(openTarget - col.open) < 0.01f) col.open = openTarget;
+            int fullH = col.entries.size() * ENTRY_H;
+            int bodyH = Math.round(fullH * col.open);
+            boolean bodyShown = bodyH >= 3;
 
             // Schatten + Rand
             fillRows(g, col.x + 2, col.y + 3, colW, HEADER_H + bodyH, 0x55000000, true);
             fillRows(g, col.x - 1, col.y - 1, colW + 2, HEADER_H + bodyH + 2, Theme.border(), true);
 
             // Koerper
-            fillRows(g, col.x, col.y + HEADER_H, colW, bodyH, PANEL, true);
+            if (bodyShown) {
+                fillRows(g, col.x, col.y + HEADER_H, colW, bodyH, PANEL, true);
+            }
 
             // Kopfzeile mit Farbverlauf und abgerundeten oberen Ecken
             for (int r = 0; r < HEADER_H; r++) {
                 int inset = r == 0 ? 2 : r == 1 ? 1 : 0;
+                if (!bodyShown) {
+                    // ohne Koerper: auch die unteren Ecken der Kopfzeile abrunden
+                    inset = Math.max(inset, r == HEADER_H - 1 ? 2 : r == HEADER_H - 2 ? 1 : 0);
+                }
                 int base = Theme.head(columns.indexOf(col));
                 int color = lerp(lerp(base, 0xFFFFFFFF, 0.22f), lerp(base, 0xFF000000, 0.18f),
                         r / (float) (HEADER_H - 1));
@@ -231,17 +253,22 @@ public class TestScreen extends Screen {
                     if (en.state.getAsBoolean()) active++;
                 }
             }
+            String mark = Theme.isCollapsed(colIndex) ? "+" : "-";
+            text(g, mark, col.x + colW - 8 - this.font.width(mark), col.y + 7, 0xFFFFFFFF);
             if (toggles > 0) {
                 String count = active + "/" + toggles;
-                text(g, count, col.x + colW - 8 - this.font.width(count), col.y + 7, 0xCCFFFFFF);
+                text(g, count, col.x + colW - 8 - this.font.width(mark) - 6 - this.font.width(count),
+                        col.y + 7, 0xCCFFFFFF);
             }
 
             for (Entry en : col.entries) {
+                // nur Zeilen zeichnen, die beim Ein-/Ausklappen schon komplett sichtbar sind
+                if (en.y + ENTRY_H > col.y + HEADER_H + bodyH) continue;
                 boolean on = en.state != null && en.state.getAsBoolean();
                 boolean over = mouseX >= en.x && mouseX < en.x + colW
                         && mouseY >= en.y && mouseY < en.y + ENTRY_H;
-                float speedH = Theme.animations ? 0.3f : 1f;
-                float speedA = Theme.animations ? 0.35f : 1f;
+                float speedH = Ui.step(0.3f);
+                float speedA = Ui.step(0.35f);
                 en.hover += ((over ? 1f : 0f) - en.hover) * speedH;
                 en.anim += ((on ? 1f : 0f) - en.anim) * speedA;
 

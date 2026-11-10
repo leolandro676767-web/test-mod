@@ -74,8 +74,8 @@ public class TestClient implements ClientModInitializer {
     // Block-Modus: einen Blocktyp waehlen, in der Naehe suchen, hinlaufen und abbauen
     public static boolean blockMode = false;
     public static Block selectedBlock = null;
-    private static final int SEARCH_RADIUS = 24;
-    private static final int SEARCH_HEIGHT = 12;
+    public static int searchRadius = 24;  // Block-Modus: Suchradius horizontal
+    public static int searchHeight = 12;  // Block-Modus: Suchradius vertikal
     public static int ax1 = 0, ay1 = 0, az1 = 0, ax2 = 0, ay2 = 0, az2 = 0;
     private static final long MAX_AREA_VOLUME = 50000L;
     private static int minX, minY, minZ, maxX, maxY, maxZ;
@@ -97,6 +97,15 @@ public class TestClient implements ClientModInitializer {
     private static int pillarTicks = 0;
     private static int stuckPillars = 0;
     private static BlockPos pillarBase = null;
+    // Festhaenge-Erkennung: Spieler bewegt sich ueber lange Zeit nicht von der Stelle
+    private static final int MAX_STALL_TICKS = 400;
+    private static final int MAX_STEPUP_TICKS = 20;
+    private static double stallX, stallY, stallZ;
+    private static boolean stallValid = false;
+    private static int stallTicks = 0;
+    private static int stepUpTicks = 0;
+    /** Nach dem Platzieren: Blick langsam wieder nach oben/vorne drehen. */
+    private static boolean restoreLook = false;
     private static boolean noBlocksWarned = false;
     private static double[] reachPoint = null;
     private static double lastX = 0.0;
@@ -350,12 +359,12 @@ public class TestClient implements ClientModInitializer {
     /** Suchbereich folgt dem Spieler. */
     private static void updateBounds(Entity p) {
         BlockPos c = p.blockPosition();
-        minX = c.getX() - SEARCH_RADIUS;
-        maxX = c.getX() + SEARCH_RADIUS;
-        minY = c.getY() - SEARCH_HEIGHT;
-        maxY = c.getY() + SEARCH_HEIGHT;
-        minZ = c.getZ() - SEARCH_RADIUS;
-        maxZ = c.getZ() + SEARCH_RADIUS;
+        minX = c.getX() - searchRadius;
+        maxX = c.getX() + searchRadius;
+        minY = c.getY() - searchHeight;
+        maxY = c.getY() + searchHeight;
+        minZ = c.getZ() - searchRadius;
+        maxZ = c.getZ() + searchRadius;
     }
 
     /** Abbaubar und (im Block-Modus) vom gewaehlten Typ. */
@@ -523,6 +532,34 @@ public class TestClient implements ClientModInitializer {
         pillarTicks = 0;
         stuckPillars = 0;
         pillarBase = null;
+        stallValid = false;
+        stallTicks = 0;
+        stepUpTicks = 0;
+    }
+
+    /** true, wenn sich der Spieler seit MAX_STALL_TICKS nicht mehr nennenswert bewegt und nichts abgebaut hat. */
+    private static boolean stalled(Entity p) {
+        if (!stallValid || p.distanceToSqr(stallX, stallY, stallZ) > 2.25) {
+            stallX = p.getX();
+            stallY = p.getY();
+            stallZ = p.getZ();
+            stallValid = true;
+            stallTicks = 0;
+            return false;
+        }
+        return ++stallTicks > MAX_STALL_TICKS;
+    }
+
+    /** Beendet das Graben; ein inzwischen abgebauter Block zaehlt als Fortschritt. */
+    private static void clearDig(Level level) {
+        if (digPos != null && !isMineable(level, digPos)) stallTicks = 0;
+        digPos = null;
+    }
+
+    /** Solider Block ueber dem Kopf (2 Bloecke ueber den Fuessen), sonst null. */
+    private static BlockPos ceilingBlock(Level level, Entity p) {
+        BlockPos c = p.blockPosition().above(2);
+        return solid(level, c) ? c : null;
     }
 
     private static void skipTarget(Minecraft mc) {
@@ -569,6 +606,10 @@ public class TestClient implements ClientModInitializer {
         }
         if (++walkTicks > MAX_GOTO_TICKS) {
             stopArea(mc, "Ziel nicht erreichbar (Zeit abgelaufen)");
+            return;
+        }
+        if (stalled(player)) {
+            stopArea(mc, "Ziel nicht erreichbar (steckt fest)");
             return;
         }
 
@@ -619,23 +660,35 @@ public class TestClient implements ClientModInitializer {
 
         BlockPos obstacle = autoMine ? findObstacle(level, player, targetYaw) : null;
         boolean stepUp = false;
+        if (moved >= 0.02) stepUpTicks = 0;
         if (obstacle != null && canStepUp(level, player, targetYaw)) {
-            obstacle = null;
-            stepUp = true;
+            BlockPos ceil = ceilingBlock(level, player);
+            if (ceil != null && isObstacle(level, ceil)) {
+                // Decke ueber uns: erst abbauen, sonst stoesst man beim Hochspringen mit dem Kopf an
+                digBlock(mc, player, ceil);
+                return;
+            }
+            if (ceil == null && stepUpTicks < MAX_STEPUP_TICKS) {
+                // Stufe von einem Block Hoehe: hochspringen. Klappt das nicht, wird die Stufe abgebaut.
+                if (moved < 0.02) stepUpTicks++;
+                obstacle = null;
+                stepUp = true;
+            }
         }
         if (obstacle != null) {
             digBlock(mc, player, obstacle);
             return;
         }
-        digPos = null;
+        clearDig(level);
         mc.options.keyAttack.setDown(false);
 
-        if (!rotateTo(player, targetYaw, 10.0f, 15.0f)) {
-            stopMove(mc);
+        // Luecke vor uns: erst nach unten schauen und den Block setzen
+        if (bridgeAhead(mc, level, player, targetYaw)) {
             return;
         }
 
-        if (bridgeAhead(mc, level, player, targetYaw)) {
+        if (!rotateWalk(player, targetYaw)) {
+            stopMove(mc);
             return;
         }
 
@@ -724,7 +777,7 @@ public class TestClient implements ClientModInitializer {
 
         // 4. Hinlaufen
         walkTicks++;
-        if (walkTicks > MAX_WALK_TICKS) {
+        if (walkTicks > MAX_WALK_TICKS || stalled(player)) {
             skipTarget(mc);
             return;
         }
@@ -783,26 +836,36 @@ public class TestClient implements ClientModInitializer {
         //     (nicht nach der aktuellen Blickrichtung), sonst arbeiten Zielen und Drehen gegeneinander.
         BlockPos obstacle = findObstacle(level, player, targetYaw);
         boolean stepUp = false;
+        if (moved >= 0.02) stepUpTicks = 0;
         if (obstacle != null && canStepUp(level, player, targetYaw)) {
-            // Stufe von einem Block Hoehe: einfach hochspringen statt abbauen
-            obstacle = null;
-            stepUp = true;
+            BlockPos ceil = ceilingBlock(level, player);
+            if (ceil != null && isObstacle(level, ceil)) {
+                // Decke ueber uns: erst abbauen, sonst stoesst man beim Hochspringen mit dem Kopf an
+                digBlock(mc, player, ceil);
+                return;
+            }
+            if (ceil == null && stepUpTicks < MAX_STEPUP_TICKS) {
+                // Stufe von einem Block Hoehe: hochspringen. Klappt das nicht, wird die Stufe abgebaut.
+                if (moved < 0.02) stepUpTicks++;
+                obstacle = null;
+                stepUp = true;
+            }
         }
         if (obstacle != null) {
             digBlock(mc, player, obstacle);
             return;
         }
-        digPos = null;
+        clearDig(level);
         mc.options.keyAttack.setDown(false);
 
-        // 4c. In Laufrichtung drehen (steht dabei still) und loslaufen
-        if (!rotateTo(player, targetYaw, 10.0f, 15.0f)) {
-            stopMove(mc);
+        // Luecke vor uns: erst nach unten schauen und die Bruecke bauen
+        if (bridgeAhead(mc, level, player, targetYaw)) {
             return;
         }
 
-        // Luecke vor uns: Bruecke bauen
-        if (bridgeAhead(mc, level, player, targetYaw)) {
+        // 4c. In Laufrichtung drehen (steht dabei still) und loslaufen
+        if (!rotateWalk(player, targetYaw)) {
+            stopMove(mc);
             return;
         }
 
@@ -906,7 +969,11 @@ public class TestClient implements ClientModInitializer {
         stuckTicks = 0;
         noProgressTicks = 0;
         Vec3 face = Vec3.atCenterOf(below).add(d.getStepX() * 0.5, 0.0, d.getStepZ() * 0.5);
-        return placeBlock(mc, below, d, face, ahead);
+        // erst nach unten auf die Kante schauen, dann platzieren
+        if (!aimAt(p, face.x, face.y, face.z)) return true;
+        boolean ok = placeBlock(mc, below, d, face, ahead);
+        restoreLook = true; // danach langsam wieder nach oben schauen
+        return ok;
     }
 
     /** Ein Schritt beim Hochbauen: springen und im Sprung den Block darunter setzen. */
@@ -915,6 +982,7 @@ public class TestClient implements ClientModInitializer {
             pillarGoalY = NO_PILLAR;
             pillarBase = null;
             mc.options.keyJump.setDown(false);
+            restoreLook = true; // fertig gebaut: Blick langsam wieder anheben
             return true;
         }
         if (++pillarTicks > MAX_PILLAR_TICKS) return false;
@@ -934,21 +1002,30 @@ public class TestClient implements ClientModInitializer {
                 pillarBase = null;
                 return true;
             }
+            // erst nach unten schauen, dann abspringen
+            Vec3 top = Vec3.atCenterOf(pillarBase).add(0.0, 0.5, 0.0);
+            if (!aimAt(p, top.x, top.y, top.z)) {
+                mc.options.keyJump.setDown(false);
+                return true;
+            }
             mc.options.keyJump.setDown(true);
             return true;
         }
 
-        // in der Luft: sobald hoch genug, den Block auf den Untergrund setzen
-        if (pillarBase != null && p.getY() >= pillarBase.getY() + 2.05) {
-            BlockPos placePos = pillarBase.above();
-            if (level.getBlockState(placePos).isAir()) {
-                Vec3 face = Vec3.atCenterOf(pillarBase).add(0.0, 0.5, 0.0);
-                if (!placeBlock(mc, pillarBase, Direction.UP, face, placePos)) {
-                    return false;
+        // in der Luft: Blick bleibt nach unten; sobald hoch genug, den Block auf den Untergrund setzen
+        if (pillarBase != null) {
+            Vec3 face = Vec3.atCenterOf(pillarBase).add(0.0, 0.5, 0.0);
+            boolean aimed = aimAt(p, face.x, face.y, face.z);
+            if (aimed && p.getY() >= pillarBase.getY() + 2.05) {
+                BlockPos placePos = pillarBase.above();
+                if (level.getBlockState(placePos).isAir()) {
+                    if (!placeBlock(mc, pillarBase, Direction.UP, face, placePos)) {
+                        return false;
+                    }
                 }
+                pillarBase = null;
+                mc.options.keyJump.setDown(false);
             }
-            pillarBase = null;
-            mc.options.keyJump.setDown(false);
         }
         return true;
     }
@@ -959,6 +1036,7 @@ public class TestClient implements ClientModInitializer {
         if (pos.equals(digPos)) {
             digTicks++;
         } else {
+            if (digPos != null && mc.level != null && !isMineable(mc.level, digPos)) stallTicks = 0;
             digPos = pos;
             digTicks = 0;
         }
@@ -1148,12 +1226,25 @@ public class TestClient implements ClientModInitializer {
     }
 
     private static boolean rotateTo(Entity p, float targetYaw, float targetPitch, float tolerance) {
+        return rotateTo(p, targetYaw, targetPitch, tolerance, 12.0f, 8.0f, 0.3f);
+    }
+
+    /** Laufrichtung einstellen; nach dem Platzieren wird der Blick dabei langsam wieder angehoben. */
+    private static boolean rotateWalk(Entity p, float targetYaw) {
+        if (!restoreLook) return rotateTo(p, targetYaw, 10.0f, 15.0f);
+        boolean ok = rotateTo(p, targetYaw, 10.0f, 15.0f, 12.0f, 3.0f, 0.12f);
+        if (Math.abs(10.0f - p.getXRot()) < 1.5f) restoreLook = false;
+        return ok;
+    }
+
+    private static boolean rotateTo(Entity p, float targetYaw, float targetPitch, float tolerance,
+                                    float maxYawStep, float maxPitchStep, float factor) {
         float yaw = p.getYRot();
         float pitch = p.getXRot();
         float dy = Mth.wrapDegrees(targetYaw - yaw);
         float dp = targetPitch - pitch;
-        yaw += Math.abs(dy) < 1.0f ? dy : Mth.clamp(dy * 0.3f, -12.0f, 12.0f);
-        pitch += Math.abs(dp) < 1.0f ? dp : Mth.clamp(dp * 0.3f, -8.0f, 8.0f);
+        yaw += Math.abs(dy) < 1.0f ? dy : Mth.clamp(dy * factor, -maxYawStep, maxYawStep);
+        pitch += Math.abs(dp) < 1.0f ? dp : Mth.clamp(dp * factor, -maxPitchStep, maxPitchStep);
         p.setYRot(yaw);
         p.setXRot(Mth.clamp(pitch, -90.0f, 90.0f));
         return Math.abs(dy) < tolerance && Math.abs(dp) < tolerance;

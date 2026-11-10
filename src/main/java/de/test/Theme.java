@@ -31,6 +31,15 @@ final class Theme {
     static boolean animations = true;
     static int logoSize = 0;   // 0 = automatisch, 1..3 = feste Pixelgroesse
     static int colWidth = 1;
+    static int collapsed = 0;  // Bitmaske: Bit i gesetzt = Spalte i eingeklappt
+
+    static boolean isCollapsed(int col) {
+        return (collapsed >> col & 1) != 0;
+    }
+
+    static void toggleCollapsed(int col) {
+        collapsed ^= 1 << col;
+    }
 
     static void clamp() {
         scheme = Math.max(0, Math.min(SCHEME_NAMES.length - 1, scheme));

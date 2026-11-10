@@ -41,6 +41,8 @@ public final class TestConfig {
         TestClient.clickerRandom = Math.max(0, Math.min(100, num(p, "clickerRandom", TestClient.clickerRandom)));
         TestClient.clickerHold = bool(p, "clickerHold", TestClient.clickerHold);
         TestClient.clickerEarly = bool(p, "clickerEarly", TestClient.clickerEarly);
+        TestClient.searchRadius = Math.max(4, Math.min(40, num(p, "searchRadius", TestClient.searchRadius)));
+        TestClient.searchHeight = Math.max(2, Math.min(20, num(p, "searchHeight", TestClient.searchHeight)));
         Theme.scheme = num(p, "themeScheme", Theme.scheme);
         Theme.headHex = num(p, "themeHead", Theme.headHex);
         Theme.accentHex = num(p, "themeAccent", Theme.accentHex);
@@ -48,6 +50,7 @@ public final class TestConfig {
         Theme.animations = bool(p, "themeAnim", Theme.animations);
         Theme.logoSize = num(p, "themeLogoSize", Theme.logoSize);
         Theme.colWidth = num(p, "themeColWidth", Theme.colWidth);
+        Theme.collapsed = num(p, "menuCollapsed", Theme.collapsed) & 0xF;
         Theme.clamp();
         String drops = p.getProperty("dropItems");
         if (drops != null) {
@@ -89,6 +92,8 @@ public final class TestConfig {
         p.setProperty("clickerRandom", Integer.toString(TestClient.clickerRandom));
         p.setProperty("clickerHold", Boolean.toString(TestClient.clickerHold));
         p.setProperty("clickerEarly", Boolean.toString(TestClient.clickerEarly));
+        p.setProperty("searchRadius", Integer.toString(TestClient.searchRadius));
+        p.setProperty("searchHeight", Integer.toString(TestClient.searchHeight));
         p.setProperty("themeScheme", Integer.toString(Theme.scheme));
         p.setProperty("themeHead", Integer.toString(Theme.headHex));
         p.setProperty("themeAccent", Integer.toString(Theme.accentHex));
@@ -96,6 +101,7 @@ public final class TestConfig {
         p.setProperty("themeAnim", Boolean.toString(Theme.animations));
         p.setProperty("themeLogoSize", Integer.toString(Theme.logoSize));
         p.setProperty("themeColWidth", Integer.toString(Theme.colWidth));
+        p.setProperty("menuCollapsed", Integer.toString(Theme.collapsed));
         StringJoiner drops = new StringJoiner(",");
         for (Item it : TestClient.dropItems) {
             drops.add(BuiltInRegistries.ITEM.getKey(it).toString());
