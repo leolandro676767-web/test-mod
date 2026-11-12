@@ -107,7 +107,7 @@ public final class Esp {
 
     private static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
-        if (!enabled || mc.options.hideGui) return;
+        if (!enabled) return;
         if (!Render3D.begin(mc, delta.getGameTimeDeltaPartialTick(true))) return;
         Player self = mc.player;
         float oldAlpha = Ui.alpha;

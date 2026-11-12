@@ -233,7 +233,7 @@ public final class RenderMods {
         }
         if (gamma) setGamma(mc, fullbrightGamma / 100.0);
         else restoreGamma(mc);
-        if (timeChanger) level.setDayTime(timeChangerValue);
+        if (timeChanger) setClientDayTime(level, timeChangerValue);
         if (noRender && noNausea) self.removeEffect(MobEffects.NAUSEA);
 
         // Trail / Breadcrumbs
@@ -255,6 +255,53 @@ public final class RenderMods {
         if (--scanCooldown <= 0) {
             scanCooldown = SCAN_INTERVAL;
             runScans(mc, self);
+        }
+    }
+
+    // ---------- Time Changer (Reflection: in 26.2 gibt es Level.setDayTime nicht mehr) ----------
+
+    private static final java.util.Map<Class<?>, java.lang.reflect.Method> TIME_SETTERS = new java.util.HashMap<>();
+    private static boolean timeWarned = false;
+
+    private static java.lang.reflect.Method findMethod(Class<?> c, String name, int params) {
+        if (TIME_SETTERS.containsKey(c)) return TIME_SETTERS.get(c);
+        java.lang.reflect.Method found = null;
+        for (Class<?> k = c; k != null && found == null; k = k.getSuperclass()) {
+            for (java.lang.reflect.Method m : k.getDeclaredMethods()) {
+                if (m.getName().equals(name) && m.getParameterCount() == params) {
+                    m.setAccessible(true);
+                    found = m;
+                    break;
+                }
+            }
+        }
+        TIME_SETTERS.put(c, found);
+        return found;
+    }
+
+    /** Setzt die Tageszeit nur bei dir: zuerst am Level, sonst an dessen LevelData. */
+    private static void setClientDayTime(Level level, long time) {
+        try {
+            java.lang.reflect.Method set = findMethod(level.getClass(), "setDayTime", 1);
+            if (set != null) {
+                set.invoke(level, time);
+                return;
+            }
+            java.lang.reflect.Method getData = findMethod(level.getClass(), "getLevelData", 0);
+            if (getData != null) {
+                Object data = getData.invoke(level);
+                java.lang.reflect.Method setData = data == null ? null : findMethod(data.getClass(), "setDayTime", 1);
+                if (setData != null) {
+                    setData.invoke(data, time);
+                    return;
+                }
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // unten melden
+        }
+        if (!timeWarned) {
+            timeWarned = true;
+            System.err.println("[1912] Time Changer: keine Methode zum Setzen der Tageszeit gefunden");
         }
     }
 
@@ -553,7 +600,7 @@ public final class RenderMods {
 
     private static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.level == null) return;
 
         // Blur: einfacher Abdunkel-Overlay bei offenem Menue (kein echter Weichzeichner)
         if (blur && mc.gui.screen() != null) {

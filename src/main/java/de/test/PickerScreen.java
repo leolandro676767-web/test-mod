@@ -143,8 +143,8 @@ public class PickerScreen extends Screen {
             }
         } else if (kind == Kind.ENTITY) {
             for (EntityType<?> t : BuiltInRegistries.ENTITY_TYPE) {
-                if (t == EntityType.PLAYER) continue;
                 Identifier key = BuiltInRegistries.ENTITY_TYPE.getKey(t);
+                if (key.getPath().equals("player")) continue;
                 // Vorschau ueber das passende Spawn-Ei, falls es eins gibt
                 Identifier egg = Identifier.fromNamespaceAndPath(key.getNamespace(), key.getPath() + "_spawn_egg");
                 Item icon = BuiltInRegistries.ITEM.containsKey(egg) ? BuiltInRegistries.ITEM.getValue(egg) : Items.AIR;

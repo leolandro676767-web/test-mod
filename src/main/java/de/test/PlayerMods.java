@@ -200,7 +200,9 @@ public final class PlayerMods {
         ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> protect(message));
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signed, sender, params, time) -> {
             if (!nameProtect || !containsOwnName(message)) return true;
-            Minecraft.getInstance().gui.getChat().addMessage(protect(message));
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player == null) return true;
+            mc.player.sendSystemMessage(protect(message));
             return false;
         });
     }

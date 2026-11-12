@@ -201,7 +201,8 @@ public final class MiscMods {
     }
 
     private static void runAutoReconnect(Minecraft mc) {
-        if (!(mc.screen instanceof DisconnectedScreen)) {
+        Screen current = mc.gui.screen();
+        if (!(current instanceof DisconnectedScreen)) {
             reconnectTicks = 0;
             return;
         }
@@ -210,7 +211,7 @@ public final class MiscMods {
         reconnectTicks = 0;
         try {
             net.minecraft.client.gui.screens.ConnectScreen.startConnecting(
-                    mc.screen, mc, net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(lastServer.ip),
+                    current, mc, net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(lastServer.ip),
                     lastServer, false, null);
         } catch (RuntimeException e) {
             System.err.println("[1912] Auto Reconnect fehlgeschlagen: " + e);

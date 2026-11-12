@@ -33,7 +33,8 @@ final class BetterTooltips {
             ItemContainerContents contents = stack.get(DataComponents.CONTAINER);
             if (contents == null) return;
             int shown = 0;
-            for (ItemStack st : contents.nonEmptyItems()) {
+            for (var template : contents.nonEmptyItems()) {
+                ItemStack st = template.create();
                 if (shown++ >= RenderMods.tipShulkerLines) {
                     lines.add(Component.literal("  ...").withStyle(ChatFormatting.DARK_GRAY));
                     break;
