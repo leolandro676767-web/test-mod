@@ -5,6 +5,7 @@
   "name": "1912 Client",
   "description": "1912 Client",
   "environment": "client",
+  "mixins": ["test.mixins.json"],
   "entrypoints": {
     "client": ["de.test.TestClient"]
   },

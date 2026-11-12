@@ -142,8 +142,26 @@ abstract class Form extends Screen {
         }
     }
 
+    /** Beschriftung links; zu lange Texte werden verkleinert (und notfalls gekuerzt), damit nichts ueberlappt. */
     private void label(GuiGraphicsExtractor g, int oy, int y, String text) {
-        Ui.text(g, this.font, text, px + PAD, oy + y + 6, Ui.TEXT, true);
+        int max = LABEL_W - 6;
+        int w = this.font.width(text);
+        if (w <= max) {
+            Ui.text(g, this.font, text, px + PAD, oy + y + 6, Ui.TEXT, true);
+            return;
+        }
+        float sc = Math.max(0.6f, max / (float) w);
+        String t = text;
+        if (w * sc > max) {
+            while (t.length() > 1 && this.font.width(t + "..") * sc > max) t = t.substring(0, t.length() - 1);
+            t = t + "..";
+        }
+        var pose = g.pose();
+        pose.pushMatrix();
+        pose.translate(px + PAD, oy + y + 6 + (1f - sc) * 4f);
+        pose.scale(sc, sc);
+        Ui.text(g, this.font, t, 0, 0, Ui.TEXT, true);
+        pose.popMatrix();
     }
 
     private static String clean(String s, boolean allowNeg) {
@@ -374,6 +392,20 @@ abstract class Form extends Screen {
         resetButton(y, () -> set.accept(def));
     }
 
+    /** Freies Textfeld. */
+    protected void text(String name, Supplier<String> get, Consumer<String> set, String def) {
+        int y = beginRow();
+        EditBox box = new EditBox(this.font, 0, 0, 120, 20, Component.literal(name));
+        box.setMaxLength(32);
+        box.setValue(get.get());
+        box.setResponder(s -> {
+            if (!syncing) set.accept(s);
+        });
+        placeBox(box, PAD + LABEL_W, y);
+        addDraw((g, ox, oy, mx, my) -> label(g, oy, y, name));
+        resetButton(y, () -> set.accept(def));
+    }
+
     /** Hex-Farbe RRGGBB; leer bedeutet -1 (Standard). */
     protected void hex(String name, IntSupplier get, IntConsumer set) {
         int y = beginRow();
@@ -551,12 +583,17 @@ abstract class Form extends Screen {
         }
         super.extractRenderState(g, mouseX, mouseY, delta);
 
+        Ui.alpha = 1f;
+        Fx.backdrop(g, this.width, this.height);
+
         List<int[]> holes = new ArrayList<>();
         for (EditBox b : boxes) {
             if (b.visible) holes.add(Ui.hole(b));
         }
         Ui.alpha = ga;
+        Fx.panelGlow(g, px, curPy + dy, pw, curPh, eased);
         Ui.panel(g, this.font, px, curPy + dy, pw, curPh, this.title.getString(), holes);
+        Fx.openFlash(g, px, curPy + dy, pw, curPh, eased);
         for (EditBox b : boxes) {
             if (!b.visible) continue;
             Ui.alpha = boxAlpha.getOrDefault(b, ga);

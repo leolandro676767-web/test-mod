@@ -125,6 +125,8 @@ public class TestClient implements ClientModInitializer {
     public static KeyMapping toggleKey;
     public static KeyMapping guiKey;
     public static KeyMapping selectKey;
+    public static KeyMapping espKey;
+    public static KeyMapping sortKey;
 
     private enum Phase { WALK, MINE, RETURN }
 
@@ -145,9 +147,22 @@ public class TestClient implements ClientModInitializer {
 
         selectKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.select", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, category));
+        espKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.test.esp", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, category));
+        sortKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.test.sort", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, category));
+        Esp.register();
 
         TestConfig.load();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> TestConfig.save());
+        PlayerMods.register();
+        RenderMods.register();
+        MiscMods.register();
+        ClientTickEvents.START_CLIENT_TICK.register(mc -> {
+            Movement2.startTick(mc);
+            Movement.startTick(mc);
+            PlayerMods.startTick(mc);
+        });
         ClientTickEvents.END_CLIENT_TICK.register(TestClient::onTick);
     }
 
@@ -403,6 +418,15 @@ public class TestClient implements ClientModInitializer {
         while (selectKey.consumeClick()) {
             selectLookedAt(mc);
         }
+        while (espKey.consumeClick()) {
+            Esp.enabled = !Esp.enabled;
+            Esp.rescan();
+            TestConfig.save();
+            if (mc.player != null) {
+                mc.player.sendSystemMessage(Component.literal("1912: ESP " + (Esp.enabled ? "AN" : "AUS")));
+            }
+        }
+        Esp.tick(mc);
         while (guiKey.consumeClick()) {
             mc.gui.setScreen(new TestScreen(mc.gui.screen()));
         }
@@ -442,6 +466,11 @@ public class TestClient implements ClientModInitializer {
 
         runAutoDrop(mc);
         runAutoClicker(mc);
+        Movement.endTick(mc);
+        Movement2.endTick(mc);
+        PlayerMods.endTick(mc);
+        RenderMods.tick(mc);
+        MiscMods.tick(mc);
 
         if (areaActive) {
             runArea(mc, level, player);

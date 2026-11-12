@@ -186,6 +186,7 @@ final class Ui {
                     lerp(Theme.headTop(), Theme.headBottom(), r / (float) (HEADER_H - 1)));
         }
         fill(g, x, y + HEADER_H - 1, x + w, y + HEADER_H, 0x40FFFFFF);
+        Fx.sweep(g, x + 2, y + HEADER_H - 1, w - 4, 1, 0xFFFFFFFF);
         text(g, font, title, x + (w - font.width(title)) / 2, y + 7, 0xFFFFFFFF, true);
     }
 

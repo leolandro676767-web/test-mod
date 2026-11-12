@@ -22,6 +22,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -34,7 +36,7 @@ import net.minecraft.world.level.block.Blocks;
  */
 public class PickerScreen extends Screen {
     /** Was zur Auswahl steht: jedes Item oder jeder Block aus den Spiel-Registern. */
-    public enum Kind { ITEM, BLOCK }
+    public enum Kind { ITEM, BLOCK, ENTITY }
 
     /** Speicherort der Auswahl eines Moduls (Mehrfach- oder Einzelauswahl). */
     public interface Selection {
@@ -138,6 +140,15 @@ public class PickerScreen extends Screen {
                 if (it == Items.AIR) continue;
                 list.add(new Option(it, Component.translatable(it.getDescriptionId()).getString(),
                         shortId(BuiltInRegistries.ITEM.getKey(it).toString()), it));
+            }
+        } else if (kind == Kind.ENTITY) {
+            for (EntityType<?> t : BuiltInRegistries.ENTITY_TYPE) {
+                if (t == EntityType.PLAYER) continue;
+                Identifier key = BuiltInRegistries.ENTITY_TYPE.getKey(t);
+                // Vorschau ueber das passende Spawn-Ei, falls es eins gibt
+                Identifier egg = Identifier.fromNamespaceAndPath(key.getNamespace(), key.getPath() + "_spawn_egg");
+                Item icon = BuiltInRegistries.ITEM.containsKey(egg) ? BuiltInRegistries.ITEM.getValue(egg) : Items.AIR;
+                list.add(new Option(t, t.getDescription().getString(), shortId(key.toString()), icon));
             }
         } else {
             for (Block b : BuiltInRegistries.BLOCK) {
@@ -273,7 +284,8 @@ public class PickerScreen extends Screen {
         footY = py + footRel;
 
         searchBox = new EditBox(this.font, lx, py + searchY, inner, 20, Component.literal("Suchen"));
-        searchBox.setHint(Component.literal(kind == Kind.ITEM ? "Alle Items suchen..." : "Alle Bl\u00f6cke suchen..."));
+        searchBox.setHint(Component.literal(kind == Kind.ITEM ? "Alle Items suchen..."
+                : kind == Kind.ENTITY ? "Alle Mobs suchen..." : "Alle Bl\u00f6cke suchen..."));
         searchBox.setMaxLength(40);
         searchBox.setValue(search);
         searchBox.setResponder(s -> {
@@ -372,11 +384,16 @@ public class PickerScreen extends Screen {
         searchBox.setAlpha(ga);
         super.extractRenderState(g, mouseX, mouseY, delta);
 
+        Ui.alpha = 1f;
+        Fx.backdrop(g, this.width, this.height);
+
         List<int[]> holes = new ArrayList<>();
         holes.add(Ui.hole(searchBox));
         boolean icons = ga >= 0.85f;
         Ui.alpha = ga;
+        Fx.panelGlow(g, px, py + d, pw, ph, ease);
         Ui.panel(g, this.font, px, py + d, pw, ph, this.title.getString(), holes);
+        Fx.openFlash(g, px, py + d, pw, ph, ease);
         Ui.frame(g, searchBox);
 
         // Trennlinie zwischen den Listen
