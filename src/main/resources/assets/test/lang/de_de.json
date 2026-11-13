@@ -1,8 +1,9 @@
 {
   "key.category.test.main": "1912 Client",
   "key.test.toggle": "1912 an/aus",
-  "key.test.gui": "1912-Men\u00fc \u00f6ffnen",
-  "key.test.select": "Block w\u00e4hlen (anvisierter Block)",
-  "key.test.esp": "ESP an/aus",
-  "key.test.sort": "Inventar sortieren"
+  "key.test.gui": "1912-Menü öffnen",
+  "key.test.select": "Block wählen (anvisierter Block)",
+  "key.test.sort": "Inventar sortieren",
+  "key.test.esp_toggle": "ESP an/aus",
+  "key.test.panic": "Alle Module aus / wieder an"
 }

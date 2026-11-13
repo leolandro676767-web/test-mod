@@ -28,6 +28,9 @@ public class GotoScreen extends Form {
                     TestClient.gz = v[2];
                 });
         start = wideButton(startLabel(), true, this::startOrStop);
+        section("Anzeige");
+        toggle("Ziele hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
+        choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
         footer(null, null);
     }
 

@@ -17,8 +17,8 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Misc-Module (Kategorie "Misc"). "Offhand Crash" ist bewusst nicht enthalten - das ist ein
- * Absturz-Exploit gegen andere Clients/Server. Discord Presence, Notebot und Swarm brauchen
- * zusaetzliche Bibliotheken bzw. mehrere Konten und sind nur als Schalter vorhanden.
+ * Absturz-Exploit gegen andere Clients/Server. Discord Presence, Notebot und Swarm liegen in
+ * eigenen Klassen (DiscordIpc, Notebot, Swarm/SwarmNet).
  */
 public final class MiscMods {
     private MiscMods() {
@@ -46,6 +46,9 @@ public final class MiscMods {
     public static String bookBotTitle = "1912";
 
     public static boolean discordPresence = false;
+    public static String discordAppId = "";           // Application ID der eigenen Discord-Anwendung
+    public static String discordText = "1912 Client"; // zweite Zeile
+    public static boolean discordShowServer = false;
 
     public static boolean inventoryTweaks = false;
     public static boolean sortHotbar = false;
@@ -56,6 +59,10 @@ public final class MiscMods {
     public static String messageAuraText = "Hi %name%!";
 
     public static boolean notebot = false;
+    public static int notebotSong = 0;
+    public static int notebotTempo = 4;      // Ticks je Schritt
+    public static int notebotTuneDelay = 2;  // Ticks zwischen zwei Stimm-Klicks
+    public static boolean notebotLoop = false;
 
     public static boolean notifier = false;
     public static boolean notifyDurability = true;
@@ -72,12 +79,21 @@ public final class MiscMods {
     public static String serverSpoofBrand = "vanilla";
 
     public static boolean soundBlocker = false;
+    /** Teile von Geraeusch-Namen, mit Komma getrennt (z.B. "portal, ghast, thunder"). */
+    public static String soundBlockList = "portal, thunder";
 
     public static boolean spam = false;
     public static int spamDelay = 5;                // Sekunden
     public static String spamText = "1912 Client";
 
     public static boolean swarm = false;
+    public static int swarmMode = 0;                // 0 = Auto, 1 = Host, 2 = Worker
+    public static String swarmHost = "127.0.0.1";
+    public static int swarmPort = 19120;
+    public static boolean swarmLan = false;         // Host auch fuer andere PCs im Netzwerk
+    public static boolean swarmMirror = true;       // Module des Hosts auf die Worker uebertragen
+    public static boolean swarmFollow = false;      // Worker laufen dem Host nach
+    public static String swarmMessage = "";
 
     // ---------- Zustand ----------
 
@@ -85,6 +101,9 @@ public final class MiscMods {
     private static int reconnectTicks = 0;
     private static ServerData lastServer = null;
     private static int spamTicks = 0;
+    private static boolean discordWasOn = false;
+    private static long discordStart = 0;
+    private static int discordTicks = 0;
     private static boolean durabilityWarned = false;
     private static boolean lastHadTotem = false;
     private static String lastChat = "";
@@ -171,6 +190,14 @@ public final class MiscMods {
         if (autoReconnect) runAutoReconnect(mc);
         else reconnectTicks = 0;
 
+        Notebot.tick(mc);
+        Swarm.tick(mc);
+        if (discordPresence) {
+            runDiscord(mc);
+        } else if (discordWasOn) {
+            discordWasOn = false;
+            DiscordIpc.stop();
+        }
         if (mc.player == null) return;
 
         if (spam && mc.gui.screen() == null) {
@@ -190,7 +217,26 @@ public final class MiscMods {
         }
     }
 
-    private static void sendChat(Minecraft mc, String text) {
+    /** Discord Presence: einmal pro Sekunde melden, was gerade angezeigt werden soll. */
+    private static void runDiscord(Minecraft mc) {
+        if (!discordWasOn) {
+            discordWasOn = true;
+            discordStart = System.currentTimeMillis();
+            discordTicks = 0;
+        }
+        if (discordTicks++ % 20 != 0) return;
+        String where;
+        if (mc.level == null) {
+            where = "Im Hauptmen\u00fc";
+        } else if (mc.getCurrentServer() != null) {
+            where = discordShowServer ? "Spielt auf " + mc.getCurrentServer().ip : "Spielt im Mehrspieler";
+        } else {
+            where = "Spielt im Einzelspieler";
+        }
+        DiscordIpc.update(discordAppId, where, discordText, discordStart);
+    }
+
+    static void sendChat(Minecraft mc, String text) {
         if (mc.getConnection() == null || text == null || text.isBlank()) return;
         String msg = text.strip();
         if (msg.startsWith("/")) {
@@ -313,8 +359,17 @@ public final class MiscMods {
                 f.text("Titel", () -> bookBotTitle, v -> bookBotTitle = v, "1912");
                 f.footer(() -> bookBot, v -> bookBot = v);
             });
-            case "Discord Presence" -> flag(parent, module, "Zeigt den Status in Discord an.\n(Braucht extra Bibliothek - nicht umgesetzt.)",
-                    () -> discordPresence, v -> discordPresence = v);
+            case "Discord Presence" -> new ModuleScreen(parent, module, f -> {
+                f.description("Zeigt in Discord, dass du gerade spielst.\nDiscord muss auf diesem PC laufen.");
+                f.section("Allgemein");
+                f.text("App-ID", () -> discordAppId, v -> discordAppId = v, "");
+                f.text("Zweite Zeile", () -> discordText, v -> discordText = v, "1912 Client");
+                f.toggle("Server-Adresse zeigen", () -> discordShowServer, v -> discordShowServer = v, false);
+                f.note(() -> "Status: " + DiscordIpc.status());
+                f.note("App-ID: auf discord.com/developers/applications eine Anwendung anlegen. Ihr Name "
+                        + "erscheint in Discord als Spiel. Die Application ID dann hier eintragen.");
+                f.footer(() -> discordPresence, v -> discordPresence = v);
+            });
             case "Inventory Tweaks" -> new ModuleScreen(parent, module, f -> {
                 f.description("Legt gleiche Items auf Tastendruck zusammen\n(Taste in \u201eTasten \u00e4ndern\u201c).");
                 f.section("Allgemein");
@@ -329,8 +384,19 @@ public final class MiscMods {
                 f.slider("Pause je Spieler (s)", 5, 300, () -> messageAuraDelay, v -> messageAuraDelay = v, 60);
                 f.footer(() -> messageAura, v -> messageAura = v);
             });
-            case "Notebot" -> flag(parent, module, "Spielt Lieder auf Notenblöcken.\n(Braucht Lieddateien - nicht umgesetzt.)",
-                    () -> notebot, v -> notebot = v);
+            case "Notebot" -> new ModuleScreen(parent, module, f -> {
+                f.description("Spielt ein Lied auf Notenbl\u00f6cken in deiner N\u00e4he.\nStell dich so hin, dass du alle erreichst (ca. 4 Bl\u00f6cke).");
+                f.section("Lied");
+                f.choice("Lied", Notebot.SONG_NAMES, () -> notebotSong, v -> notebotSong = v, 0);
+                f.slider("Tempo (Ticks je Note)", 1, 10, () -> notebotTempo, v -> notebotTempo = v, 4);
+                f.toggle("Wiederholen", () -> notebotLoop, v -> notebotLoop = v, false);
+                f.section("Stimmen");
+                f.slider("Pause je Klick (Ticks)", 1, 10, () -> notebotTuneDelay, v -> notebotTuneDelay = v, 2);
+                f.note("Eigene Datei: config/" + Notebot.FILE_NAME + " - Noten mit Leerzeichen: c d e f g a h, "
+                        + "c2 = h\u00f6here Oktave, c# = Halbton, - = Pause, c+e+g = Akkord. "
+                        + "Nicht im Kreativmodus. \u00dcber jedem Notenblock muss Luft sein.");
+                f.footer(() -> notebot, v -> notebot = v);
+            });
             case "Notifier" -> new ModuleScreen(parent, module, f -> {
                 f.description("Meldet wichtige Ereignisse im Chat.");
                 f.section("Allgemein");
@@ -354,8 +420,13 @@ public final class MiscMods {
                 f.text("Marke", () -> serverSpoofBrand, v -> serverSpoofBrand = v, "vanilla");
                 f.footer(() -> serverSpoof, v -> serverSpoof = v);
             });
-            case "Sound Blocker" -> flag(parent, module, "Stummt gewählte Geräusche.\n(Braucht Mixin - evtl. wirkungslos.)",
-                    () -> soundBlocker, v -> soundBlocker = v);
+            case "Sound Blocker" -> new ModuleScreen(parent, module, f -> {
+                f.description("Stummt Ger\u00e4usche, die der Server schickt\n(Mobs, Portale, Gewitter, Explosionen ...).");
+                f.section("Allgemein");
+                f.text("Ger\u00e4usche", () -> soundBlockList, v -> soundBlockList = v, "portal, thunder");
+                f.note("Teile des Namens, mit Komma getrennt - z.B. ghast, portal, thunder, explode, villager.");
+                f.footer(() -> soundBlocker, v -> soundBlocker = v);
+            });
             case "Spam" -> new ModuleScreen(parent, module, f -> {
                 f.description("Schreibt wiederholt eine Nachricht.\nBeginnt mit / für Befehle.");
                 f.section("Allgemein");
@@ -363,10 +434,69 @@ public final class MiscMods {
                 f.slider("Abstand (s)", 1, 60, () -> spamDelay, v -> spamDelay = v, 5);
                 f.footer(() -> spam, v -> spam = v);
             });
-            case "Swarm" -> flag(parent, module, "Steuert mehrere Konten gleichzeitig.\n(Nicht umgesetzt.)",
-                    () -> swarm, v -> swarm = v);
+            case "Swarm" -> new ModuleScreen(parent, module, f -> {
+                f.description("Steuert mehrere eigene Spiele gemeinsam: eines ist der Host,\ndie anderen verbinden sich als Worker und machen mit.");
+                f.section("Verbindung");
+                f.choice("Rolle", Swarm.MODES, () -> swarmMode, v -> swarmMode = v, 0);
+                f.text("Host-Adresse", () -> swarmHost, v -> swarmHost = v, "127.0.0.1");
+                f.number("Port", () -> swarmPort, v -> swarmPort = v, 19120);
+                f.toggle("Auch andere PCs (LAN)", () -> swarmLan, v -> swarmLan = v, false);
+                f.note(() -> "Status: " + SwarmNet.status());
+                f.note("Auto: das erste Spiel auf diesem PC wird Host, alle weiteren werden Worker.");
+                f.section("Host steuert die Worker");
+                f.toggle("Module spiegeln", () -> swarmMirror, v -> swarmMirror = v, true);
+                f.toggle("Worker folgen mir", () -> swarmFollow, v -> swarmFollow = v, false);
+                f.text("Nachricht", () -> swarmMessage, v -> swarmMessage = v, "");
+                f.wideButton("Nachricht von allen Workern senden", false, () -> swarmHint(Swarm.sayAll()));
+                f.wideButton("Alle Worker zu mir holen", false, () -> swarmHint(Swarm.callAll(Minecraft.getInstance())));
+                f.wideButton("Alle Worker stoppen", false, () -> swarmHint(Swarm.stopAll()));
+                f.footer(() -> swarm, v -> swarm = v);
+            });
             default -> null;
         };
+    }
+
+    private static final java.util.Map<Class<?>, java.lang.reflect.Field[]> SOUND_FIELDS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Sound Blocker: true = dieses Ger\u00e4usch-Paket nicht abspielen. Der Name des Ger\u00e4uschs wird aus
+     * den Feldern des Pakets gelesen (unabh\u00e4ngig von deren genauen Namen).
+     */
+    public static boolean blockSound(Object packet) {
+        if (!soundBlocker || packet == null || soundBlockList.isBlank()) return false;
+        String text;
+        try {
+            java.lang.reflect.Field[] fields = SOUND_FIELDS.computeIfAbsent(packet.getClass(), c -> {
+                List<java.lang.reflect.Field> out = new java.util.ArrayList<>();
+                for (java.lang.reflect.Field fd : c.getDeclaredFields()) {
+                    if (java.lang.reflect.Modifier.isStatic(fd.getModifiers()) || fd.getType().isPrimitive()) continue;
+                    try {
+                        fd.setAccessible(true);
+                        out.add(fd);
+                    } catch (RuntimeException e) {
+                        // Feld nicht lesbar: ueberspringen
+                    }
+                }
+                return out.toArray(new java.lang.reflect.Field[0]);
+            });
+            StringBuilder sb = new StringBuilder();
+            for (java.lang.reflect.Field fd : fields) sb.append(fd.get(packet)).append(' ');
+            text = sb.toString().toLowerCase(java.util.Locale.ROOT);
+        } catch (Exception | LinkageError e) {
+            return false;
+        }
+        for (String part : soundBlockList.toLowerCase(java.util.Locale.ROOT).split(",")) {
+            String t = part.trim();
+            if (!t.isEmpty() && text.contains(t)) return true;
+        }
+        return false;
+    }
+
+    /** Zeigt eine Fehlermeldung eines Swarm-Knopfs im Chat (null = alles gut). */
+    private static void swarmHint(String error) {
+        var p = Minecraft.getInstance().player;
+        if (error != null && p != null) p.sendSystemMessage(Component.literal("\u00a7c1912: Swarm - " + error));
     }
 
     private static Screen flag(Screen parent, String module, String desc,

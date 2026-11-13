@@ -1,10 +1,15 @@
 package de.test.mixin;
 
+import de.test.MiscMods;
 import de.test.PlayerMods;
+import de.test.RenderMods;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerRotationPacket;
+import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -59,5 +64,22 @@ public abstract class ClientPacketListenerMixin {
     @Inject(method = "handleRotatePlayer", at = @At("TAIL"), require = 0)
     private void test$rotTail(ClientboundPlayerRotationPacket packet, CallbackInfo ci) {
         test$restore();
+    }
+
+    // Sound Blocker: gewaehlte Geraeusche vom Server gar nicht erst abspielen
+    @Inject(method = "handleSoundEvent", at = @At("HEAD"), cancellable = true, require = 0)
+    private void test$sound(ClientboundSoundPacket packet, CallbackInfo ci) {
+        if (MiscMods.blockSound(packet)) ci.cancel();
+    }
+
+    @Inject(method = "handleSoundEntityEvent", at = @At("HEAD"), cancellable = true, require = 0)
+    private void test$soundEntity(ClientboundSoundEntityPacket packet, CallbackInfo ci) {
+        if (MiscMods.blockSound(packet)) ci.cancel();
+    }
+
+    // Boss Stack: Bossleisten selbst verwalten und zusammengefasst zeichnen
+    @Inject(method = "handleBossUpdate", at = @At("HEAD"), cancellable = true, require = 0)
+    private void test$boss(ClientboundBossEventPacket packet, CallbackInfo ci) {
+        if (RenderMods.onBossPacket(packet)) ci.cancel();
     }
 }

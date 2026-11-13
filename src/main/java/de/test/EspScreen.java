@@ -27,9 +27,18 @@ public class EspScreen extends Form {
         }, false);
 
         section("Darstellung");
-        toggle("Kasten", () -> Esp.box, v -> Esp.box = v, true);
+        toggle("Umriss", () -> Esp.box, v -> Esp.box = v, true);
+        choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
+        slider("Scan-Tempo", 1, 10, () -> RenderMods.outlineScanSpeed, v -> RenderMods.outlineScanSpeed = v, 4);
+        toggle("Welle", () -> RenderMods.outlineWave, v -> RenderMods.outlineWave = v, true);
         toggle("Linien", () -> Esp.tracers, v -> Esp.tracers = v, false);
         toggle("Name + Entfernung", () -> Esp.labels, v -> Esp.labels = v, true);
+
+        section("Farben (leer = Standard)");
+        hex("Spieler", () -> Esp.colPlayer, v -> Esp.colPlayer = v);
+        hex("Mobs", () -> Esp.colMob, v -> Esp.colMob = v);
+        hex("Items", () -> Esp.colItem, v -> Esp.colItem = v);
+        hex("Bl\u00f6cke", () -> Esp.colBlock, v -> Esp.colBlock = v);
 
         section("Reichweite");
         slider("Radius", 8, 256, () -> Esp.radius, v -> Esp.radius = v, 64);

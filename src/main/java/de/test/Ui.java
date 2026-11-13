@@ -2,19 +2,21 @@ package de.test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.Comparator;
-import java.util.List;
-import java.util.TreeSet;
-import java.util.function.IntSupplier;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 
-/** Gemeinsamer Flieder/Lila-Stil fuer alle Untermenues. */
+/**
+ * Gemeinsamer Stil fuer alle Menues: Farben, weiche Verlaeufe, runde Flaechen und die
+ * einheitlich gezeichneten Bedienelemente. Texte werden nie mit Punkten abgeschnitten -
+ * die Layouts sorgen fuer genug Platz, und nur im aeussersten Notfall wird ein Text
+ * etwas kleiner geschrieben.
+ */
 final class Ui {
     private Ui() {
     }
@@ -25,24 +27,19 @@ final class Ui {
     static final int TEXT = 0xFFE8E2F3;
     static final int TEXT_ON = 0xFFE3D4FF;
     static final int MUTED = 0xFF8F84A8;
+    /** Ruhige Linie/Rahmenfarbe fuer nicht aktive Elemente. */
+    static final int LINE = 0xFF3A3450;
+    static final int HAIR = 0x26FFFFFF;
 
     static final int STYLE_NORMAL = 0;
     static final int STYLE_PRIMARY = 1;
     static final int STYLE_ON = 2;
 
     static final int HEADER_H = 22;
+    /** Eckenradius der Panels. */
+    static final int RADIUS = 5;
 
-    /** Ein sichtbar gezeichneter Button (das echte Button-Widget wird nur fuer Klicks genutzt). */
-    static final class Btn {
-        final Button button;
-        final IntSupplier style;
-
-        Btn(Button button, IntSupplier style) {
-            this.button = button;
-            this.style = style;
-        }
-    }
-
+    private static final float HALF_PI = (float) (Math.PI / 2);
 
     // ---------- Animation ----------
 
@@ -69,21 +66,6 @@ final class Ui {
         return 1f - (float) Math.pow(1f - speed, frameScale);
     }
 
-    static int mul(int color) {
-        int a0 = color >>> 24;
-        if (alpha >= 0.999f || a0 < 8) return color;
-        int a = Math.max(8, Math.round(a0 * Math.max(0f, alpha)));
-        return (a << 24) | (color & 0xFFFFFF);
-    }
-
-    static void fill(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int color) {
-        g.fill(x1, y1, x2, y2, mul(color));
-    }
-
-    static void text(GuiGraphicsExtractor g, Font font, String s, int x, int y, int color, boolean shadow) {
-        g.text(font, s, x, y, mul(color), shadow);
-    }
-
     /**
      * Weicher Uebergang zum Zielwert (0..1), je Objekt und Kanal gemerkt.
      * String-Schluessel bleiben erhalten, andere Objekte (z.B. Buttons) werden schwach referenziert.
@@ -106,7 +88,30 @@ final class Ui {
         return v;
     }
 
+    // ---------- Farben ----------
+
+    /** Farbe mal globale Transparenz (fuer Text: nie ganz durchsichtig, das zeichnet Minecraft sonst deckend). */
+    static int mul(int color) {
+        int a0 = color >>> 24;
+        if (alpha >= 0.999f || a0 < 8) return color;
+        int a = Math.max(8, Math.round(a0 * Math.max(0f, alpha)));
+        return (a << 24) | (color & 0xFFFFFF);
+    }
+
+    /** Farbe mal globale Transparenz, exakt (fuer Flaechen und Verlaeufe, darf bis 0 gehen). */
+    static int mulA(int color) {
+        if (alpha >= 0.999f) return color;
+        int a = Math.round((color >>> 24) * Math.max(0f, alpha));
+        return (a << 24) | (color & 0xFFFFFF);
+    }
+
+    /** Dieselbe Farbe mit anderer Deckkraft (0..255). */
+    static int withA(int color, int a) {
+        return (Math.max(0, Math.min(255, a)) << 24) | (color & 0xFFFFFF);
+    }
+
     static int lerp(int a, int b, float t) {
+        t = Math.max(0f, Math.min(1f, t));
         int ar = a >>> 24, r1 = (a >> 16) & 255, g1 = (a >> 8) & 255, b1 = a & 255;
         int br = b >>> 24, r2 = (b >> 16) & 255, g2 = (b >> 8) & 255, b2 = b & 255;
         return (Math.round(ar + (br - ar) * t) << 24)
@@ -115,79 +120,216 @@ final class Ui {
                 | Math.round(b1 + (b2 - b1) * t);
     }
 
+    // ---------- Flaechen ----------
+
+    static void fill(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int color) {
+        g.fill(x1, y1, x2, y2, mul(color));
+    }
+
+    /** Stufenloser senkrechter Verlauf (oben -> unten). */
+    static void gradientV(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int top, int bottom) {
+        if (x2 <= x1 || y2 <= y1) return;
+        g.fillGradient(x1, y1, x2, y2, mulA(top), mulA(bottom));
+    }
+
+    /** Stufenloser waagerechter Verlauf (links -> rechts): ein gedrehter senkrechter Verlauf. */
+    static void gradientH(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int left, int right) {
+        if (x2 <= x1 || y2 <= y1) return;
+        var pose = g.pose();
+        pose.pushMatrix();
+        pose.translate(x1, y2);
+        pose.rotate(-HALF_PI);
+        g.fillGradient(0, 0, y2 - y1, x2 - x1, mulA(left), mulA(right));
+        pose.popMatrix();
+    }
+
     /** Rechteck mit abgeschnittenen Ecken (je 1 Pixel). */
     static void rounded(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         fill(g, x + 1, y, x + w - 1, y + h, color);
         fill(g, x, y + 1, x + w, y + h - 1, color);
     }
 
-    /** Fuellt ein Rechteck, spart aber die angegebenen Loecher {x1,y1,x2,y2} aus. */
-    static void fillExcept(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int color, List<int[]> holes) {
-        TreeSet<Integer> ys = new TreeSet<>();
-        ys.add(y1);
-        ys.add(y2);
-        for (int[] h : holes) {
-            if (h[3] > y1 && h[1] < y2) {
-                ys.add(Math.max(y1, h[1]));
-                ys.add(Math.min(y2, h[3]));
+    /** Wie weit Zeile i (0 = aeusserste) einer runden Ecke mit Radius r eingerueckt ist. */
+    static int inset(int r, int i) {
+        double dy = r - i - 0.5;
+        return (int) Math.round(r - Math.sqrt(Math.max(0.0, r * r - dy * dy)));
+    }
+
+    /** Rechteck mit echten runden Ecken (Radius r). */
+    static void roundRect(GuiGraphicsExtractor g, int x, int y, int w, int h, int r, int color) {
+        roundRect(g, x, y, w, h, r, color, true, true);
+    }
+
+    /** Rechteck mit runden Ecken oben und/oder unten. */
+    static void roundRect(GuiGraphicsExtractor g, int x, int y, int w, int h, int r, int color,
+            boolean top, boolean bottom) {
+        if (w <= 0 || h <= 0) return;
+        r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+        int rt = top ? r : 0;
+        int rb = bottom ? r : 0;
+        for (int i = 0; i < rt; i++) {
+            int in = inset(r, i);
+            fill(g, x + in, y + i, x + w - in, y + i + 1, color);
+        }
+        if (h - rt - rb > 0) fill(g, x, y + rt, x + w, y + h - rb, color);
+        for (int i = 0; i < rb; i++) {
+            int in = inset(r, i);
+            fill(g, x + in, y + h - 1 - i, x + w - in, y + h - i, color);
+        }
+    }
+
+    /** Waagerechter Farbverlauf mit runden Ecken oben und/oder unten. */
+    static void roundGradientH(GuiGraphicsExtractor g, int x, int y, int w, int h, int r, int left, int right,
+            boolean top, boolean bottom) {
+        if (w <= 0 || h <= 0) return;
+        r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+        int rt = top ? r : 0;
+        int rb = bottom ? r : 0;
+        for (int i = 0; i < rt; i++) {
+            int in = inset(r, i);
+            float f = in / (float) w;
+            gradientH(g, x + in, y + i, x + w - in, y + i + 1, lerp(left, right, f), lerp(left, right, 1f - f));
+        }
+        gradientH(g, x, y + rt, x + w, y + h - rb, left, right);
+        for (int i = 0; i < rb; i++) {
+            int in = inset(r, i);
+            float f = in / (float) w;
+            gradientH(g, x + in, y + h - 1 - i, x + w - in, y + h - i, lerp(left, right, f), lerp(left, right, 1f - f));
+        }
+    }
+
+    // ---------- Text ----------
+
+    static void text(GuiGraphicsExtractor g, Font font, String s, int x, int y, int color, boolean shadow) {
+        g.text(font, s, x, y, mul(color), shadow);
+    }
+
+    /**
+     * Text, der immer ganz zu sehen ist: passt er nicht in die Breite, wird er verkleinert
+     * (nie gekuerzt und nie mit Punkten abgeschnitten).
+     */
+    static void fitText(GuiGraphicsExtractor g, Font font, String s, int x, int y, int max, int color, boolean shadow) {
+        int w = font.width(s);
+        if (max <= 0 || w <= max) {
+            text(g, font, s, x, y, color, shadow);
+            return;
+        }
+        float sc = max / (float) w;
+        var pose = g.pose();
+        pose.pushMatrix();
+        pose.translate(x, y + (1f - sc) * 4f);
+        pose.scale(sc, sc);
+        text(g, font, s, 0, 0, color, shadow);
+        pose.popMatrix();
+    }
+
+    /** Wie {@link #fitText}, aber um cx zentriert. */
+    static void fitCentered(GuiGraphicsExtractor g, Font font, String s, int cx, int y, int max, int color,
+            boolean shadow) {
+        int w = font.width(s);
+        if (max <= 0 || w <= max) {
+            text(g, font, s, cx - w / 2, y, color, shadow);
+            return;
+        }
+        fitText(g, font, s, cx - max / 2, y, max, color, shadow);
+    }
+
+    /** Bricht einen Text an Leerzeichen so um, dass jede Zeile in die Breite passt. */
+    static List<String> wrap(Font font, String text, int max) {
+        List<String> out = new ArrayList<>();
+        for (String para : text.split("\n", -1)) {
+            if (max <= 0 || font.width(para) <= max) {
+                out.add(para);
+                continue;
             }
-        }
-        Integer prev = null;
-        for (int y : ys) {
-            if (prev != null) {
-                int b1 = prev;
-                int b2 = y;
-                List<int[]> hs = new ArrayList<>();
-                for (int[] h : holes) {
-                    if (h[1] <= b1 && h[3] >= b2) hs.add(h);
+            StringBuilder line = new StringBuilder();
+            for (String word : para.split(" ")) {
+                String tryLine = line.length() == 0 ? word : line + " " + word;
+                if (line.length() > 0 && font.width(tryLine) > max) {
+                    out.add(line.toString());
+                    line = new StringBuilder(word);
+                } else {
+                    line = new StringBuilder(tryLine);
                 }
-                hs.sort(Comparator.comparingInt(h -> h[0]));
-                int cx = x1;
-                for (int[] h : hs) {
-                    if (h[0] > cx) fill(g, cx, b1, Math.min(h[0], x2), b2, color);
-                    cx = Math.max(cx, h[2]);
-                }
-                if (cx < x2) fill(g, cx, b1, x2, b2, color);
             }
-            prev = y;
+            out.add(line.toString());
+        }
+        return out;
+    }
+
+    // ---------- Panel ----------
+
+    /**
+     * Panel mit runden Ecken, weichem Schatten und Kopfzeile im Farbverlauf des Themes.
+     * reserveRight: so viel Platz bleibt rechts in der Kopfzeile frei (z.B. fuer ein Suchfeld).
+     */
+    static void panel(GuiGraphicsExtractor g, Font font, int x, int y, int w, int h, String title, int reserveRight) {
+        int r = RADIUS;
+        Fx.shadow(g, x, y, w, h);
+        roundRect(g, x - 1, y - 1, w + 2, h + 2, r + 1, Theme.border());
+        roundRect(g, x, y + HEADER_H, w, h - HEADER_H, r, PANEL, false, true);
+        header(g, x, y, w, 0f, 1f, false);
+        fitText(g, font, title, x + 10, y + 7, w - 20 - reserveRight, 0xFFFFFFFF, true);
+    }
+
+    /**
+     * Kopfzeile: stufenloser waagerechter Verlauf durch die Theme-Farben. t0..t1 waehlt den
+     * Ausschnitt des Verlaufs (0 = erste Farbe, 1 = letzte), so koennen mehrere Koepfe
+     * nebeneinander einen durchgehenden Verlauf bilden.
+     */
+    static void header(GuiGraphicsExtractor g, int x, int y, int w, float t0, float t1, boolean roundBottom) {
+        int left = Theme.headAt(t0);
+        int right = Theme.headAt(t1);
+        for (int row = 0; row < HEADER_H; row++) {
+            int in = row < RADIUS ? inset(RADIUS, row) : 0;
+            if (roundBottom && HEADER_H - 1 - row < RADIUS) in = Math.max(in, inset(RADIUS, HEADER_H - 1 - row));
+            float f = in / (float) Math.max(1, w);
+            float v = row / (float) (HEADER_H - 1);
+            gradientH(g, x + in, y + row, x + w - in, y + row + 1,
+                    shade(lerp(left, right, f), v), shade(lerp(left, right, 1f - f), v));
         }
     }
 
-    /** Loch fuer ein Eingabefeld (inkl. 1 Pixel Rahmen). */
-    static int[] hole(EditBox b) {
-        return new int[] {b.getX() - 1, b.getY() - 1, b.getX() + b.getWidth() + 1, b.getY() + b.getHeight() + 1};
+    /** Sanfte Schattierung von oben (etwas heller) nach unten (etwas dunkler); v = 0..1. */
+    private static int shade(int color, float v) {
+        if (v < 0.5f) return lerp(color, 0xFFFFFFFF, 0.14f * (1f - v * 2f));
+        return lerp(color, 0xFF000000, 0.16f * (v * 2f - 1f));
     }
 
-    static void frame(GuiGraphicsExtractor g, EditBox b) {
-        int[] h = hole(b);
-        int c = b.isFocused() ? Theme.accent() : Theme.border();
-        fill(g, h[0], h[1], h[2], h[1] + 1, c);
-        fill(g, h[0], h[3] - 1, h[2], h[3], c);
-        fill(g, h[0], h[1], h[0] + 1, h[3], c);
-        fill(g, h[2] - 1, h[1], h[2], h[3], c);
+    // ---------- Bedienelemente ----------
+
+    /** Kleines Plus/Minus (zum Ein-/Ausklappen); t = 1 Plus (zu), t = 0 Minus (offen), dazwischen animiert. */
+    static void plusMinusIcon(GuiGraphicsExtractor g, int cx, int cy, float t, int color) {
+        fill(g, cx - 3, cy, cx + 4, cy + 1, color);
+        int v = Math.round(3f * Math.max(0f, Math.min(1f, t)));
+        if (v > 0) fill(g, cx, cy - v, cx + 1, cy + 1 + v, color);
     }
 
-    /** Panel mit Kopfzeile. Wird NACH super.extractRenderState gezeichnet; die Loecher schuetzen die Eingabefelder. */
-    static void panel(GuiGraphicsExtractor g, Font font, int x, int y, int w, int h, String title, List<int[]> holes) {
-        int bodyH = h - HEADER_H;
-        // Schatten und Rand
-        fill(g, x + 2, y + 3, x + w + 2, y + h + 2, 0x55000000);
-        rounded(g, x - 1, y - 1, w + 2, h + 2, Theme.border());
+    /** Runder An/Aus-Schalter (16x8). t = 0 aus, 1 an. */
+    static void switchPill(GuiGraphicsExtractor g, int x, int y, float t) {
+        roundRect(g, x, y, 16, 8, 4, lerp(LINE, Theme.accent(), t));
+        int kx = x + 1 + Math.round(t * 8f);
+        roundRect(g, kx, y + 1, 6, 6, 3, lerp(0xFFB9B0D0, 0xFFFFFFFF, t));
+    }
 
-        // Koerper (untere Ecken abgerundet)
-        fillExcept(g, x, y + HEADER_H, x + w, y + h - 2, PANEL, holes);
-        fill(g, x + 1, y + h - 2, x + w - 1, y + h - 1, PANEL);
-        fill(g, x + 2, y + h - 1, x + w - 2, y + h, PANEL);
+    /** Schmaler Scrollbalken: Spur plus Griff. hover 0..1 hebt den Griff hervor. */
+    static void scrollbar(GuiGraphicsExtractor g, int x, int trackY, int trackH, int thumbY, int thumbH, float hover) {
+        roundRect(g, x, trackY, 3, trackH, 1, 0x16FFFFFF);
+        roundRect(g, x, thumbY, 3, thumbH, 1, lerp(0x70FFFFFF, Theme.accent(), hover));
+    }
 
-        // Kopfzeile mit Verlauf
-        for (int r = 0; r < HEADER_H; r++) {
-            int inset = r == 0 ? 2 : r == 1 ? 1 : 0;
-            fill(g, x + inset, y + r, x + w - inset, y + r + 1,
-                    lerp(Theme.headTop(), Theme.headBottom(), r / (float) (HEADER_H - 1)));
-        }
-        fill(g, x, y + HEADER_H - 1, x + w, y + HEADER_H, 0x40FFFFFF);
-        Fx.sweep(g, x + 2, y + HEADER_H - 1, w - 4, 1, 0xFFFFFFFF);
-        text(g, font, title, x + (w - font.width(title)) / 2, y + 7, 0xFFFFFFFF, true);
+    /**
+     * Eigener Rahmen fuer ein Eingabefeld. Er liegt genau ueber dem Rand, den Minecraft selbst
+     * zeichnet, und leuchtet weich in der Akzentfarbe auf, wenn das Feld aktiv ist.
+     */
+    static void field(GuiGraphicsExtractor g, EditBox b) {
+        float f = ease(b, 0, b.isFocused() ? 1f : 0f, 0.3f);
+        int c = lerp(LINE, 0xFF000000 | Theme.accent(), f);
+        int x = b.getX(), y = b.getY(), w = b.getWidth(), h = b.getHeight();
+        fill(g, x, y, x + w, y + 1, c);
+        fill(g, x, y + h - 1, x + w, y + h, c);
+        fill(g, x, y + 1, x + 1, y + h - 1, c);
+        fill(g, x + w - 1, y + 1, x + w, y + h - 1, c);
     }
 
     static final String[] ICON_RESET = {
@@ -206,38 +348,63 @@ final class Ui {
         int ox = x + (w - pw) / 2;
         int oy = y + (h - rows.length) / 2;
         for (int r = 0; r < rows.length; r++) {
-            for (int c = 0; c < pw; c++) {
-                if (rows[r].charAt(c) == '#') fill(g, ox + c, oy + r, ox + c + 1, oy + r + 1, color);
+            String row = rows[r];
+            int c = 0;
+            while (c < pw) {
+                if (row.charAt(c) != '#') {
+                    c++;
+                    continue;
+                }
+                int start = c;
+                while (c < pw && row.charAt(c) == '#') c++;
+                fill(g, ox + start, oy + r, ox + c, oy + r + 1, color);
             }
         }
     }
 
-    /** Rahmen + Hintergrund eines 20x20-Feldes (oder breiter). Gibt die Hover-Staerke 0..1 zurueck. */
+    /** Rahmen + Hintergrund eines 20 Pixel hohen Feldes. Gibt die Hover-Staerke 0..1 zurueck. */
     static float box20(GuiGraphicsExtractor g, Object key, int x, int y, int w, int mx, int my, boolean active) {
         boolean over = active && mx >= x && mx < x + w && my >= y && my < y + 20;
         float hv = ease(key, 0, over ? 1f : 0f, 0.3f);
-        rounded(g, x, y, w, 20, lerp(Theme.border(), Theme.accent(), hv));
-        fill(g, x + 1, y + 1, x + w - 1, y + 19, active ? lerp(BTN, Theme.btnHover(), hv) : BTN_OFF);
+        roundRect(g, x, y, w, 20, 3, lerp(LINE, Theme.accent(), hv * 0.8f));
+        roundRect(g, x + 1, y + 1, w - 2, 18, 2, active ? lerp(BTN, Theme.btnHover(), hv) : BTN_OFF);
         return hv;
     }
 
+    /** Haken-Feld: die Fuellung blendet weich ein und aus. */
     static void checkbox(GuiGraphicsExtractor g, Object key, int x, int y, boolean on, int mx, int my) {
-        box20(g, key, x, y, 20, mx, my, true);
-        float t = ease(key, 1, on ? 1f : 0f, 0.35f);
-        int half = Math.round(5f * t);
-        if (half > 0) fill(g, x + 10 - half, y + 10 - half, x + 10 + half, y + 10 + half, Theme.accent());
-    }
-
-    static void resetIcon(GuiGraphicsExtractor g, Object key, int x, int y, int mx, int my) {
         float hv = box20(g, key, x, y, 20, mx, my, true);
-        pattern(g, ICON_RESET, x, y, 20, 20, lerp(TEXT, 0xFFFFFFFF, hv));
+        float t = ease(key, 1, on ? 1f : 0f, 0.35f);
+        if (t > 0.02f) {
+            int c = withA(lerp(Theme.accent(), 0xFFFFFFFF, hv * 0.15f), Math.round(255 * t));
+            int half = 3 + Math.round(2f * t);
+            roundRect(g, x + 10 - half, y + 10 - half, half * 2, half * 2, 2, c);
+        }
     }
 
+    /**
+     * Zuruecksetzen-Symbol ohne Kasten. show 0..1 blendet es ein (nur sichtbar, wenn der Wert
+     * vom Standard abweicht); unter der Maus leuchtet es in der Akzentfarbe.
+     */
+    static void resetIcon(GuiGraphicsExtractor g, Object key, int x, int y, int mx, int my, float show) {
+        if (show <= 0.02f) return;
+        boolean over = mx >= x && mx < x + 16 && my >= y && my < y + 20;
+        float hv = ease(key, 0, over ? 1f : 0f, 0.3f);
+        if (hv > 0.02f) roundRect(g, x, y + 2, 16, 16, 3, withA(Theme.accent(), Math.round(0x30 * hv * show)));
+        pattern(g, ICON_RESET, x, y, 16, 20, withA(lerp(MUTED, 0xFFFFFFFF, hv), Math.round(255 * show)));
+    }
+
+    /** Plus/Minus-Knopf der Auswahllisten. */
     static void plusMinus(GuiGraphicsExtractor g, Object key, int x, int y, boolean plus, boolean active, int mx, int my) {
-        box20(g, key, x, y, 20, mx, my, active);
-        int c = !active ? MUTED : plus ? 0xFF30E030 : 0xFFE03030;
-        fill(g, x + 5, y + 9, x + 15, y + 11, c);
-        if (plus) fill(g, x + 9, y + 5, x + 11, y + 15, c);
+        float hv = box20(g, key, x, y, 20, mx, my, active);
+        int c = !active ? LINE : lerp(TEXT, plus ? 0xFF7CF29A : 0xFFFF8A8A, 0.35f + 0.65f * hv);
+        fill(g, x + 6, y + 9, x + 14, y + 11, c);
+        if (plus) fill(g, x + 9, y + 6, x + 11, y + 14, c);
+    }
+
+    /** So breit muss ein Knopf sein, damit sein Text ganz hineinpasst. */
+    static int buttonWidth(Font font, String text) {
+        return font.width(text) + 16;
     }
 
     static void button(GuiGraphicsExtractor g, Font font, Button b, int mx, int my, int style) {
@@ -246,37 +413,25 @@ final class Ui {
         boolean over = active && mx >= x && mx < x + w && my >= y && my < y + h;
         float hv = ease(b, 0, over ? 1f : 0f, 0.3f);
 
-        rounded(g, x, y, w, h, lerp(Theme.border(), Theme.accent(), hv));
-        int ix = x + 1, iy = y + 1, iw = w - 2, ih = h - 2;
-
-        int textColor = TEXT;
+        int textColor;
         if (!active) {
-            fill(g, ix, iy, ix + iw, iy + ih, BTN_OFF);
+            roundRect(g, x, y, w, h, 3, LINE);
+            roundRect(g, x + 1, y + 1, w - 2, h - 2, 2, BTN_OFF);
             textColor = MUTED;
         } else if (style == STYLE_PRIMARY) {
-            for (int r = 0; r < ih; r++) {
-                int c = lerp(Theme.headTop(), Theme.headBottom(), r / (float) Math.max(1, ih - 1));
-                if (hv > 0f) c = lerp(c, 0xFFFFFFFF, 0.15f * hv);
-                fill(g, ix, iy + r, ix + iw, iy + r + 1, c);
-            }
+            roundRect(g, x, y, w, h, 3, lerp(Theme.border(), 0xFFFFFFFF, 0.25f * hv));
+            roundGradientH(g, x + 1, y + 1, w - 2, h - 2, 2, lerp(Theme.headAt(0.1f), 0xFFFFFFFF, 0.12f * hv),
+                    lerp(Theme.headAt(0.9f), 0xFFFFFFFF, 0.12f * hv), true, true);
             textColor = 0xFFFFFFFF;
         } else if (style == STYLE_ON) {
-            fill(g, ix, iy, ix + iw, iy + ih, lerp(Theme.onBg(), Theme.btnHover(), hv));
-            fill(g, ix, iy, ix + 2, iy + ih, Theme.accent());
+            roundRect(g, x, y, w, h, 3, lerp(Theme.border(), Theme.accent(), hv));
+            roundRect(g, x + 1, y + 1, w - 2, h - 2, 2, lerp(Theme.onBg(), Theme.btnHover(), hv));
             textColor = TEXT_ON;
         } else {
-            fill(g, ix, iy, ix + iw, iy + ih, lerp(BTN, Theme.btnHover(), hv));
+            roundRect(g, x, y, w, h, 3, lerp(LINE, Theme.accent(), hv * 0.8f));
+            roundRect(g, x + 1, y + 1, w - 2, h - 2, 2, lerp(BTN, Theme.btnHover(), hv));
             textColor = lerp(TEXT, 0xFFFFFFFF, hv);
         }
-
-        String s = b.getMessage().getString();
-        int max = w - 10;
-        if (font.width(s) > max) {
-            while (s.length() > 1 && font.width(s + "...") > max) {
-                s = s.substring(0, s.length() - 1);
-            }
-            s = s + "...";
-        }
-        text(g, font, s, x + (w - font.width(s)) / 2, y + (h - 8) / 2, textColor, true);
+        fitCentered(g, font, b.getMessage().getString(), x + w / 2, y + (h - 8) / 2, w - 10, textColor, true);
     }
 }

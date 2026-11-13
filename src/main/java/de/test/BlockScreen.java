@@ -37,6 +37,9 @@ public class BlockScreen extends Form {
         slider("Radius (Bl\u00f6cke)", 4, 40, () -> TestClient.searchRadius, v -> TestClient.searchRadius = v, 24);
         slider("H\u00f6he (Bl\u00f6cke)", 2, 20, () -> TestClient.searchHeight, v -> TestClient.searchHeight = v, 12);
         start = wideButton(startLabel(), true, this::startOrStop);
+        section("Anzeige");
+        toggle("Ziele hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
+        choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
         footer(null, null);
     }
 

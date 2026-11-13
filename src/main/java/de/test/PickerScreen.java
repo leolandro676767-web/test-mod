@@ -81,9 +81,13 @@ public class PickerScreen extends Screen {
 
     private static final int ROW = 22;
     private static final int PAD = 10;
+    private static final int LANE = 7;   // Platz fuer den Scrollbalken je Liste
+    private static final int MID = 13;   // Abstand zwischen den beiden Listen (mit Trennlinie)
 
     private static final Map<Kind, List<Option>> OPTIONS = new EnumMap<>(Kind.class);
     private static final Map<Kind, Map<Object, Option>> LOOKUP = new EnumMap<>(Kind.class);
+    /** Breite des laengsten Namens je Art (einmal gemessen), damit die Listen breit genug werden. */
+    private static final Map<Kind, Integer> NAME_W = new EnumMap<>(Kind.class);
     private static final Map<Item, ItemStack> ICONS = new HashMap<>();
     private static final Set<Item> BAD_ICONS = new HashSet<>();
 
@@ -105,9 +109,9 @@ public class PickerScreen extends Screen {
     private int scrollL = 0;
     private int scrollR = 0;
     private int rows;
-    private int px, py, pw, ph, lx, rx, leftW, rightW, listY, navY, footY;
+    private int px, py, pw, ph, lx, rx, leftW, rightW, listY, capY, footY;
     private EditBox searchBox;
-    private Button prevL, nextL, prevR, nextR, activeBtn, backBtn;
+    private Button activeBtn, backBtn;
 
     /**
      * @param active    optionaler "Aktiv"-Schalter des Moduls (null = keiner)
@@ -224,12 +228,14 @@ public class PickerScreen extends Screen {
         return idx >= 0 && idx < sel.size() ? sel.get(idx) : null;
     }
 
-    private String fit(String s, int max) {
-        if (this.font.width(s) <= max) return s;
-        while (s.length() > 1 && this.font.width(s + "...") > max) {
-            s = s.substring(0, s.length() - 1);
-        }
-        return s + "...";
+    /** Breite des laengsten Namens: danach richtet sich die Breite der Listen (nichts wird gekuerzt). */
+    private int longestName() {
+        Integer cached = NAME_W.get(kind);
+        if (cached != null) return cached;
+        int w = 0;
+        for (Option o : options(kind)) w = Math.max(w, this.font.width(o.name()));
+        NAME_W.put(kind, w);
+        return w;
     }
 
     // ---------- Vorschau ----------
@@ -258,6 +264,9 @@ public class PickerScreen extends Screen {
 
     @Override
     protected void init() {
+        GuiScale.apply();
+        this.width = this.minecraft.getWindow().getGuiScaledWidth();
+        this.height = this.minecraft.getWindow().getGuiScaledHeight();
         options(kind);
         ICONS.clear();
         BAD_ICONS.clear();
@@ -265,35 +274,43 @@ public class PickerScreen extends Screen {
         addBtns.clear();
         delBtns.clear();
 
-        rows = Math.max(4, Math.min(10, (this.height - 190) / ROW));
-        pw = Math.min(380, this.width - 12);
+        rows = Math.max(4, Math.min(12, (this.height - 150) / ROW));
+        // Jede Liste: Vorschau, Name (in voller Laenge), Knopf, Scrollbalken
+        int colNeed = 4 + 16 + 6 + longestName() + 8 + 20 + 2 + LANE;
+        int want = Math.max(360, 2 * colNeed + MID + 2 * PAD);
+        pw = Math.min(want, this.width - 12);
         int inner = pw - 2 * PAD;
-        leftW = inner * 3 / 5;
-        rightW = inner - leftW - 9;
-        int searchY = Ui.HEADER_H + 8;
-        int listRel = searchY + 20 + 6;
-        int navRel = listRel + rows * ROW + 6;
-        int footRel = navRel + 20 + 4 + 1 + 6;
-        ph = footRel + 24 + 6;
+        leftW = (inner - MID) / 2;
+        rightW = inner - MID - leftW;
+        int searchRel = Ui.HEADER_H + 8;
+        int capRel = searchRel + 20 + 7;
+        int listRel = capRel + 12;
+        int footRel = listRel + rows * ROW + 8;
+        ph = footRel + 7 + 20 + 8;
         px = (this.width - pw) / 2;
         py = Math.max(4, (this.height - ph) / 2);
         lx = px + PAD;
-        rx = lx + leftW + 9;
+        rx = lx + leftW + MID;
+        capY = py + capRel;
         listY = py + listRel;
-        navY = py + navRel;
-        footY = py + footRel;
+        footY = py + footRel + 7;
 
-        searchBox = new EditBox(this.font, lx, py + searchY, inner, 20, Component.literal("Suchen"));
-        searchBox.setHint(Component.literal(kind == Kind.ITEM ? "Alle Items suchen..."
-                : kind == Kind.ENTITY ? "Alle Mobs suchen..." : "Alle Bl\u00f6cke suchen..."));
-        searchBox.setMaxLength(40);
-        searchBox.setValue(search);
-        searchBox.setResponder(s -> {
-            search = s;
-            scrollL = 0;
-            refilter();
-        });
-        addRenderableWidget(searchBox);
+        if (searchBox == null) {
+            searchBox = new EditBox(this.font, 0, 0, inner, 20, Component.literal("Suchen"));
+            searchBox.setHint(Component.literal(kind == Kind.ITEM ? "Alle Items durchsuchen"
+                    : kind == Kind.ENTITY ? "Alle Mobs durchsuchen" : "Alle Bl\u00f6cke durchsuchen"));
+            searchBox.setMaxLength(40);
+            searchBox.setValue(search);
+            searchBox.setResponder(s -> {
+                search = s;
+                scrollL = 0;
+                refilter();
+            });
+        }
+        searchBox.setWidth(inner);
+        searchBox.setX(lx);
+        searchBox.setY(py + searchRel);
+        addWidget(searchBox); // gezeichnet wird es von uns selbst (ueber dem Panel)
         refilter();
 
         for (int i = 0; i < rows; i++) {
@@ -305,7 +322,7 @@ public class PickerScreen extends Screen {
                     selection.add(o.value());
                     TestConfig.save();
                 }
-            }).bounds(lx + leftW - 22, y, 20, 20).build()));
+            }).bounds(lx + leftW - LANE - 22, y, 20, 20).build()));
             delBtns.add(addWidget(Button.builder(Component.empty(), b -> {
                 Option o = rightOption(r);
                 if (o != null) {
@@ -313,35 +330,39 @@ public class PickerScreen extends Screen {
                     TestConfig.save();
                     clampScroll();
                 }
-            }).bounds(rx + rightW - 22, y, 20, 20).build()));
+            }).bounds(rx + rightW - LANE - 22, y, 20, 20).build()));
         }
 
-        prevL = addWidget(Button.builder(Component.literal("<"), b -> {
-            scrollL -= rows;
+        // Klick in den Scrollbalken: obere Haelfte blaettert zurueck, untere weiter
+        int half = rows * ROW / 2;
+        addWidget(Button.builder(Component.empty(), b -> {
+            scrollL -= rows - 1;
             clampScroll();
-        }).bounds(lx, navY, 28, 20).build());
-        nextL = addWidget(Button.builder(Component.literal(">"), b -> {
-            scrollL += rows;
+        }).bounds(lx + leftW - LANE, listY, LANE, half).build());
+        addWidget(Button.builder(Component.empty(), b -> {
+            scrollL += rows - 1;
             clampScroll();
-        }).bounds(lx + 32, navY, 28, 20).build());
-        prevR = addWidget(Button.builder(Component.literal("<"), b -> {
-            scrollR -= rows;
+        }).bounds(lx + leftW - LANE, listY + half, LANE, rows * ROW - half).build());
+        addWidget(Button.builder(Component.empty(), b -> {
+            scrollR -= rows - 1;
             clampScroll();
-        }).bounds(rx, navY, 28, 20).build());
-        nextR = addWidget(Button.builder(Component.literal(">"), b -> {
-            scrollR += rows;
+        }).bounds(rx + rightW - LANE, listY, LANE, half).build());
+        addWidget(Button.builder(Component.empty(), b -> {
+            scrollR += rows - 1;
             clampScroll();
-        }).bounds(rx + 32, navY, 28, 20).build());
+        }).bounds(rx + rightW - LANE, listY + half, LANE, rows * ROW - half).build());
 
         activeBtn = null;
         if (active != null) {
+            int activeW = 16 + 6 + this.font.width("Aktiv") + 4;
             activeBtn = addWidget(Button.builder(Component.empty(), b -> {
                 setActive.accept(!active.getAsBoolean());
                 TestConfig.save();
-            }).bounds(lx + 46, footY, 20, 20).build());
+            }).bounds(lx, footY, activeW, 20).build());
         }
+        int backW = Math.max(72, Ui.buttonWidth(this.font, CommonComponents.GUI_BACK.getString()));
         backBtn = addWidget(Button.builder(CommonComponents.GUI_BACK, b -> onClose())
-                .bounds(px + pw - PAD - 90, footY, 90, 20).build());
+                .bounds(px + pw - PAD - backW, footY, backW, 20).build());
 
         // Ausgangspositionen merken, damit die Einblend-Animation alles mitverschieben kann
         baseY.clear();
@@ -352,7 +373,7 @@ public class PickerScreen extends Screen {
 
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int d = scrollY > 0 ? -3 : 3;
-        if (mouseX < rx - 4) {
+        if (mouseX < rx - MID / 2) {
             scrollL += d;
         } else {
             scrollR += d;
@@ -362,6 +383,17 @@ public class PickerScreen extends Screen {
     }
 
     // ---------- Zeichnen ----------
+
+    /** Scrollbalken einer Liste (nur wenn sie mehr Eintraege hat, als sichtbar sind). */
+    private void listBar(GuiGraphicsExtractor g, Object key, int x, int top, int total, int scroll, int mx, int my) {
+        if (total <= rows) return;
+        int trackY = top + 2;
+        int trackH = rows * ROW - 6;
+        int thumbH = Math.max(14, trackH * rows / total);
+        int thumbY = trackY + Math.round((trackH - thumbH) * (scroll / (float) (total - rows)));
+        boolean over = mx >= x - 2 && mx < x + LANE && my >= top && my < top + rows * ROW;
+        Ui.scrollbar(g, x + 2, trackY, trackH, thumbY, thumbH, Ui.ease(key, 0, over ? 1f : 0f, 0.3f));
+    }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
@@ -382,24 +414,33 @@ public class PickerScreen extends Screen {
             e.getKey().setY(e.getValue() + d);
         }
         searchBox.setAlpha(ga);
+        // Minecraft zeichnet hier nichts selbst: das Suchfeld kommt unten, ueber dem Panel
         super.extractRenderState(g, mouseX, mouseY, delta);
 
         Ui.alpha = 1f;
         Fx.backdrop(g, this.width, this.height);
 
-        List<int[]> holes = new ArrayList<>();
-        holes.add(Ui.hole(searchBox));
         boolean icons = ga >= 0.85f;
         Ui.alpha = ga;
         Fx.panelGlow(g, px, py + d, pw, ph, ease);
-        Ui.panel(g, this.font, px, py + d, pw, ph, this.title.getString(), holes);
+        Ui.panel(g, this.font, px, py + d, pw, ph, this.title.getString(), 0);
         Fx.openFlash(g, px, py + d, pw, ph, ease);
-        Ui.frame(g, searchBox);
 
-        // Trennlinie zwischen den Listen
-        Ui.fill(g, lx + leftW + 4, listY + d, lx + leftW + 5, listY + d + rows * ROW, Ui.TEXT);
+        searchBox.extractRenderState(g, mouseX, mouseY, delta);
+        Ui.field(g, searchBox);
 
+        // Ueberschriften der beiden Listen
         List<Option> sel = selected();
+        String all = kind == Kind.ITEM ? "Items" : kind == Kind.ENTITY ? "Mobs" : "Bl\u00f6cke";
+        Ui.text(g, this.font, filtered.size() + " " + all, lx + 2, capY + d, Ui.MUTED, true);
+        Ui.text(g, this.font, "Ausgew\u00e4hlt: " + sel.size(), rx + 2, capY + d, Ui.MUTED, true);
+
+        // feine Trennlinie zwischen den Listen
+        int midX = lx + leftW + MID / 2;
+        Ui.fill(g, midX, listY + d, midX + 1, listY + d + rows * ROW, Ui.HAIR);
+
+        int nameMaxL = leftW - LANE - 22 - 8 - 26;
+        int nameMaxR = rightW - LANE - 22 - 8 - 26;
         for (int r = 0; r < rows; r++) {
             int y = listY + d + r * ROW;
 
@@ -407,14 +448,14 @@ public class PickerScreen extends Screen {
             Button ab = addBtns.get(r);
             boolean chosen = a != null && selection.contains(a.value());
             ab.active = a != null && !chosen;
-            boolean overL = a != null && mouseX >= lx && mouseX < lx + leftW && mouseY >= y && mouseY < y + ROW;
+            boolean overL = a != null && mouseX >= lx && mouseX < lx + leftW - LANE && mouseY >= y && mouseY < y + ROW;
             float hl = Ui.ease(ab, 2, overL ? 1f : 0f, 0.3f);
             if (hl > 0.01f) {
-                Ui.fill(g, lx, y, lx + leftW - 1, y + ROW - 2, Ui.lerp(0x00000000, Theme.hoverBg(), hl));
+                Ui.roundRect(g, lx, y, leftW - LANE, ROW - 1, 3, Ui.withA(0xFFFFFF, Math.round(0x12 * hl)));
             }
             if (a != null) {
                 if (icons) drawIcon(g, a, lx + 4, y + 3);
-                Ui.text(g, this.font, fit(a.name(), leftW - 56), lx + 24, y + 7,
+                Ui.fitText(g, this.font, a.name(), lx + 26, y + 7, nameMaxL,
                         chosen ? Theme.accent() : Ui.TEXT, true);
                 Ui.plusMinus(g, ab, ab.getX(), ab.getY(), true, ab.active, mouseX, mouseY);
             }
@@ -423,34 +464,37 @@ public class PickerScreen extends Screen {
             Option s = idx < sel.size() ? sel.get(idx) : null;
             Button db = delBtns.get(r);
             db.active = s != null;
-            boolean overR = s != null && mouseX >= rx && mouseX < rx + rightW && mouseY >= y && mouseY < y + ROW;
+            boolean overR = s != null && mouseX >= rx && mouseX < rx + rightW - LANE && mouseY >= y && mouseY < y + ROW;
             float hr = Ui.ease(db, 2, overR ? 1f : 0f, 0.3f);
             if (hr > 0.01f) {
-                Ui.fill(g, rx, y, rx + rightW - 1, y + ROW - 2, Ui.lerp(0x00000000, Theme.hoverBg(), hr));
+                Ui.roundRect(g, rx, y, rightW - LANE, ROW - 1, 3, Ui.withA(0xFFFFFF, Math.round(0x12 * hr)));
             }
             if (s != null) {
                 if (icons) drawIcon(g, s, rx + 4, y + 3);
-                Ui.text(g, this.font, fit(s.name(), rightW - 56), rx + 24, y + 7, Ui.TEXT, true);
+                Ui.fitText(g, this.font, s.name(), rx + 26, y + 7, nameMaxR, Ui.TEXT, true);
                 Ui.plusMinus(g, db, db.getX(), db.getY(), false, true, mouseX, mouseY);
             }
         }
-
-        // Navigation + Zaehler
-        prevL.active = scrollL > 0;
-        nextL.active = scrollL + rows < filtered.size();
-        prevR.active = scrollR > 0;
-        nextR.active = scrollR + rows < sel.size();
-        for (Button b : new Button[] {prevL, nextL, prevR, nextR}) {
-            Ui.button(g, this.font, b, mouseX, mouseY, Ui.STYLE_NORMAL);
+        if (sel.isEmpty()) {
+            Ui.fitText(g, this.font, "Noch nichts ausgew\u00e4hlt", rx + 4, listY + d + 7, rightW - LANE - 8,
+                    Ui.withA(Ui.MUTED, 0xB0), true);
         }
-        Ui.text(g, this.font, filtered.size() + " Treffer", lx + 66, navY + d + 6, Ui.MUTED, true);
-        Ui.text(g, this.font, "Gew\u00e4hlt: " + sel.size(), rx + 66, navY + d + 6, Ui.MUTED, true);
+
+        // Scrollbalken statt Blaetter-Knoepfen
+        listBar(g, "pickL", lx + leftW - LANE, listY + d, filtered.size(), scrollL, mouseX, mouseY);
+        listBar(g, "pickR", rx + rightW - LANE, listY + d, sel.size(), scrollR, mouseX, mouseY);
 
         // Fusszeile
-        Ui.fill(g, px, footY + d - 5, px + pw, footY + d - 4, Ui.TEXT);
+        Ui.fill(g, px + PAD, footY + d - 7, px + pw - PAD, footY + d - 6, Ui.HAIR);
         if (activeBtn != null) {
-            Ui.text(g, this.font, "Aktiv:", lx, footY + d + 6, Ui.TEXT, true);
-            Ui.checkbox(g, activeBtn, activeBtn.getX(), activeBtn.getY(), active.getAsBoolean(), mouseX, mouseY);
+            boolean on = active.getAsBoolean();
+            boolean over = mouseX >= activeBtn.getX() && mouseX < activeBtn.getX() + activeBtn.getWidth()
+                    && mouseY >= activeBtn.getY() && mouseY < activeBtn.getY() + 20;
+            float hv = Ui.ease(activeBtn, 0, over ? 1f : 0f, 0.3f);
+            float st = Ui.ease(activeBtn, 1, on ? 1f : 0f, 0.35f);
+            Ui.switchPill(g, activeBtn.getX(), activeBtn.getY() + 6, st);
+            Ui.text(g, this.font, "Aktiv", activeBtn.getX() + 22, activeBtn.getY() + 6,
+                    Ui.lerp(Ui.lerp(Ui.MUTED, Ui.TEXT_ON, st), 0xFFFFFFFF, hv * 0.4f), true);
         }
         Ui.button(g, this.font, backBtn, mouseX, mouseY, Ui.STYLE_NORMAL);
         Ui.alpha = 1f;
@@ -470,6 +514,7 @@ public class PickerScreen extends Screen {
 
     public void removed() {
         TestConfig.save();
+        GuiScale.restore();
     }
 
     @Override

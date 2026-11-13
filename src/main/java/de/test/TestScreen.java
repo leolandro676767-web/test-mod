@@ -2,35 +2,41 @@ package de.test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
 
-/** Hauptmenue im ClickGUI-Stil: Kategorien als Spalten, darunter die Module. */
+/**
+ * Hauptmenue im ClickGUI-Stil: Kategorien als Spalten, darunter die Module; oben eine Suche.
+ * Jede Spalte ist so breit wie ihr laengster Eintrag - kein Name wird gekuerzt.
+ */
 public class TestScreen extends Screen {
-    private static final int GAP = 8;
-    private static final int HEADER_H = 22;
+    private static final int GAP = 6;
+    private static final int HEADER_H = Ui.HEADER_H;
     private static final int ENTRY_H = 18;
-    private static final int SETTINGS_W = 13; // Klickbereich rechts fuer die Einstellungen
+    private static final int DOTS_W = 9;     // Klickbereich rechts fuer die Einstellungen (drei Punkte)
+    private static final int SCROLL_W = 5;   // Platz fuer den schmalen Scrollbalken
+    private static final int SEARCH_H = 16;
+    private static final int FOOTER_H = 14;
+    private static final int R = Ui.RADIUS;  // Eckenradius
 
-    // Flieder / Lila statt Rosa
-    private static final int PANEL = 0xE0140F1F;
-    private static final int TEXT = 0xFFE8E2F3;
-    private static final int TEXT_ON = 0xFFE3D4FF;
-    private static final int MUTED = 0xFF8F84A8;
-    private static final int TRACK_OFF = 0xFF3A3450;
+    private static final int PANEL = Ui.PANEL;
+    private static final int TEXT = Ui.TEXT;
+    private static final int TEXT_ON = Ui.TEXT_ON;
+    private static final int MUTED = Ui.MUTED;
 
     private static final class Entry {
         final String name;
         final BooleanSupplier state; // null = reiner Button ohne An/Aus
         final Runnable action;
         Supplier<Screen> settings; // null = keine Einstellungen
-        boolean plain;             // Scroll-Zeile: ohne Pfeil rechts
         int x, y;
         boolean last;
         float hover = 0f;
@@ -46,9 +52,16 @@ public class TestScreen extends Screen {
     private static final class Column {
         final String title;
         final List<Entry> entries = new ArrayList<>();
-        final List<Entry> visible = new ArrayList<>(); // gerade sichtbare Zeilen (inkl. Scroll-Zeilen)
-        int x, y;
+        final List<Entry> matches = new ArrayList<>(); // passend zur Suche
+        final List<Entry> visible = new ArrayList<>(); // gerade sichtbare Zeilen
+        int index;
+        int x, y, w;
+        float t0, t1;    // Ausschnitt des Farbverlaufs fuer die Kopfzeile
+        boolean scrollable;
+        int scroll;
         float open = 1f; // 0 = eingeklappt, 1 = ausgeklappt (animiert)
+        float headHover = 0f;
+        float laneHover = 0f;
 
         Column(String title) {
             this.title = title;
@@ -57,16 +70,27 @@ public class TestScreen extends Screen {
 
     /** Scroll-Position je Spalte (bleibt beim Schliessen erhalten). */
     private static final java.util.Map<String, Integer> SCROLL = new java.util.HashMap<>();
-    private static final int SCROLL_STEP = 4;
 
     private final Screen parent;
     private final List<Column> columns = new ArrayList<>();
+    private final List<Column> shown = new ArrayList<>();
     private int fitRows = 10;
     private final long openedAt = System.currentTimeMillis();
-    private int colW = 104;
     private int logoScale = 2;
-    private float ga = 1f; // globale Transparenz (Einblenden)
-    private int dy = 0;    // globaler Versatz (Hereingleiten)
+    private int logoY = 0;
+    private int gridY = 0;
+    private int searchY = 0;
+
+    private EditBox searchBox;
+    private String query = "";
+    private boolean pendingRebuild;
+
+    // Tasten zuweisen
+    private static final String BIND_TEXT = "Tasten zuweisen";
+    private boolean bindMode;
+    private String waiting; // Name des Moduls, das gerade auf eine Taste wartet
+    private java.util.Set<Integer> waitHeld = new java.util.HashSet<>();
+    private Button bindBtn;
 
     public TestScreen(Screen parent) {
         super(Component.literal("1912"));
@@ -80,7 +104,7 @@ public class TestScreen extends Screen {
         });
     }
 
-    /** Modul mit An/Aus-Schalter und eigenem Einstellungs-Menue (Pfeil rechts). */
+    /** Modul mit An/Aus-Schalter und eigenem Einstellungs-Menue (drei Punkte rechts). */
     private static Entry module(String name, BooleanSupplier state, Runnable flip, Supplier<Screen> settings) {
         Entry e = toggle(name, state, flip);
         e.settings = settings;
@@ -93,6 +117,16 @@ public class TestScreen extends Screen {
 
     @Override
     protected void init() {
+        buildColumns();
+        initLayout();
+    }
+
+    /** Fuer Tasten ohne offenes Menue: baut die Eintraege einmal auf und merkt sich, was sie tun. */
+    static void registerActions() {
+        new TestScreen(null).buildColumns();
+    }
+
+    private void buildColumns() {
         columns.clear();
 
         Column move = new Column("Bewegung");
@@ -346,6 +380,7 @@ public class TestScreen extends Screen {
         misc.entries.add(open("Design anpassen", () -> new DesignScreen(this)));
         misc.entries.add(open("Tasten \u00e4ndern",
                 () -> new KeyBindsScreen(this, this.minecraft.options)));
+        misc.entries.add(new Entry("Alle Module aus / an", null, Keybinds::panic));
         misc.entries.add(new Entry("Schlie\u00dfen", null, this::onClose));
 
         columns.add(move);
@@ -355,157 +390,347 @@ public class TestScreen extends Screen {
         columns.add(inv);
         columns.add(misc2);
         columns.add(misc);
+        for (int i = 0; i < columns.size(); i++) columns.get(i).index = i;
 
-        int n = columns.size();
-        colW = Math.max(72, Math.min(Theme.columnWidth(), (this.width - 16) / n));
-        logoScale = Theme.logoSize > 0 ? Theme.logoSize : (this.height >= 220 ? 2 : 1);
-        int logoH = Theme.showLogo ? Logo.H * logoScale : 12;
+        // Was jede Taste ausloesen darf (alles ausser der Menue-Spalte)
+        Keybinds.ACTIONS.clear();
+        for (Column col : columns) {
+            if (col == misc) continue;
+            for (Entry e : col.entries) Keybinds.ACTIONS.put(e.name, new Keybinds.Action(e.state, e.action));
+        }
+    }
 
-        // Spalten ggf. auf mehrere Zeilen umbrechen, wenn sie nicht nebeneinander passen
-        int perRow = Math.max(1, Math.min(n, (this.width - 16 + GAP) / (colW + GAP)));
-        int gridRows = (n + perRow - 1) / perRow;
-        int topY = logoH + 12 + 2;
-        int rowGap = 10;
-        int availV = this.height - 16 - topY;
-        // So viele Modul-Zeilen passen je Spalte; laengere Spalten werden scrollbar
-        fitRows = Math.max(5, ((availV - (gridRows - 1) * rowGap) / gridRows - HEADER_H) / ENTRY_H);
+    /** Die einfachen Module, die der Standardmodus zeigt (Welt, Inventar und Menue sind immer komplett). */
+    private static final java.util.Set<String> SIMPLE = java.util.Set.of(
+            "Auto Jump", "Auto Walk", "Flight", "High Jump", "No Fall", "Safe Walk", "Sneak", "Speed", "Sprint", "Step",
+            "Anti Afk", "Auto Clicker", "Auto Eat", "Auto Fish", "Auto Respawn", "Auto Tool", "Fast Use", "Reach",
+            "Speed Mine",
+            "Better Tooltips", "Chams", "Freecam", "Fullbright", "Item Highlight", "Nametags", "Time Changer",
+            "Tracers", "Waypoints",
+            "Auto Reconnect", "Better Chat", "Discord Presence", "Inventory Tweaks", "Notifier");
+
+    /**
+     * Ob ein Eintrag im aktuellen Modus zu sehen ist. Im Standardmodus bleiben ausserdem alle Module
+     * sichtbar, die gerade an sind oder eine Taste haben - sonst waeren sie an, ohne dass man es sieht.
+     */
+    private boolean inMode(Column col, Entry e) {
+        if (Theme.menuMode == 1 || col.index >= 3 && col.index != 5) return true;
+        if (SIMPLE.contains(e.name) || Keybinds.get(e.name) != null) return true;
+        return e.state != null && e.state.getAsBoolean();
+    }
+
+    private boolean bindable(Column col) {
+        return col.index != columns.size() - 1; // die Menue-Spalte bekommt keine Tasten
+    }
+
+    private void initLayout() {
+
+        // Jede Spalte so breit wie ihr laengster Eintrag: kein Name muss gekuerzt werden
+        int total = 0;
+        for (Column col : columns) {
+            int need = 8 + this.font.width(col.title) + 12 + this.font.width("00/00") + 8 + 7 + 9;
+            for (Entry e : col.entries) need = Math.max(need, needWidth(e));
+            col.w = Math.max(Theme.columnWidth(), need);
+            total += col.w;
+        }
+        total += (columns.size() - 1) * GAP;
+
+        // Eigene Menue-Groesse (gilt nur, solange ein 1912-Menue offen ist): "Auto" waehlt sie so,
+        // dass alle Spalten nebeneinander passen
+        GuiScale.need(total + 24, 330);
+        GuiScale.apply();
+        this.width = this.minecraft.getWindow().getGuiScaledWidth();
+        this.height = this.minecraft.getWindow().getGuiScaledHeight();
+
+        layout();
+    }
+
+    private String q() {
+        return query.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean searching() {
+        return !q().isEmpty();
+    }
+
+    private boolean collapsed(Column col) {
+        return !searching() && Theme.isCollapsed(col.index);
+    }
+
+    /** Platz, den ein Eintrag braucht, damit sein Name ganz zu lesen ist. */
+    private int needWidth(Entry e) {
+        int right = e.state != null ? 4 + 16 + 2 + DOTS_W : (e.settings != null ? 4 + DOTS_W : 4);
+        return 8 + this.font.width(e.name) + 2 + badgeW(e) + right + SCROLL_W;
+    }
+
+    /** Platz fuer das Tasten-Schild eines Eintrags. */
+    private int badgeW(Entry e) {
+        Integer k = Keybinds.get(e.name);
+        if (k != null) return this.font.width(Keybinds.keyName(k)) + 8 + 4;
+        return bindMode ? 16 : 0; // freie Plaetze brauchen nur im Zuweisen-Modus Platz
+    }
+
+    /** Verteilt Spalten auf moeglichst wenige, gleichmaessig gefuellte Reihen. */
+    private List<List<Column>> flow(List<Column> cols, int maxW) {
+        // erst zaehlen, wie viele Reihen noetig sind
+        int rows = 1;
+        int cur = 0;
+        for (Column col : cols) {
+            int add = col.w + (cur > 0 ? GAP : 0);
+            if (cur > 0 && cur + add > maxW) {
+                rows++;
+                cur = col.w;
+            } else {
+                cur += add;
+            }
+        }
+        int perRow = (cols.size() + rows - 1) / rows;
+        List<List<Column>> out = new ArrayList<>();
+        List<Column> line = new ArrayList<>();
+        cur = 0;
+        for (Column col : cols) {
+            int add = col.w + (line.isEmpty() ? 0 : GAP);
+            if (!line.isEmpty() && (cur + add > maxW || line.size() >= perRow)) {
+                out.add(line);
+                line = new ArrayList<>();
+                cur = 0;
+                add = col.w;
+            }
+            line.add(col);
+            cur += add;
+        }
+        if (!line.isEmpty()) out.add(line);
+        return out;
+    }
+
+    private void layout() {
+        String q = q();
+        shown.clear();
+        for (Column col : columns) {
+            col.matches.clear();
+            boolean titleHit = !q.isEmpty() && col.title.toLowerCase(Locale.ROOT).contains(q);
+            for (Entry e : col.entries) {
+                // die Suche findet immer alle Module, auch die im Standardmodus ausgeblendeten
+                boolean hit = q.isEmpty() ? inMode(col, e) : titleHit || e.name.toLowerCase(Locale.ROOT).contains(q);
+                if (hit) col.matches.add(e);
+            }
+            if (!col.matches.isEmpty()) shown.add(col);
+        }
+
+        int maxW = this.width - 16;
+        logoScale = Theme.logoSize > 0 ? Theme.logoSize : (this.height >= 300 ? 2 : 1);
+        int logoH = Theme.showLogo ? Logo.H * logoScale : 10;
+        int topY = 8 + logoH + 8 + SEARCH_H + 10;
+        int rowGap = 12;
+        int availV = this.height - FOOTER_H - 6 - topY;
+
+        // Hoehe und Lage des Rasters immer wie ohne Suche -> Suchfeld und Logo springen nicht
+        int gridRowsAll = flow(columns, maxW).size();
+        fitRows = Math.max(4, ((availV - (gridRowsAll - 1) * rowGap) / gridRowsAll - HEADER_H) / ENTRY_H);
         int maxRows = 1;
-        for (Column col : columns) maxRows = Math.max(maxRows, Math.min(fitRows, col.entries.size()));
+        for (Column col : columns) {
+            int n = 0;
+            for (Entry e : col.entries) if (inMode(col, e)) n++;
+            maxRows = Math.max(maxRows, Math.min(fitRows, n));
+        }
         int rowH = HEADER_H + maxRows * ENTRY_H;
-        int gridH = gridRows * rowH + (gridRows - 1) * rowGap;
-        int y0 = topY + Math.max(0, (availV - gridH) / 2);
+        int gridH = gridRowsAll * rowH + (gridRowsAll - 1) * rowGap;
+        gridY = topY + Math.max(0, (availV - gridH) / 3);
+        searchY = gridY - 10 - SEARCH_H;
+        logoY = searchY - 8 - logoH;
 
-        for (int c = 0; c < n; c++) {
-            Column col = columns.get(c);
-            int gr = c / perRow;
-            int inRow = c % perRow;
-            int colsThisRow = Math.min(perRow, n - gr * perRow);
-            int rowW = colsThisRow * colW + (colsThisRow - 1) * GAP;
-            int rowX0 = (this.width - rowW) / 2;
-            col.x = rowX0 + inRow * (colW + GAP);
-            col.y = y0 + gr * (rowH + rowGap);
-            col.open = Theme.isCollapsed(c) ? 0f : 1f;
-            final int ci = c;
-            // Klick auf die Kopfzeile klappt die Spalte ein bzw. aus
-            addWidget(Button.builder(Component.empty(), b -> {
-                Theme.toggleCollapsed(ci);
-                TestConfig.save();
-            }).bounds(col.x, col.y, colW, HEADER_H).build());
-            buildVisible(col);
-            for (int e = 0; e < col.visible.size(); e++) {
-                Entry en = col.visible.get(e);
-                en.x = col.x;
-                en.y = col.y + HEADER_H + e * ENTRY_H;
-                en.last = e == col.visible.size() - 1;
-                en.anim = en.state != null && en.state.getAsBoolean() ? 1f : 0f;
-                Runnable action = () -> {
-                    if (!Theme.isCollapsed(ci)) en.action.run();
-                };
-                // Unsichtbare Klick-Bereiche (werden nicht gezeichnet, nur fuer Mausklicks):
-                // links umschalten, rechts (Pfeil) Einstellungen oeffnen
-                int toggleW = en.settings != null ? colW - SETTINGS_W : colW;
-                addWidget(Button.builder(Component.empty(), b -> action.run())
-                        .bounds(en.x, en.y, toggleW, ENTRY_H).build());
-                if (en.settings != null) {
-                    Supplier<Screen> s = en.settings;
-                    addWidget(Button.builder(Component.empty(), b -> {
-                        if (!Theme.isCollapsed(ci)) this.minecraft.gui.setScreen(s.get());
-                    }).bounds(en.x + toggleW, en.y, SETTINGS_W, ENTRY_H).build());
-                }
+        // Suchfeld (bleibt dasselbe Objekt, damit Text und Cursor beim Neuaufbau erhalten bleiben)
+        int sw = Math.min(200, this.width - 40);
+        if (searchBox == null) {
+            searchBox = new EditBox(this.font, 0, 0, sw, SEARCH_H, Component.literal("Suchen"));
+            searchBox.setHint(Component.literal("Module suchen"));
+            searchBox.setMaxLength(40);
+            searchBox.setValue(query);
+            searchBox.setResponder(s -> {
+                if (s.equals(query)) return;
+                query = s;
+                SCROLL.keySet().removeIf(k -> k.endsWith("?"));
+                pendingRebuild = true;
+            });
+        }
+        int bw = this.font.width(BIND_TEXT) + 18;
+        int sx0 = (this.width - (sw + 6 + bw)) / 2;
+        searchBox.setWidth(sw);
+        searchBox.setX(sx0);
+        searchBox.setY(searchY);
+        addWidget(searchBox); // gezeichnet wird es von uns selbst (nach dem Hintergrund)
+        bindBtn = addWidget(Button.builder(Component.literal(BIND_TEXT), b -> {
+            bindMode = !bindMode;
+            waiting = null;
+            pendingRebuild = true; // Spalten brauchen im Zuweisen-Modus etwas mehr Platz
+        }).bounds(sx0 + sw + 6, searchY, bw, SEARCH_H).build());
+
+        // Spalten (nur die mit Treffern) in Reihen anordnen
+        List<List<Column>> lines = flow(shown, maxW);
+        for (int gr = 0; gr < lines.size(); gr++) {
+            List<Column> line = lines.get(gr);
+            int rowW = (line.size() - 1) * GAP;
+            for (Column col : line) rowW += col.w;
+            int x = (this.width - rowW) / 2;
+            int rowX0 = x;
+            for (Column col : line) {
+                col.x = x;
+                col.y = gridY + gr * (rowH + rowGap);
+                col.t0 = (x - rowX0) / (float) Math.max(1, rowW);
+                col.t1 = (x + col.w - rowX0) / (float) Math.max(1, rowW);
+                x += col.w + GAP;
+                place(col);
             }
         }
     }
 
-    /** Waehlt die sichtbaren Zeilen; bei zu vielen kommen oben/unten Scroll-Zeilen dazu. */
+    /** Legt die unsichtbaren Klick-Bereiche einer Spalte an. */
+    private void place(Column col) {
+        col.open = collapsed(col) ? 0f : 1f;
+        // Klick auf die Kopfzeile klappt die Spalte ein bzw. aus (nicht waehrend der Suche)
+        addWidget(Button.builder(Component.empty(), b -> {
+            if (searching()) return;
+            Theme.toggleCollapsed(col.index);
+            TestConfig.save();
+        }).bounds(col.x, col.y, col.w, HEADER_H).build());
+        buildVisible(col);
+        for (int e = 0; e < col.visible.size(); e++) {
+            Entry en = col.visible.get(e);
+            en.x = col.x;
+            en.y = col.y + HEADER_H + e * ENTRY_H;
+            en.last = e == col.visible.size() - 1;
+            en.anim = en.state != null && en.state.getAsBoolean() ? 1f : 0f;
+            // links umschalten, rechts (Punkte) Einstellungen oeffnen
+            int dotsX = col.x + col.w - SCROLL_W - DOTS_W;
+            int toggleW = en.settings != null ? dotsX - en.x : col.w - SCROLL_W;
+            boolean canBind = bindable(col);
+            addWidget(Button.builder(Component.empty(), b -> {
+                if (collapsed(col)) return;
+                if (bindMode && canBind) {
+                    if (!en.name.equals(waiting)) {
+                        waiting = en.name;
+                        waitHeld = Keybinds.pressedNow();
+                    }
+                    return;
+                }
+                en.action.run();
+            }).bounds(en.x, en.y, toggleW, ENTRY_H).build());
+            if (en.settings != null) {
+                Supplier<Screen> s = en.settings;
+                addWidget(Button.builder(Component.empty(), b -> {
+                    if (!collapsed(col)) this.minecraft.gui.setScreen(s.get());
+                }).bounds(dotsX, en.y, DOTS_W, ENTRY_H).build());
+            }
+        }
+        if (col.scrollable) {
+            // Klick in den Scrollbalken ober-/unterhalb des Griffs blaettert eine Seite
+            int[] th = thumb(col);
+            int lx = col.x + col.w - SCROLL_W;
+            int page = Math.max(1, fitRows - 1);
+            if (th[2] > th[0]) {
+                addWidget(Button.builder(Component.empty(), b -> scroll(col, -page))
+                        .bounds(lx, th[0], SCROLL_W, th[2] - th[0]).build());
+            }
+            int below = th[2] + th[3];
+            if (th[0] + th[1] > below) {
+                addWidget(Button.builder(Component.empty(), b -> scroll(col, page))
+                        .bounds(lx, below, SCROLL_W, th[0] + th[1] - below).build());
+            }
+        }
+    }
+
+    private String scrollKey(Column col) {
+        return col.title + (searching() ? "?" : "");
+    }
+
+    /** Waehlt die sichtbaren Zeilen; laengere Spalten bekommen einen Scrollbalken. */
     private void buildVisible(Column col) {
         col.visible.clear();
-        int total = col.entries.size();
-        if (total <= fitRows) {
-            col.visible.addAll(col.entries);
+        int total = col.matches.size();
+        col.scrollable = total > fitRows;
+        if (!col.scrollable) {
+            col.scroll = 0;
+            col.visible.addAll(col.matches);
             return;
         }
-        int shown = fitRows - 2;
-        int maxScroll = total - shown;
-        int scroll = Math.max(0, Math.min(maxScroll, SCROLL.getOrDefault(col.title, 0)));
-        SCROLL.put(col.title, scroll);
-        int above = scroll;
-        int below = total - shown - scroll;
-        Entry up = new Entry(above > 0 ? "^  " + above + " weitere" : "^", null, () -> scroll(col, -SCROLL_STEP));
-        Entry down = new Entry(below > 0 ? "v  " + below + " weitere" : "v", null, () -> scroll(col, SCROLL_STEP));
-        up.plain = true;
-        down.plain = true;
-        col.visible.add(up);
-        for (int i = scroll; i < scroll + shown; i++) col.visible.add(col.entries.get(i));
-        col.visible.add(down);
+        int maxScroll = total - fitRows;
+        int scroll = Math.max(0, Math.min(maxScroll, SCROLL.getOrDefault(scrollKey(col), 0)));
+        SCROLL.put(scrollKey(col), scroll);
+        col.scroll = scroll;
+        for (int i = scroll; i < scroll + fitRows; i++) col.visible.add(col.matches.get(i));
+    }
+
+    /** Scrollbalken: {Spur oben, Spur-Hoehe, Griff oben, Griff-Hoehe}. */
+    private int[] thumb(Column col) {
+        int trackY = col.y + HEADER_H + 4;
+        int trackH = Math.max(8, col.visible.size() * ENTRY_H - 8 - 2);
+        int total = Math.max(1, col.matches.size());
+        int maxScroll = Math.max(1, total - fitRows);
+        int thumbH = Math.max(12, trackH * fitRows / total);
+        int thumbY = trackY + Math.round((trackH - thumbH) * (col.scroll / (float) maxScroll));
+        return new int[] {trackY, trackH, thumbY, thumbH};
     }
 
     private void scroll(Column col, int delta) {
-        SCROLL.put(col.title, SCROLL.getOrDefault(col.title, 0) + delta);
+        SCROLL.put(scrollKey(col), SCROLL.getOrDefault(scrollKey(col), 0) + delta);
+        rebuildKeepFocus();
+    }
+
+    private void rebuildKeepFocus() {
+        boolean focused = searchBox != null && searchBox.isFocused();
         this.rebuildWidgets();
+        if (focused && searchBox != null) this.setFocused(searchBox);
     }
 
     /** Mausrad ueber einer Spalte scrollt sie. */
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        for (Column col : columns) {
+        for (Column col : shown) {
             int h = HEADER_H + col.visible.size() * ENTRY_H;
-            boolean over = mouseX >= col.x && mouseX < col.x + colW && mouseY >= col.y && mouseY < col.y + h;
-            if (over && col.entries.size() > fitRows) {
-                scroll(col, scrollY > 0 ? -1 : 1);
+            boolean over = mouseX >= col.x && mouseX < col.x + col.w && mouseY >= col.y && mouseY < col.y + h;
+            if (over && col.scrollable) {
+                scroll(col, scrollY > 0 ? -2 : 2);
                 return true;
             }
         }
         return false;
     }
 
-    // ---------- Zeichen-Helfer ----------
+    // ---------- Zeichnen ----------
 
-    private int al(int argb) {
-        int a = Math.round((argb >>> 24) * ga);
-        return (a << 24) | (argb & 0xFFFFFF);
+    /** Schreibt einen Namen; ein Suchtreffer wird darin unterstrichen. Der Platz reicht immer aus. */
+    private void name(GuiGraphicsExtractor g, String s, int x, int y, int max, int color) {
+        Ui.fitText(g, this.font, s, x, y, max, color, true);
+        String q = q();
+        if (q.isEmpty()) return;
+        int i = s.toLowerCase(Locale.ROOT).indexOf(q);
+        if (i < 0) return;
+        int end = Math.min(s.length(), i + q.length());
+        int w = this.font.width(s);
+        float sc = max > 0 && w > max ? max / (float) w : 1f;
+        int ux = x + Math.round(this.font.width(s.substring(0, i)) * sc);
+        int uw = Math.round(this.font.width(s.substring(i, end)) * sc);
+        Ui.fill(g, ux, y + 9, ux + uw, y + 10, Theme.accent());
     }
-
-    private static int lerp(int a, int b, float t) {
-        int ar = a >>> 24, r1 = (a >> 16) & 255, g1 = (a >> 8) & 255, b1 = a & 255;
-        int br = b >>> 24, r2 = (b >> 16) & 255, g2 = (b >> 8) & 255, b2 = b & 255;
-        return (Math.round(ar + (br - ar) * t) << 24)
-                | (Math.round(r1 + (r2 - r1) * t) << 16)
-                | (Math.round(g1 + (g2 - g1) * t) << 8)
-                | Math.round(b1 + (b2 - b1) * t);
-    }
-
-    private void fill(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int color) {
-        g.fill(x1, y1 + dy, x2, y2 + dy, al(color));
-    }
-
-    /** Rechteck, optional mit abgerundeten unteren Ecken. */
-    private void fillRows(GuiGraphicsExtractor g, int x, int y, int w, int h, int color, boolean roundBottom) {
-        if (!roundBottom) {
-            fill(g, x, y, x + w, y + h, color);
-            return;
-        }
-        fill(g, x, y, x + w, y + h - 2, color);
-        fill(g, x + 1, y + h - 2, x + w - 1, y + h - 1, color);
-        fill(g, x + 2, y + h - 1, x + w - 2, y + h, color);
-    }
-
-    private void text(GuiGraphicsExtractor g, String s, int x, int y, int color) {
-        g.text(this.font, s, x, y + dy, al(color), true);
-    }
-
-    // ---------- Rendern ----------
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-        super.extractRenderState(g, mouseX, mouseY, delta);
-        Ui.beginFrame();
-
-        float t = Math.min(1f, (System.currentTimeMillis() - openedAt) / 180f);
-        float ease = 1f - (1f - t) * (1f - t);
-        if (!Theme.animations) {
-            ease = 1f;
+        if (waiting != null) pollBind();
+        if (pendingRebuild) {
+            pendingRebuild = false;
+            rebuildKeepFocus();
         }
-        ga = Math.max(0.06f, ease);
-        dy = Math.round((1f - ease) * 10f);
+        Ui.beginFrame();
+        float t = Math.min(1f, (System.currentTimeMillis() - openedAt) / 180f);
+        float ease = Theme.animations ? 1f - (1f - t) * (1f - t) : 1f;
+        float ga = Math.max(0.06f, ease);  // globale Transparenz (Einblenden)
+        int dy = Math.round((1f - ease) * 10f); // globaler Versatz (Hereingleiten)
+        if (searchBox != null) {
+            searchBox.setAlpha(ga);
+            searchBox.setY(searchY + dy);
+        }
+        if (bindBtn != null) bindBtn.setY(searchY + dy);
+        // Minecraft zeichnet hier nichts selbst: das Suchfeld kommt unten, ueber dem Hintergrund
+        super.extractRenderState(g, mouseX, mouseY, delta);
 
         Ui.alpha = 1f;
         Fx.backdrop(g, this.width, this.height);
@@ -515,141 +740,201 @@ public class TestScreen extends Screen {
         int cx = this.width / 2;
         if (Theme.showLogo) {
             int logoW = Logo.W * logoScale;
-            int logoY = columns.get(0).y - 12 - Logo.H * logoScale;
             Logo.draw(g, cx - logoW / 2, logoY, logoScale, ga, dy);
         } else {
             String title = "1 9 1 2";
-            text(g, title, cx - this.font.width(title) / 2, columns.get(0).y - 18, 0xFFFFFFFF);
+            Ui.text(g, this.font, title, cx - this.font.width(title) / 2, logoY + dy, 0xFFFFFFFF, true);
         }
 
-        for (Column col : columns) {
-            int colIndex = columns.indexOf(col);
-            float openTarget = Theme.isCollapsed(colIndex) ? 0f : 1f;
-            col.open += (openTarget - col.open) * Ui.step(0.3f);
-            if (Math.abs(openTarget - col.open) < 0.01f) col.open = openTarget;
-            int fullH = col.visible.size() * ENTRY_H;
-            int bodyH = Math.round(fullH * col.open);
-            boolean bodyShown = bodyH >= 3;
-
-            // Weiches Leuchten hinter der Spalte
-            Fx.panelGlow(g, col.x, col.y + dy, colW, HEADER_H + bodyH, ease);
-            // Schatten + Rand
-            fillRows(g, col.x + 2, col.y + 3, colW, HEADER_H + bodyH, 0x55000000, true);
-            fillRows(g, col.x - 1, col.y - 1, colW + 2, HEADER_H + bodyH + 2, Theme.border(), true);
-
-            // Koerper
-            if (bodyShown) {
-                fillRows(g, col.x, col.y + HEADER_H, colW, bodyH, PANEL, true);
-            }
-
-            // Kopfzeile mit Farbverlauf und abgerundeten oberen Ecken
-            for (int r = 0; r < HEADER_H; r++) {
-                int inset = r == 0 ? 2 : r == 1 ? 1 : 0;
-                if (!bodyShown) {
-                    // ohne Koerper: auch die unteren Ecken der Kopfzeile abrunden
-                    inset = Math.max(inset, r == HEADER_H - 1 ? 2 : r == HEADER_H - 2 ? 1 : 0);
-                }
-                int base = Theme.head(columns.indexOf(col));
-                int color = lerp(lerp(base, 0xFFFFFFFF, 0.22f), lerp(base, 0xFF000000, 0.18f),
-                        r / (float) (HEADER_H - 1));
-                fill(g, col.x + inset, col.y + r, col.x + colW - inset, col.y + r + 1, color);
-            }
-            fill(g, col.x, col.y + HEADER_H - 1, col.x + colW, col.y + HEADER_H, 0x40FFFFFF);
-            text(g, col.title, col.x + 8, col.y + 7, 0xFFFFFFFF);
-
-            int active = 0, toggles = 0;
-            for (Entry en : col.entries) {
-                if (en.state != null) {
-                    toggles++;
-                    if (en.state.getAsBoolean()) active++;
-                }
-            }
-            String mark = Theme.isCollapsed(colIndex) ? "+" : "-";
-            text(g, mark, col.x + colW - 8 - this.font.width(mark), col.y + 7, 0xFFFFFFFF);
-            if (toggles > 0) {
-                String count = active + "/" + toggles;
-                text(g, count, col.x + colW - 8 - this.font.width(mark) - 6 - this.font.width(count),
-                        col.y + 7, 0xCCFFFFFF);
-            }
-
-            for (Entry en : col.visible) {
-                // nur Zeilen zeichnen, die beim Ein-/Ausklappen schon komplett sichtbar sind
-                if (en.y + ENTRY_H > col.y + HEADER_H + bodyH) continue;
-                boolean on = en.state != null && en.state.getAsBoolean();
-                boolean over = mouseX >= en.x && mouseX < en.x + colW
-                        && mouseY >= en.y && mouseY < en.y + ENTRY_H;
-                float speedH = Ui.step(0.3f);
-                float speedA = Ui.step(0.35f);
-                en.hover += ((over ? 1f : 0f) - en.hover) * speedH;
-                en.anim += ((on ? 1f : 0f) - en.anim) * speedA;
-
-                int ph = ENTRY_H - (en.last ? 2 : 0);
-                if (on) {
-                    fillRows(g, en.x, en.y, colW, ENTRY_H, Theme.onBg(), en.last);
-                    // sanfter Schimmer von links
-                    for (int i = 0; i < 6; i++) {
-                        int a = 0x30 - i * 7;
-                        fill(g, en.x + 2 + i * 5, en.y, en.x + 7 + i * 5, en.y + ph,
-                                (a << 24) | (Theme.accent() & 0xFFFFFF));
-                    }
-                    fill(g, en.x, en.y + 1, en.x + 2, en.y + ph - 1, Theme.accent());
-                } else if (en.hover > 0.02f) {
-                    fillRows(g, en.x, en.y, colW, ENTRY_H, lerp(PANEL, Theme.hoverBg(), en.hover), en.last);
-                }
-                if (!en.last) {
-                    fill(g, en.x + 6, en.y + ENTRY_H - 1, en.x + colW - 6, en.y + ENTRY_H, 0x14FFFFFF);
-                }
-
-                int textColor = on ? TEXT_ON : lerp(TEXT, 0xFFFFFFFF, en.hover);
-                int rightPad = en.settings != null ? SETTINGS_W : 8;
-                int sx = en.x + colW - rightPad - 16;
-                int nameX = en.x + 8 + (on ? 2 : 0);
-                int nameMax = (en.state != null ? sx - 4 : en.x + colW - 16) - nameX;
-                text(g, fitName(en.name, nameMax), nameX, en.y + 5, textColor);
-
-                if (en.settings != null) {
-                    // Pfeil fuer die Einstellungen; leuchtet, wenn die Maus darueber ist
-                    boolean overArrow = over && mouseX >= en.x + colW - SETTINGS_W;
-                    String chev = ">";
-                    text(g, chev, en.x + colW - SETTINGS_W + (SETTINGS_W - this.font.width(chev)) / 2,
-                            en.y + 5, overArrow ? Theme.accent() : MUTED);
-                }
-                if (en.state != null) {
-                    // Schalter rechts: Spur + Knopf
-                    int sy = en.y + (ENTRY_H - 8) / 2;
-                    int track = lerp(TRACK_OFF, Theme.accent(), en.anim);
-                    fill(g, sx + 1, sy, sx + 15, sy + 8, track);
-                    fill(g, sx, sy + 1, sx + 16, sy + 7, track);
-                    int kx = sx + 1 + Math.round(en.anim * 8f);
-                    fill(g, kx, sy + 1, kx + 6, sy + 7, 0xFFFFFFFF);
-                } else if (!en.plain) {
-                    String chev = ">";
-                    text(g, chev, en.x + colW - 8 - this.font.width(chev) + Math.round(en.hover * 2f),
-                            en.y + 5, lerp(MUTED, Theme.accent(), en.hover));
-                }
-            }
+        // Suchfeld: weiches Leuchten, solange es aktiv ist
+        if (searchBox != null) {
+            float f = Ui.ease("menuSearch", 0, searchBox.isFocused() ? 1f : 0f, 0.25f);
+            Fx.soft(g, searchBox.getX(), searchBox.getY(), searchBox.getWidth(), SEARCH_H, 7f,
+                    Fx.withAlpha(Theme.accent(), Math.round(0x18 + 0x48 * f)));
+            searchBox.extractRenderState(g, mouseX, mouseY, delta);
+            Ui.field(g, searchBox);
+        }
+        if (bindBtn != null) {
+            Ui.button(g, this.font, bindBtn, mouseX, mouseY, bindMode ? Ui.STYLE_PRIMARY : Ui.STYLE_NORMAL);
         }
 
-        // Fusszeile
+        if (shown.isEmpty()) {
+            String msg = "Keine Module gefunden für „" + query.trim() + "“";
+            Ui.fitCentered(g, this.font, msg, cx, gridY + 12 + dy, this.width - 24, MUTED, true);
+        }
+
+        for (Column col : shown) drawColumn(g, col, mouseX, mouseY, dy, ease);
+
+        // Fusszeile: weicher Uebergang nach unten, darin eine kurze Bedienhilfe
+        Ui.alpha = ga;
+        Ui.gradientV(g, 0, this.height - 26, this.width, this.height, 0x00000000, 0x96000000);
         String keys = TestClient.toggleKey.getTranslatedKeyMessage().getString()
                 + " / " + TestClient.guiKey.getTranslatedKeyMessage().getString();
-        fill(g, 0, this.height - 16, this.width, this.height, 0x80000000);
-        text(g, "1912 Client   |   Klick: an/aus   |   > : Einstellungen   |   Tasten: " + keys,
-                6, this.height - 12, MUTED);
+        String sep = "   ·   ";
+        String[] hints = {
+            "Klick: an/aus" + sep + "Punkte: Einstellungen" + sep + "Mausrad: scrollen" + sep + "Tasten: " + keys,
+            "Klick: an/aus" + sep + "Punkte: Einstellungen" + sep + "Tasten: " + keys,
+            "Klick: an/aus" + sep + "Punkte: Einstellungen",
+            "Klick: an/aus"
+        };
+        if (Theme.menuMode == 0 && !bindMode) {
+            // Standardmodus: zeigen, wo die restlichen Module zu finden sind
+            hints = new String[] {
+                hints[1] + sep + "Alle Module: Design anpassen, Modus Experte",
+                "Klick: an/aus" + sep + "Alle Module: Design anpassen, Modus Experte",
+                hints[2], hints[3]
+            };
+        }
+        if (bindMode) {
+            hints = waiting != null
+                    ? new String[] {"Dr\u00fccke jetzt eine Taste f\u00fcr " + waiting + sep
+                            + "R\u00fccktaste oder Entf: Taste entfernen", "Dr\u00fccke jetzt eine Taste", "Taste dr\u00fccken"}
+                    : new String[] {"Klick auf ein Modul, dann die gew\u00fcnschte Taste dr\u00fccken" + sep
+                            + "Die Tasten wirken im Spiel", "Klick auf ein Modul, dann Taste dr\u00fccken", "Modul anklicken"};
+        }
+        for (String hint : hints) {
+            // die ausfuehrlichste Hilfe, die ganz in die Breite passt
+            if (this.font.width(hint) <= this.width - 16) {
+                Ui.text(g, this.font, hint, cx - this.font.width(hint) / 2, this.height - 11, MUTED, true);
+                break;
+            }
+        }
+        Ui.alpha = 1f;
     }
 
-    /** Kuerzt einen Namen mit "..", wenn die Spalte zu schmal ist. */
-    private String fitName(String s, int max) {
-        if (max <= 0 || this.font.width(s) <= max) return s;
-        while (s.length() > 1 && this.font.width(s + "..") > max) {
-            s = s.substring(0, s.length() - 1);
+    private void drawColumn(GuiGraphicsExtractor g, Column col, int mouseX, int mouseY, int dy, float ease) {
+        float openTarget = collapsed(col) ? 0f : 1f;
+        col.open += (openTarget - col.open) * Ui.step(0.3f);
+        if (Math.abs(openTarget - col.open) < 0.01f) col.open = openTarget;
+        int fullH = col.visible.size() * ENTRY_H;
+        int bodyH = Math.round(fullH * col.open);
+        boolean bodyShown = bodyH >= R + 1;
+        int x = col.x;
+        int y = col.y + dy;
+        int w = col.w;
+        int h = HEADER_H + (bodyShown ? bodyH : 0);
+
+        // Schatten, dezentes Leuchten, Rand, Koerper
+        Fx.shadow(g, x, y, w, h);
+        Fx.panelGlow(g, x, y, w, h, ease);
+        Ui.roundRect(g, x - 1, y - 1, w + 2, h + 2, R + 1, Theme.border());
+        if (bodyShown) Ui.roundRect(g, x, y + HEADER_H, w, bodyH, R, PANEL, false, true);
+
+        // Kopfzeile: Ausschnitt des durchgehenden Farbverlaufs
+        boolean overHead = mouseX >= x && mouseX < x + w && mouseY >= col.y && mouseY < col.y + HEADER_H;
+        col.headHover += ((overHead ? 1f : 0f) - col.headHover) * Ui.step(0.3f);
+        Ui.header(g, x, y, w, col.t0, col.t1, !bodyShown);
+        if (col.headHover > 0.02f) {
+            Ui.roundRect(g, x, y, w, HEADER_H, R, Ui.withA(0xFFFFFF, Math.round(0x16 * col.headHover)), true, !bodyShown);
         }
-        return s + "..";
+
+        int active = 0;
+        int toggles = 0;
+        for (Entry en : col.matches) {
+            if (en.state != null) {
+                toggles++;
+                if (en.state.getAsBoolean()) active++;
+            }
+        }
+        // Plus/Minus: blendet weich um, wenn die Spalte ein-/ausklappt
+        int pmX = x + w - 12;
+        Ui.plusMinusIcon(g, pmX, y + 10, 1f - col.open, 0xFFFFFFFF);
+        String count = toggles > 0 ? active + "/" + toggles : "";
+        int countW = this.font.width(count);
+        if (!count.isEmpty()) Ui.text(g, this.font, count, pmX - 8 - countW, y + 7, 0xC8FFFFFF, true);
+        name(g, col.title, x + 8, y + 7, pmX - 8 - countW - 6 - (x + 8), 0xFFFFFFFF);
+
+        int accent = Theme.accent();
+        int right = x + w - SCROLL_W;           // rechter Rand des Zeileninhalts
+        int dotsX = right - DOTS_W;
+        for (Entry en : col.visible) {
+            // nur Zeilen zeichnen, die beim Ein-/Ausklappen schon komplett sichtbar sind
+            if (!bodyShown || en.y + ENTRY_H > col.y + HEADER_H + bodyH) continue;
+            int ey = en.y + dy;
+            boolean on = en.state != null && en.state.getAsBoolean();
+            boolean over = mouseX >= x && mouseX < right && mouseY >= en.y && mouseY < en.y + ENTRY_H;
+            en.hover += ((over ? 1f : 0f) - en.hover) * Ui.step(0.3f);
+            en.anim += ((on ? 1f : 0f) - en.anim) * Ui.step(0.25f);
+            if (Math.abs((on ? 1f : 0f) - en.anim) < 0.01f) en.anim = on ? 1f : 0f;
+
+            // Eingeschaltet: weicher Farbverlauf von links, der sanft ein- und ausblendet
+            if (en.anim > 0.02f) {
+                Ui.roundGradientH(g, x, ey, w, ENTRY_H, R, Ui.withA(accent, Math.round(0x4A * en.anim)),
+                        Ui.withA(accent, Math.round(0x0A * en.anim)), false, en.last);
+                int barH = ENTRY_H - 6 - (en.last ? 2 : 0);
+                Ui.roundRect(g, x + 2, ey + 3, 2, barH, 1, Ui.withA(accent, Math.round(255 * en.anim)));
+            }
+            if (en.hover > 0.02f) {
+                Ui.roundRect(g, x, ey, w, ENTRY_H, R, Ui.withA(0xFFFFFF, Math.round(0x12 * en.hover)), false, en.last);
+            }
+
+            int textColor = Ui.lerp(Ui.lerp(TEXT, TEXT_ON, en.anim), 0xFFFFFFFF, en.hover * 0.6f);
+            int nameX = x + 8 + Math.round(2f * en.anim);
+            int nameEnd = en.state != null ? dotsX - 2 - 16 - 4 : (en.settings != null ? dotsX - 4 : right - 4);
+            // Tasten-Schild: zeigt die zugewiesene Taste (im Zuweisen-Modus auch freie Plaetze)
+            Integer key = Keybinds.get(en.name);
+            boolean wait = en.name.equals(waiting);
+            String badge = wait ? "?" : key != null ? Keybinds.keyName(key) : (bindMode && bindable(col) ? "+" : null);
+            if (badge != null) {
+                int bw = this.font.width(badge) + 8;
+                int bx = nameEnd - bw;
+                float pulse = wait ? 0.5f + 0.5f * (float) Math.sin(Fx.time() * 6f) : 0f;
+                int bg = wait ? Ui.withA(accent, Math.round(0x50 + 0x50 * pulse))
+                        : key != null ? Ui.withA(0xFFFFFF, 0x1A) : Ui.withA(0xFFFFFF, 0x0C);
+                Ui.roundRect(g, bx, ey + 3, bw, 12, 3, bg);
+                int tc = wait ? 0xFFFFFFFF : key != null ? Ui.lerp(MUTED, TEXT, 0.5f) : Ui.withA(MUTED, 0x90);
+                Ui.text(g, this.font, badge, bx + 4, ey + 5, tc, false);
+                nameEnd = bx - 4;
+            }
+            name(g, en.name, nameX, ey + 5, nameEnd - nameX, textColor);
+
+            if (en.settings != null) {
+                // Drei Punkte fuer die Einstellungen; leuchten, wenn die Maus darueber ist
+                boolean overDots = over && mouseX >= dotsX;
+                int dc = overDots ? accent : Ui.lerp(Ui.withA(MUTED, 0xB0), TEXT, en.hover * 0.6f);
+                int dx = dotsX + (DOTS_W - 2) / 2;
+                for (int i = 0; i < 3; i++) {
+                    Ui.fill(g, dx, ey + 4 + i * 4, dx + 2, ey + 6 + i * 4, dc);
+                }
+            }
+            if (en.state != null) Ui.switchPill(g, dotsX - 2 - 16, ey + (ENTRY_H - 8) / 2, en.anim);
+        }
+
+        // Scrollbalken fuer lange Spalten
+        if (col.scrollable && bodyShown && col.open > 0.98f) {
+            int[] th = thumb(col);
+            boolean overLane = mouseX >= right && mouseX < x + w && mouseY >= th[0] && mouseY < th[0] + th[1];
+            col.laneHover += ((overLane ? 1f : 0f) - col.laneHover) * Ui.step(0.3f);
+            Ui.scrollbar(g, right + 1, th[0] + dy, th[1], th[2] + dy, th[3], col.laneHover);
+        }
+    }
+
+    /** Wartet auf die Taste fuer das gewaehlte Modul (Ruecktaste/Entf entfernt sie). */
+    private void pollBind() {
+        java.util.Set<Integer> now = Keybinds.pressedNow();
+        waitHeld.retainAll(now); // losgelassene Tasten duerfen wieder zaehlen
+        for (int code : now) {
+            if (waitHeld.contains(code)) continue;
+            if (code == org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE || code == org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE) {
+                Keybinds.clear(waiting);
+            } else if (code != org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                Keybinds.set(waiting, code);
+            } else {
+                continue;
+            }
+            waiting = null;
+            pendingRebuild = true; // Spaltenbreite an das neue Schild anpassen
+            return;
+        }
     }
 
     @Override
     public void onClose() {
         TestConfig.save();
         this.minecraft.gui.setScreen(parent);
+    }
+
+    public void removed() {
+        GuiScale.restore();
     }
 }

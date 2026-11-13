@@ -3,6 +3,7 @@
   "key.test.toggle": "Toggle 1912",
   "key.test.gui": "Open 1912 menu",
   "key.test.select": "Select targeted block",
-  "key.test.esp": "Toggle ESP",
-  "key.test.sort": "Sort inventory"
+  "key.test.sort": "Sort inventory",
+  "key.test.esp_toggle": "Toggle ESP",
+  "key.test.panic": "Disable all modules / restore"
 }

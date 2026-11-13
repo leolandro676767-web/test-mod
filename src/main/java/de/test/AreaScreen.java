@@ -42,6 +42,10 @@ public class AreaScreen extends Form {
                     + " Bl\u00f6cke (max. 50000)";
         });
         start = wideButton(startLabel(), true, this::startOrStop);
+        section("Anzeige");
+        toggle("Ziele hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
+        toggle("Bereichsrahmen", () -> RenderMods.miningShowArea, v -> RenderMods.miningShowArea = v, true);
+        choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
         footer(null, null);
     }
 

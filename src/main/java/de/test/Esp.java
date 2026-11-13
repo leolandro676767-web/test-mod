@@ -53,7 +53,33 @@ public final class Esp {
     public static final int COLOR_PLAYER = 0xFFFF4D4D;
     public static final int COLOR_MOB = 0xFFFFB13B;
     public static final int COLOR_ITEM = 0xFF4DD2FF;
-    public static final int COLOR_BLOCK = 0xFF5BFF7A;
+    public static final int COLOR_BLOCK = 0xFF39FF14;
+
+    /** Eigene Farben als 0xRRGGBB, -1 = Standardfarbe. */
+    public static int colPlayer = -1;
+    public static int colMob = -1;
+    public static int colItem = -1;
+    public static int colBlock = -1;
+
+    private static int pick(int custom, int def) {
+        return custom >= 0 ? 0xFF000000 | custom : def;
+    }
+
+    public static int playerColor() {
+        return pick(colPlayer, COLOR_PLAYER);
+    }
+
+    public static int mobColor() {
+        return pick(colMob, COLOR_MOB);
+    }
+
+    public static int itemColor() {
+        return pick(colItem, COLOR_ITEM);
+    }
+
+    public static int blockColor() {
+        return pick(colBlock, COLOR_BLOCK);
+    }
 
     private static final int MAX_TARGETS = 250;
     private static final int MAX_BLOCKS = 400;
@@ -121,7 +147,7 @@ public final class Esp {
                     if (!blockTypes.contains(b)) continue; // inzwischen abgebaut
                     AABB bb = new AABB(pos.getX(), pos.getY(), pos.getZ(),
                             pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1);
-                    drawOne(g, mc, self, bb, COLOR_BLOCK, b.getName().getString());
+                    drawOne(g, mc, self, bb, blockColor(), b.getName().getString());
                     drawn++;
                 }
             }
@@ -134,23 +160,23 @@ public final class Esp {
                     String name;
                     if (e instanceof Player) {
                         if (!players) continue;
-                        color = COLOR_PLAYER;
+                        color = playerColor();
                         name = e.getName().getString();
                     } else if (e instanceof ItemEntity ie) {
                         if (!items) continue;
                         if (!itemTypes.isEmpty() && !itemTypes.contains(ie.getItem().getItem())) continue;
-                        color = COLOR_ITEM;
+                        color = itemColor();
                         int n = ie.getItem().getCount();
                         name = ie.getItem().getHoverName().getString() + (n > 1 ? " x" + n : "");
                     } else if (e instanceof LivingEntity) {
                         if (!mobs) continue;
                         if (!mobTypes.isEmpty() && !mobTypes.contains(e.getType())) continue;
-                        color = COLOR_MOB;
+                        color = mobColor();
                         name = e.getName().getString();
                     } else {
                         // Andere Objekte (Boote, Loren, ...) nur, wenn ausdruecklich gewaehlt
                         if (!mobs || !mobTypes.contains(e.getType())) continue;
-                        color = COLOR_MOB;
+                        color = mobColor();
                         name = e.getName().getString();
                     }
                     AABB bb = Render3D.smoothBox(e);
@@ -166,7 +192,7 @@ public final class Esp {
 
     private static void drawOne(GuiGraphicsExtractor g, Minecraft mc, Player self, AABB bb, int color, String name) {
         if (tracers) Render3D.tracer(g, bb.getCenter(), (color & 0x00FFFFFF) | 0xB0000000);
-        if (box) Render3D.box(g, bb, color, false);
+        if (box) Render3D.outline(g, bb, color, false);
         if (labels) {
             double dist = self.getEyePosition().distanceTo(bb.getCenter());
             Render3D.label(g, mc, new Vec3(bb.getCenter().x, bb.maxY, bb.getCenter().z),

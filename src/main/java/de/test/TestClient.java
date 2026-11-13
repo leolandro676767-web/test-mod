@@ -67,6 +67,18 @@ public class TestClient implements ClientModInitializer {
 
     // Koordinaten-Modus: zu einem festen Punkt laufen (nutzt areaActive als "aktiv"-Flag)
     public static boolean gotoMode = false;
+
+    /** Aktuelles Abbau-/Laufziel (fuer die Anzeige), sonst null. */
+    public static BlockPos miningTarget() {
+        if (!areaActive) return null;
+        return gotoMode ? new BlockPos(gx, gy, gz) : areaTarget;
+    }
+
+    /** Grenzen des aktiven Bereichs {minX, minY, minZ, maxX, maxY, maxZ}, sonst null. */
+    public static int[] miningBounds() {
+        if (!areaActive || gotoMode) return null;
+        return new int[] {minX, minY, minZ, maxX, maxY, maxZ};
+    }
     public static int gx = 0, gy = 64, gz = 0;
     private static final int MAX_GOTO_TICKS = 12000;
     private static final int MAX_GOTO_NO_PROGRESS = 200;
@@ -126,6 +138,7 @@ public class TestClient implements ClientModInitializer {
     public static KeyMapping guiKey;
     public static KeyMapping selectKey;
     public static KeyMapping espKey;
+    public static KeyMapping panicKey;
     public static KeyMapping sortKey;
 
     private enum Phase { WALK, MINE, RETURN }
@@ -147,11 +160,16 @@ public class TestClient implements ClientModInitializer {
 
         selectKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.select", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, category));
+        // ESP hat keine feste Taste mehr (J ist jetzt "Alle Module aus/an"); neuer Name, damit eine
+        // alte gespeicherte J-Belegung nicht doppelt greift. Belegbar im 1912-Menue oder in den Steuerungen.
         espKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.test.esp", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, category));
+                "key.test.esp_toggle", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, category));
+        panicKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.test.panic", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, category));
         sortKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.sort", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, category));
         Esp.register();
+        Keybinds.register();
 
         TestConfig.load();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> TestConfig.save());
@@ -162,6 +180,7 @@ public class TestClient implements ClientModInitializer {
             Movement2.startTick(mc);
             Movement.startTick(mc);
             PlayerMods.startTick(mc);
+            CameraMods.startTick(mc);
         });
         ClientTickEvents.END_CLIENT_TICK.register(TestClient::onTick);
     }
@@ -404,6 +423,8 @@ public class TestClient implements ClientModInitializer {
     // ---------- Tick ----------
 
     private static void onTick(Minecraft mc) {
+        GuiScale.check(mc);
+        Keybinds.tick(mc);
         while (toggleKey.consumeClick()) {
             if (areaActive) {
                 stopArea(mc, gotoMode ? "Gehen abgebrochen" : blockMode ? "Abbau gestoppt" : "Bereich abgebrochen");
@@ -417,6 +438,9 @@ public class TestClient implements ClientModInitializer {
         }
         while (selectKey.consumeClick()) {
             selectLookedAt(mc);
+        }
+        while (panicKey.consumeClick()) {
+            Keybinds.panic();
         }
         while (espKey.consumeClick()) {
             Esp.enabled = !Esp.enabled;
@@ -471,6 +495,7 @@ public class TestClient implements ClientModInitializer {
         PlayerMods.endTick(mc);
         RenderMods.tick(mc);
         MiscMods.tick(mc);
+        CameraMods.endTick(mc);
 
         if (areaActive) {
             runArea(mc, level, player);

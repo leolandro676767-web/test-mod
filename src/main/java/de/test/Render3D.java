@@ -8,12 +8,17 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Gemeinsame Hilfe fuer alle Render-Module: projiziert Weltpunkte selbst auf das HUD
- * (ohne Welt-Render-Mixins). So lassen sich Kaesten, Linien und Beschriftungen "durch Waende"
- * zeichnen. Wird pro Frame mit {@link #begin} vorbereitet.
+ * (ohne Welt-Render-Mixins). So lassen sich Umrisse, Linien und Beschriftungen "durch Waende"
+ * zeichnen. Wird pro Frame mit {@link #begin} vorbereitet und folgt der Kamera (auch in Freecam).
  */
 public final class Render3D {
     private Render3D() {
     }
+
+    /** Umriss-Stile (Einstellung in RenderMods.outlineStyle). */
+    public static final String[] STYLES = {"2D-Kasten", "3D-Rahmen", "3D + Scan-Linie"};
+
+    private static final double NEAR = 0.05;
 
     private static double camX, camY, camZ, sinYaw, cosYaw, sinPitch, cosPitch, focal;
     private static int screenW, screenH;
@@ -25,13 +30,14 @@ public final class Render3D {
         ready = false;
         if (mc.player == null || mc.level == null) return false;
         if (!mc.options.getCameraType().isFirstPerson()) return false;
+        Entity cam = mc.getCameraEntity() != null ? mc.getCameraEntity() : mc.player;
         partial = pt;
-        Vec3 eye = mc.player.getEyePosition(pt);
+        Vec3 eye = cam.getEyePosition(pt);
         camX = eye.x;
         camY = eye.y;
         camZ = eye.z;
-        double yaw = Math.toRadians(mc.player.getViewYRot(pt));
-        double pitch = Math.toRadians(mc.player.getViewXRot(pt));
+        double yaw = Math.toRadians(cam.getViewYRot(pt));
+        double pitch = Math.toRadians(cam.getViewXRot(pt));
         sinYaw = Math.sin(yaw);
         cosYaw = Math.cos(yaw);
         sinPitch = Math.sin(pitch);
@@ -72,8 +78,10 @@ public final class Render3D {
         return screenH;
     }
 
-    /** {x, y, vorne}: vorne &gt; 0 heisst vor der Kamera. */
-    public static double[] project(double wx, double wy, double wz) {
+    // ---------- Projektion ----------
+
+    /** Kamera-Koordinaten {rechts, oben, vorne}. */
+    private static double[] toCam(double wx, double wy, double wz) {
         double dx = wx - camX;
         double dy = wy - camY;
         double dz = wz - camZ;
@@ -81,8 +89,19 @@ public final class Render3D {
         double right = -cosYaw * dx - sinYaw * dz;
         double fwd = fwdH * cosPitch - dy * sinPitch;
         double up = fwdH * sinPitch + dy * cosPitch;
-        if (fwd <= 0.05) return new double[] {right, -up, fwd};
-        return new double[] {screenW / 2.0 + right / fwd * focal, screenH / 2.0 - up / fwd * focal, fwd};
+        return new double[] {right, up, fwd};
+    }
+
+    private static double[] camToScreen(double[] c) {
+        return new double[] {screenW / 2.0 + c[0] / c[2] * focal, screenH / 2.0 - c[1] / c[2] * focal};
+    }
+
+    /** {x, y, vorne}: vorne &gt; 0 heisst vor der Kamera. */
+    public static double[] project(double wx, double wy, double wz) {
+        double[] c = toCam(wx, wy, wz);
+        if (c[2] <= NEAR) return new double[] {c[0], -c[1], c[2]};
+        double[] s = camToScreen(c);
+        return new double[] {s[0], s[1], c[2]};
     }
 
     /** Zwischen den Ticks geglaettete Hitbox eines Wesens. */
@@ -101,7 +120,82 @@ public final class Render3D {
         return a + (b - a) * partial;
     }
 
-    // ---------- Zeichnen ----------
+    // ---------- Umrisse ----------
+
+    /**
+     * Umriss im eingestellten Stil: 2D-Kasten, 3D-Rahmen (12 Kanten) oder 3D-Rahmen mit
+     * einer Scan-Linie, die langsam hoch und runter laeuft.
+     * @param fill2d nur fuer den 2D-Stil: Flaeche leicht einfaerben
+     */
+    public static void outline(GuiGraphicsExtractor g, AABB bb, int color, boolean fill2d) {
+        switch (RenderMods.outlineStyle) {
+            case 0 -> box(g, bb, color, fill2d);
+            case 1 -> wire(g, bb, color);
+            default -> {
+                wire(g, bb, color);
+                scan(g, bb, color);
+            }
+        }
+    }
+
+    /** 3D-Rahmen: alle 12 Kanten der Box. */
+    public static void wire(GuiGraphicsExtractor g, AABB bb, int color) {
+        double x1 = bb.minX, y1 = bb.minY, z1 = bb.minZ, x2 = bb.maxX, y2 = bb.maxY, z2 = bb.maxZ;
+        // unten
+        worldLine(g, x1, y1, z1, x2, y1, z1, color);
+        worldLine(g, x2, y1, z1, x2, y1, z2, color);
+        worldLine(g, x2, y1, z2, x1, y1, z2, color);
+        worldLine(g, x1, y1, z2, x1, y1, z1, color);
+        // oben
+        worldLine(g, x1, y2, z1, x2, y2, z1, color);
+        worldLine(g, x2, y2, z1, x2, y2, z2, color);
+        worldLine(g, x2, y2, z2, x1, y2, z2, color);
+        worldLine(g, x1, y2, z2, x1, y2, z1, color);
+        // senkrecht
+        worldLine(g, x1, y1, z1, x1, y2, z1, color);
+        worldLine(g, x2, y1, z1, x2, y2, z1, color);
+        worldLine(g, x2, y1, z2, x2, y2, z2, color);
+        worldLine(g, x1, y1, z2, x1, y2, z2, color);
+    }
+
+    /** Waagerechte Linie um die Box, die zwischen Boden und Deckel auf und ab laeuft. */
+    public static void scan(GuiGraphicsExtractor g, AABB bb, int color) {
+        double phase = Fx.time() * RenderMods.outlineScanSpeed * 0.6;
+        if (RenderMods.outlineWave) phase += bb.minY * 0.8 + (bb.minX + bb.minZ) * 0.3;
+        double t = Theme.animations ? 0.5 - 0.5 * Math.cos(phase) : 0.5;
+        double y = bb.minY + (bb.maxY - bb.minY) * t;
+        double x1 = bb.minX, z1 = bb.minZ, x2 = bb.maxX, z2 = bb.maxZ;
+        int c = (color & 0x00FFFFFF) | 0xC0000000;
+        worldLine(g, x1, y, z1, x2, y, z1, c);
+        worldLine(g, x2, y, z1, x2, y, z2, c);
+        worldLine(g, x2, y, z2, x1, y, z2, c);
+        worldLine(g, x1, y, z2, x1, y, z1, c);
+    }
+
+    /**
+     * Fuellt die Flaeche, die eine Welt-Hitbox auf dem Bildschirm einnimmt, mit einem senkrechten
+     * Farbverlauf (fuer Chams). Gibt false zurueck, wenn nichts sichtbar ist.
+     */
+    public static boolean fillBox(GuiGraphicsExtractor g, AABB bb, int top, int bottom) {
+        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+        for (int i = 0; i < 8; i++) {
+            double[] p = project((i & 1) == 0 ? bb.minX : bb.maxX,
+                    (i & 2) == 0 ? bb.minY : bb.maxY,
+                    (i & 4) == 0 ? bb.minZ : bb.maxZ);
+            if (p[2] <= NEAR) return false;
+            minX = Math.min(minX, p[0]);
+            minY = Math.min(minY, p[1]);
+            maxX = Math.max(maxX, p[0]);
+            maxY = Math.max(maxY, p[1]);
+        }
+        if (maxX < 0 || maxY < 0 || minX > screenW || minY > screenH) return false;
+        int x1 = (int) Math.floor(minX);
+        int y1 = (int) Math.floor(minY);
+        int x2 = Math.max(x1 + 2, (int) Math.ceil(maxX));
+        int y2 = Math.max(y1 + 2, (int) Math.ceil(maxY));
+        Ui.gradientV(g, x1, y1, x2, y2, top, bottom);
+        return true;
+    }
 
     /** Umschliessender 2D-Kasten einer Welt-Hitbox. Gibt false zurueck, wenn nichts sichtbar ist. */
     public static boolean box(GuiGraphicsExtractor g, AABB bb, int color, boolean filled) {
@@ -110,7 +204,7 @@ public final class Render3D {
             double[] p = project((i & 1) == 0 ? bb.minX : bb.maxX,
                     (i & 2) == 0 ? bb.minY : bb.maxY,
                     (i & 4) == 0 ? bb.minZ : bb.maxZ);
-            if (p[2] <= 0.05) return false;
+            if (p[2] <= NEAR) return false;
             minX = Math.min(minX, p[0]);
             minY = Math.min(minY, p[1]);
             maxX = Math.max(maxX, p[0]);
@@ -139,6 +233,8 @@ public final class Render3D {
         Ui.fill(g, x2 - 1, y1 + 1, x2, y2 - 1, color);
     }
 
+    // ---------- Linien ----------
+
     /** Linie von der Bildschirmmitte zu einem Weltpunkt (Tracer). */
     public static void tracer(GuiGraphicsExtractor g, Vec3 target, int color) {
         double[] c = project(target.x, target.y, target.z);
@@ -146,7 +242,7 @@ public final class Render3D {
         float sy = screenH / 2f;
         float ex;
         float ey;
-        if (c[2] > 0.05) {
+        if (c[2] > NEAR) {
             ex = (float) c[0];
             ey = (float) c[1];
         } else {
@@ -158,12 +254,34 @@ public final class Render3D {
         line(g, sx, sy, ex, ey, color);
     }
 
-    /** Linie zwischen zwei Weltpunkten. */
     public static void worldLine(GuiGraphicsExtractor g, Vec3 a, Vec3 b, int color) {
-        double[] pa = project(a.x, a.y, a.z);
-        double[] pb = project(b.x, b.y, b.z);
-        if (pa[2] <= 0.05 || pb[2] <= 0.05) return;
-        line(g, (float) pa[0], (float) pa[1], (float) pb[0], (float) pb[1], color);
+        worldLine(g, a.x, a.y, a.z, b.x, b.y, b.z, color);
+    }
+
+    /**
+     * Linie zwischen zwei Weltpunkten. Liegt ein Ende hinter der Kamera, wird die Linie an der
+     * Bildebene abgeschnitten statt ganz zu verschwinden (wichtig fuer Bloecke direkt neben einem).
+     */
+    public static void worldLine(GuiGraphicsExtractor g, double ax, double ay, double az,
+                                 double bx, double by, double bz, int color) {
+        double[] ca = toCam(ax, ay, az);
+        double[] cb = toCam(bx, by, bz);
+        if (ca[2] < NEAR && cb[2] < NEAR) return;
+        if (ca[2] < NEAR) ca = clip(ca, cb);
+        else if (cb[2] < NEAR) cb = clip(cb, ca);
+        double[] sa = camToScreen(ca);
+        double[] sb = camToScreen(cb);
+        // Beide Enden auf derselben Seite ausserhalb des Bildschirms: nichts zu sehen
+        if ((sa[0] < 0 && sb[0] < 0) || (sa[1] < 0 && sb[1] < 0)
+                || (sa[0] > screenW && sb[0] > screenW) || (sa[1] > screenH && sb[1] > screenH)) {
+            return;
+        }
+        line(g, (float) sa[0], (float) sa[1], (float) sb[0], (float) sb[1], color);
+    }
+
+    private static double[] clip(double[] behind, double[] front) {
+        double t = (NEAR - behind[2]) / (front[2] - behind[2]);
+        return new double[] {behind[0] + (front[0] - behind[0]) * t, behind[1] + (front[1] - behind[1]) * t, NEAR};
     }
 
     /** Linie als gedrehtes, 1 Pixel hohes Rechteck. */
@@ -172,6 +290,13 @@ public final class Render3D {
         float dy = y2 - y1;
         float len = (float) Math.sqrt(dx * dx + dy * dy);
         if (len < 1f) return;
+        if (len > 20000f) {
+            // extrem lange Stuecke (Schnitt dicht an der Kamera) auf sinnvolle Laenge kuerzen
+            float k = 20000f / len;
+            dx *= k;
+            dy *= k;
+            len = 20000f;
+        }
         var pose = g.pose();
         pose.pushMatrix();
         pose.translate(x1, y1);
@@ -183,7 +308,7 @@ public final class Render3D {
     /** Gefuelltes Quadrat an einem Weltpunkt (Marker-Punkt). */
     public static void dot(GuiGraphicsExtractor g, Vec3 at, int size, int color) {
         double[] p = project(at.x, at.y, at.z);
-        if (p[2] <= 0.05) return;
+        if (p[2] <= NEAR) return;
         int x = (int) Math.round(p[0]);
         int y = (int) Math.round(p[1]);
         Ui.fill(g, x - size - 1, y - size - 1, x + size + 1, y + size + 1, 0x90000000);
@@ -193,7 +318,7 @@ public final class Render3D {
     /** Text mittig ueber einem Weltpunkt. */
     public static void label(GuiGraphicsExtractor g, Minecraft mc, Vec3 at, String text, int color, int yOffset) {
         double[] p = project(at.x, at.y, at.z);
-        if (p[2] <= 0.05) return;
+        if (p[2] <= NEAR) return;
         int tw = mc.font.width(text);
         int x = (int) Math.round(p[0]) - tw / 2;
         int y = (int) Math.round(p[1]) + yOffset;

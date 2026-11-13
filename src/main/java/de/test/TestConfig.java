@@ -50,7 +50,11 @@ public final class TestConfig {
         Theme.animations = bool(p, "themeAnim", Theme.animations);
         Theme.logoSize = num(p, "themeLogoSize", Theme.logoSize);
         Theme.colWidth = num(p, "themeColWidth", Theme.colWidth);
-        Theme.collapsed = num(p, "menuCollapsed", Theme.collapsed) & 0x1F;
+        Theme.menuScale = num(p, "themeMenuScale", Theme.menuScale);
+        Theme.menuMode = num(p, "themeMenuMode", Theme.menuMode) == 1 ? 1 : 0;
+        Theme.hudList = num(p, "themeHudList", 1) == 1;
+        Theme.hudListSize = Math.max(0, Math.min(3, num(p, "themeHudListSize", Theme.hudListSize)));
+        Theme.collapsed = num(p, "menuCollapsed", Theme.collapsed) & 0x7F;
         Theme.clamp();
         Movement.highJump = bool(p, "highJump", Movement.highJump);
         Movement.jesus = bool(p, "jesus", Movement.jesus);
@@ -136,7 +140,12 @@ public final class TestConfig {
         loadStatics(p, RenderMods.class, "rm.");
         readIds(p.getProperty("rm.blockEspBlocks"), BuiltInRegistries.BLOCK, RenderMods.blockEspBlocks);
         loadStatics(p, MiscMods.class, "mm.");
+        Keybinds.load(p);
         Esp.enabled = bool(p, "espEnabled", Esp.enabled);
+        Esp.colPlayer = color(num(p, "espColPlayer", Esp.colPlayer));
+        Esp.colMob = color(num(p, "espColMob", Esp.colMob));
+        Esp.colItem = color(num(p, "espColItem", Esp.colItem));
+        Esp.colBlock = color(num(p, "espColBlock", Esp.colBlock));
         Esp.players = bool(p, "espPlayers", Esp.players);
         Esp.mobs = bool(p, "espMobs", Esp.mobs);
         Esp.items = bool(p, "espItems", Esp.items);
@@ -199,6 +208,10 @@ public final class TestConfig {
         p.setProperty("themeLogoSize", Integer.toString(Theme.logoSize));
         p.setProperty("themeColWidth", Integer.toString(Theme.colWidth));
         p.setProperty("menuCollapsed", Integer.toString(Theme.collapsed));
+        p.setProperty("themeMenuScale", Integer.toString(Theme.menuScale));
+        p.setProperty("themeMenuMode", Integer.toString(Theme.menuMode));
+        p.setProperty("themeHudList", Theme.hudList ? "1" : "0");
+        p.setProperty("themeHudListSize", Integer.toString(Theme.hudListSize));
         StringJoiner drops = new StringJoiner(",");
         for (Item it : TestClient.dropItems) {
             drops.add(BuiltInRegistries.ITEM.getKey(it).toString());
@@ -288,7 +301,12 @@ public final class TestConfig {
         saveStatics(p, RenderMods.class, "rm.");
         p.setProperty("rm.blockEspBlocks", writeIds(RenderMods.blockEspBlocks, BuiltInRegistries.BLOCK));
         saveStatics(p, MiscMods.class, "mm.");
+        Keybinds.save(p);
         p.setProperty("espEnabled", Boolean.toString(Esp.enabled));
+        p.setProperty("espColPlayer", Integer.toString(Esp.colPlayer));
+        p.setProperty("espColMob", Integer.toString(Esp.colMob));
+        p.setProperty("espColItem", Integer.toString(Esp.colItem));
+        p.setProperty("espColBlock", Integer.toString(Esp.colBlock));
         p.setProperty("espPlayers", Boolean.toString(Esp.players));
         p.setProperty("espMobs", Boolean.toString(Esp.mobs));
         p.setProperty("espItems", Boolean.toString(Esp.items));
@@ -324,7 +342,8 @@ public final class TestConfig {
     }
 
     /** Diese Schalter sollen nach einem Neustart immer aus sein. */
-    private static final java.util.Set<String> NOT_SAVED = java.util.Set.of("chestSwap", "fakePlayer", "bookBot");
+    private static final java.util.Set<String> NOT_SAVED = java.util.Set.of("chestSwap", "fakePlayer", "bookBot", "freecam", "freeLook",
+            "notebot");
 
     /** Speichert alle oeffentlichen, veraenderbaren boolean/int/String-Felder einer Klasse. */
     private static void saveStatics(Properties p, Class<?> c, String prefix) {
@@ -381,6 +400,11 @@ public final class TestConfig {
             if (id != null) j.add(id.toString());
         }
         return j.toString();
+    }
+
+    /** Farbe 0xRRGGBB oder -1 (Standard); alles andere wird zu -1. */
+    private static int color(int v) {
+        return v >= 0 && v <= 0xFFFFFF ? v : -1;
     }
 
     private static boolean bool(Properties p, String key, boolean def) {

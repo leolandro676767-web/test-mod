@@ -33,15 +33,20 @@ final class BetterTooltips {
             ItemContainerContents contents = stack.get(DataComponents.CONTAINER);
             if (contents == null) return;
             int shown = 0;
+            int more = 0;
             for (var template : contents.nonEmptyItems()) {
-                ItemStack st = template.create();
-                if (shown++ >= RenderMods.tipShulkerLines) {
-                    lines.add(Component.literal("  ...").withStyle(ChatFormatting.DARK_GRAY));
-                    break;
+                if (shown >= RenderMods.tipShulkerLines) {
+                    more++; // passt nicht mehr in die Liste: nur mitzaehlen
+                    continue;
                 }
+                ItemStack st = template.create();
+                shown++;
                 lines.add(Component.literal("  " + st.getCount() + "x ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(st.getHoverName().copy().withStyle(ChatFormatting.AQUA)));
+            }
+            if (more > 0) {
+                lines.add(Component.literal("  + " + more + " weitere").withStyle(ChatFormatting.DARK_GRAY));
             }
         }
     }
