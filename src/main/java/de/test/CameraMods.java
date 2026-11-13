@@ -35,6 +35,7 @@ public final class CameraMods {
     private static float bodyPitch;
     private static float walkYaw;   // Free Look: feste Laufrichtung
     private static float lookYaw;   // Free Look: aktuelle Blickrichtung
+    private static boolean waitNoted; // Hinweis "wartet auf Boden" schon gezeigt
 
     public static boolean active() {
         return mode != OFF;
@@ -113,7 +114,12 @@ public final class CameraMods {
         cam.setXRot(camPitch);
         cam.yRotO = camYaw;
         cam.xRotO = camPitch;
+        // Die Kamera schaut entlang der Kopfdrehung und mischt dabei alten und neuen Wert. Der alte
+        // Wert muss mitgesetzt werden, sonst pendelt das Bild 20-mal pro Sekunde zwischen beiden.
         cam.setYHeadRot(camYaw);
+        cam.yHeadRotO = camYaw;
+        cam.yBodyRot = camYaw;
+        cam.yBodyRotO = camYaw;
     }
 
     /** Jeden Frame aus dem HUD-Zeichnen aufgerufen: sorgt fuer fluessiges Umsehen. */
@@ -132,6 +138,19 @@ public final class CameraMods {
             return;
         }
         int want = RenderMods.freecam ? FREECAM : RenderMods.freeLook ? FREELOOK : OFF;
+        // Freecam erst starten, wenn der Koerper am Boden steht: in der Luft "eingefroren" saehe er
+        // fuer den Server aus, als wuerde er schweben
+        if (want == FREECAM && mode != FREECAM && RenderMods.freecamWaitGround
+                && !p.onGround() && !p.isPassenger() && !p.getAbilities().flying && !p.isSpectator()) {
+            if (!waitNoted) {
+                waitNoted = true;
+                p.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                        "\u00a7e1912: Freecam startet, sobald du am Boden stehst"));
+            }
+            want = mode == FREELOOK ? OFF : mode;
+        } else {
+            waitNoted = false;
+        }
         if (want != mode) {
             if (mode != OFF) stop(mc);
             if (want != OFF) start(mc, p, want);

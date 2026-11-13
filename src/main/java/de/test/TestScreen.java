@@ -426,12 +426,19 @@ public class TestScreen extends Screen {
     private void initLayout() {
 
         // Jede Spalte so breit wie ihr laengster Eintrag: kein Name muss gekuerzt werden
+        // total = Breite ohne Tasten-Schilder: nur danach richtet sich die Menue-Groesse, damit das Menue
+        // beim Zuweisen von Tasten nicht ploetzlich kleiner wird (dann ruecken die Spalten in zwei Reihen)
         int total = 0;
         for (Column col : columns) {
-            int need = 8 + this.font.width(col.title) + 12 + this.font.width("00/00") + 8 + 7 + 9;
-            for (Entry e : col.entries) need = Math.max(need, needWidth(e));
+            int head = 8 + this.font.width(col.title) + 12 + this.font.width("00/00") + 8 + 7 + 9;
+            int need = head;
+            int plain = head;
+            for (Entry e : col.entries) {
+                need = Math.max(need, needWidth(e));
+                plain = Math.max(plain, needWidth(e) - badgeW(e));
+            }
             col.w = Math.max(Theme.columnWidth(), need);
-            total += col.w;
+            total += Math.max(Theme.columnWidth(), plain);
         }
         total += (columns.size() - 1) * GAP;
 

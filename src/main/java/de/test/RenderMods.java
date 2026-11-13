@@ -133,6 +133,7 @@ public final class RenderMods {
     public static boolean freeLook = false;
     public static boolean freecam = false;
     public static boolean freecamBlockClicks = true;
+    public static boolean freecamWaitGround = true; // erst starten, wenn der Koerper am Boden steht
     public static int freecamSpeed = 10;
     private static boolean fullbrightApplied = false;
     public static int fullbrightMode = 0;           // 0 = Nachtsicht, 1 = Gamma
@@ -1257,6 +1258,9 @@ public final class RenderMods {
                 f.section("Allgemein");
                 f.slider("Tempo (Bl\u00f6cke/s)", 2, 40, () -> freecamSpeed, v -> freecamSpeed = v, 10);
                 f.toggle("Klicks sperren", () -> freecamBlockClicks, v -> freecamBlockClicks = v, true);
+                f.toggle("Erst am Boden starten", () -> freecamWaitGround, v -> freecamWaitGround = v, true);
+                f.note("F\u00fcr den Server stehst du nur still: es wird keine Bewegung gesendet. "
+                        + "In der Luft gestartet w\u00fcrde dein K\u00f6rper dort h\u00e4ngen bleiben, das kann wie Fliegen aussehen.");
                 f.footer(() -> freecam, v -> {
                     freecam = v;
                     if (v) freeLook = false;
