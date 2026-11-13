@@ -108,7 +108,7 @@ public final class Fx {
 
     /** Wenige, langsam aufsteigende Lichtpunkte, die weich ein- und ausblenden. */
     private static void particles(GuiGraphicsExtractor g, int w, int h, float t, int accent) {
-        int count = Math.max(10, Math.min(22, w * h / 20000));
+        int count = Math.max(30, Math.min(70, w * h / 7000)); // mehr Lichtpunkte
         float span = h * 1.2f;
         for (int i = 0; i < count; i++) {
             float rx = hash(i * 3 + 1);
@@ -123,9 +123,10 @@ public final class Fx {
             float a = life * twinkle;
             if (a < 0.04f) continue;
             int col = i % 3 == 0 ? 0xFFFFFFFF : Ui.lerp(accent, 0xFFFFFFFF, 0.35f);
-            float size = 1.2f + rs * 1.4f;
-            glow(g, x, y, size * 4f, withAlpha(col, Math.round(0x22 * a)));
-            glow(g, x, y, size, withAlpha(col, Math.round(0xC0 * a)));
+            float size = 1.2f + rs * 1.6f;
+            // nur die groesseren bekommen einen Schein (spart Zeichenarbeit bei vielen Punkten)
+            if (rs > 0.35f) glow(g, x, y, size * 4f, withAlpha(col, Math.round(0x30 * a)));
+            glow(g, x, y, size, withAlpha(col, Math.round(0xF0 * a)));
         }
     }
 

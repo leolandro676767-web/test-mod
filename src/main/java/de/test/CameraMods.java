@@ -36,6 +36,7 @@ public final class CameraMods {
     private static float walkYaw;   // Free Look: feste Laufrichtung
     private static float lookYaw;   // Free Look: aktuelle Blickrichtung
     private static boolean waitNoted; // Hinweis "wartet auf Boden" schon gezeigt
+    private static int camIds;
 
     public static boolean active() {
         return mode != OFF;
@@ -59,6 +60,10 @@ public final class CameraMods {
             RenderMods.freeLook = false;
             return;
         }
+        // Eine eigene Kennung (ID) geben: andere Mods (z.B. die Animationen vom NoRisk Client) fragen die
+        // ID der Kamera-Figur ab, und ohne ID stuerzt das Spiel dann ab. Negativ, damit sie nie mit
+        // einem echten Wesen auf dem Server zusammenfaellt.
+        cam.setId(-1912000 - (++camIds % 1000));
         cam.copyPosition(p);
         cam.xo = p.getX();
         cam.yo = p.getY();
