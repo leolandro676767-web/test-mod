@@ -418,7 +418,7 @@ public class PickerScreen extends Screen {
         super.extractRenderState(g, mouseX, mouseY, delta);
 
         Ui.alpha = 1f;
-        Fx.backdrop(g, this.width, this.height);
+        Fx.backdrop(g, this.width, this.height, mouseX, mouseY);
 
         boolean icons = ga >= 0.85f;
         Ui.alpha = ga;

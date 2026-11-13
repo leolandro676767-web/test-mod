@@ -883,7 +883,7 @@ abstract class Form extends Screen {
         super.extractRenderState(g, mouseX, mouseY, delta);
 
         Ui.alpha = 1f;
-        Fx.backdrop(g, this.width, this.height);
+        Fx.backdrop(g, this.width, this.height, mouseX, mouseY);
 
         Ui.alpha = ga;
         Fx.panelGlow(g, px, curPy, pw, curPh, eased);

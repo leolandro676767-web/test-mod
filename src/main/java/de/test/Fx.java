@@ -84,7 +84,46 @@ public final class Fx {
      * und eine sanfte, runde Abdunkelung zu den Ecken hin.
      */
     public static void backdrop(GuiGraphicsExtractor g, int w, int h) {
+        backdrop(g, w, h, w / 2, h / 2);
+    }
+
+    // Weich nachgezogene Mausposition (-1..1 je Achse, 0 = Bildschirmmitte)
+    private static float mouseX = 0f;
+    private static float mouseY = 0f;
+    private static float mouseGlow = 0f;
+    private static int lastMx = Integer.MIN_VALUE;
+    private static int lastMy = Integer.MIN_VALUE;
+    private static long lastMove = 0;
+
+    /** Mausposition -1..1 (weich), z.B. fuer das 3D-Logo. */
+    public static float mouseX() {
+        return mouseX;
+    }
+
+    public static float mouseY() {
+        return mouseY;
+    }
+
+    /**
+     * Hintergrund, der auf die Maus reagiert: die Lichtwolken und Punkte verschieben sich je nach
+     * Tiefe unterschiedlich weit (Parallax), und ein weiches Licht folgt dem Mauszeiger.
+     */
+    public static void backdrop(GuiGraphicsExtractor g, int w, int h, int mx, int my) {
         float t = Theme.animations ? time() : 0f;
+        float tx = w > 0 ? Math.max(-1f, Math.min(1f, (mx - w / 2f) / (w / 2f))) : 0f;
+        float ty = h > 0 ? Math.max(-1f, Math.min(1f, (my - h / 2f) / (h / 2f))) : 0f;
+        float k = Ui.step(0.08f);
+        mouseX += (tx - mouseX) * k;
+        mouseY += (ty - mouseY) * k;
+        long now = System.currentTimeMillis();
+        if (mx != lastMx || my != lastMy) {
+            lastMx = mx;
+            lastMy = my;
+            lastMove = now;
+        }
+        // das Licht am Zeiger leuchtet beim Bewegen auf und wird in Ruhe schwaecher
+        boolean moving = now - lastMove < 400;
+        mouseGlow += ((moving ? 1f : 0.45f) - mouseGlow) * Ui.step(moving ? 0.15f : 0.03f);
         int accent = Theme.accent();
         int first = Theme.headAt(0f);
         int last = Theme.headAt(1f);
@@ -92,22 +131,29 @@ public final class Fx {
         g.fillGradient(0, 0, w, h, withAlpha(first, 0x1C), withAlpha(last, 0x36));
 
         float big = Math.max(w, h);
-        glow(g, w * (0.26f + 0.08f * (float) Math.sin(t * 0.21)),
-                h * (0.36f + 0.10f * (float) Math.cos(t * 0.17)),
+        // Parallax: weiter "hinten" liegende Wolken bewegen sich weniger (gegen die Maus)
+        float px = -mouseX * w * 0.05f;
+        float py = -mouseY * h * 0.05f;
+        glow(g, w * (0.26f + 0.08f * (float) Math.sin(t * 0.21)) + px,
+                h * (0.36f + 0.10f * (float) Math.cos(t * 0.17)) + py,
                 big * (0.42f + 0.03f * (float) Math.sin(t * 0.5)), withAlpha(first, 0x3C));
-        glow(g, w * (0.76f + 0.07f * (float) Math.sin(t * 0.15 + 2)),
-                h * (0.66f + 0.10f * (float) Math.cos(t * 0.19 + 1)),
+        glow(g, w * (0.76f + 0.07f * (float) Math.sin(t * 0.15 + 2)) + px * 1.6f,
+                h * (0.66f + 0.10f * (float) Math.cos(t * 0.19 + 1)) + py * 1.6f,
                 big * (0.40f + 0.03f * (float) Math.cos(t * 0.43 + 1)), withAlpha(last, 0x40));
-        glow(g, w * (0.54f + 0.10f * (float) Math.cos(t * 0.12 + 4)),
-                h * (0.10f + 0.06f * (float) Math.sin(t * 0.16 + 3)),
+        glow(g, w * (0.54f + 0.10f * (float) Math.cos(t * 0.12 + 4)) + px * 0.6f,
+                h * (0.10f + 0.06f * (float) Math.sin(t * 0.16 + 3)) + py * 0.6f,
                 big * (0.30f + 0.02f * (float) Math.sin(t * 0.37 + 2)), withAlpha(accent, 0x24));
 
-        particles(g, w, h, t, accent);
+        // weiches Licht, das dem Mauszeiger folgt
+        glow(g, mx, my, big * 0.16f, withAlpha(Ui.lerp(accent, 0xFFFFFFFF, 0.2f), Math.round(0x30 * mouseGlow)));
+        glow(g, mx, my, big * 0.05f, withAlpha(0xFFFFFFFF, Math.round(0x18 * mouseGlow)));
+
+        particles(g, w, h, t, accent, mx, my);
         part(g, VIGNETTE, 0, 0, w, h, 0, 0, VIGNETTE_SIZE, VIGNETTE_SIZE, VIGNETTE_SIZE, withAlpha(0xFF000000, 0x78));
     }
 
     /** Wenige, langsam aufsteigende Lichtpunkte, die weich ein- und ausblenden. */
-    private static void particles(GuiGraphicsExtractor g, int w, int h, float t, int accent) {
+    private static void particles(GuiGraphicsExtractor g, int w, int h, float t, int accent, int mx, int my) {
         int count = Math.max(30, Math.min(70, w * h / 7000)); // mehr Lichtpunkte
         float span = h * 1.2f;
         for (int i = 0; i < count; i++) {
@@ -118,9 +164,22 @@ public final class Fx {
             float p = ((t * speed + ry * span) % span) / span; // 0 = unten, 1 = oben
             float y = h + 6 - p * span;
             float x = rx * w + 6f * (float) Math.sin(t * (0.3f + rs * 0.4f) + i);
+            // Parallax: groessere (= naehere) Punkte verschieben sich staerker mit der Maus
+            x -= mouseX * w * (0.02f + 0.06f * rs);
+            y -= mouseY * h * (0.02f + 0.06f * rs);
+            // Punkte nahe am Zeiger werden sanft weggeschoben und leuchten auf
+            float ddx = x - mx;
+            float ddy = y - my;
+            float dist = (float) Math.sqrt(ddx * ddx + ddy * ddy);
+            float near = Math.max(0f, 1f - dist / 70f);
+            if (near > 0f && dist > 0.5f) {
+                float push = near * near * 18f;
+                x += ddx / dist * push;
+                y += ddy / dist * push;
+            }
             float life = (float) Math.sin(Math.PI * Math.min(1f, Math.max(0f, p)));
             float twinkle = 0.7f + 0.3f * (float) Math.sin(t * (1.1f + rs) + i * 1.7f);
-            float a = life * twinkle;
+            float a = Math.min(1f, life * twinkle * (1f + near * 0.8f));
             if (a < 0.04f) continue;
             int col = i % 3 == 0 ? 0xFFFFFFFF : Ui.lerp(accent, 0xFFFFFFFF, 0.35f);
             float size = 1.2f + rs * 1.6f;

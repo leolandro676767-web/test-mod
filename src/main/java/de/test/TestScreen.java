@@ -740,14 +740,14 @@ public class TestScreen extends Screen {
         super.extractRenderState(g, mouseX, mouseY, delta);
 
         Ui.alpha = 1f;
-        Fx.backdrop(g, this.width, this.height);
+        Fx.backdrop(g, this.width, this.height, mouseX, mouseY);
         Ui.alpha = ga;
 
         // Logo (oder nur Schriftzug)
         int cx = this.width / 2;
         if (Theme.showLogo) {
             int logoW = Logo.W * logoScale;
-            Logo.draw(g, cx - logoW / 2, logoY, logoScale, ga, dy);
+            Logo.draw3d(g, cx - logoW / 2, logoY, logoScale, ga, dy, Fx.mouseX(), Fx.mouseY());
         } else {
             String title = "1 9 1 2";
             Ui.text(g, this.font, title, cx - this.font.width(title) / 2, logoY + dy, 0xFFFFFFFF, true);
