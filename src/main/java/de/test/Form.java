@@ -76,6 +76,8 @@ abstract class Form extends Screen {
     protected final Screen parent;
     private final List<Placed> placed = new ArrayList<>();
     private final List<Placed> boxes = new ArrayList<>();
+    // grauer Hinweis in leeren Textfeldern (z.B. welcher Befehl sonst gilt)
+    private final java.util.Map<EditBox, Supplier<String>> hints = new java.util.IdentityHashMap<>();
     private final List<Item> items = new ArrayList<>();
     private final List<Sec> secs = new ArrayList<>();
 
@@ -148,7 +150,7 @@ abstract class Form extends Screen {
         int ctrlNeed = Math.max(needCtrl, choiceW);
         int want = PAD + labelW + ctrlNeed + 4 + RESET_W + PAD;
         want = Math.max(want, needLine + 2 * PAD);
-        want = Math.max(want, 10 + this.font.width(this.title.getString()) + 12 + (searchable ? SEARCH_W + 8 : 0));
+        want = Math.max(want, 10 + this.font.width(Lang.t(this.title.getString())) + 12 + (searchable ? SEARCH_W + 8 : 0));
         want = Math.max(want, MIN_PW);
         pw = Math.min(want, this.width - 12);
         // Sehr schmales Fenster: die Bedienelemente behalten ihre Breite, die Beschriftung gibt nach
@@ -163,6 +165,7 @@ abstract class Form extends Screen {
         // 2. Durchgang: wirklich aufbauen
         placed.clear();
         boxes.clear();
+        hints.clear();
         items.clear();
         secs.clear();
         curRow = 0;
@@ -184,8 +187,8 @@ abstract class Form extends Screen {
         // Suchfeld oben rechts in der Kopfzeile (nur bei Fenstern mit vielen Einstellungen)
         if (searchable) {
             if (searchBox == null) {
-                searchBox = new EditBox(this.font, 0, 0, SEARCH_W, SEARCH_H, Component.literal("Suchen"));
-                searchBox.setHint(Component.literal("Suchen"));
+                searchBox = new EditBox(this.font, 0, 0, SEARCH_W, SEARCH_H, Lang.literal("Suchen"));
+                searchBox.setHint(Lang.literal("Suchen"));
                 searchBox.setMaxLength(30);
                 searchBox.setResponder(s -> {
                     String f = s.trim().toLowerCase(Locale.ROOT);
@@ -305,7 +308,8 @@ abstract class Form extends Screen {
 
     // ---------- Bausteine ----------
 
-    protected void description(String text) {
+    protected void description(String rawText) {
+        String text = Lang.t(rawText);
         if (measuring) {
             for (String line : text.split("\n")) measureLine(this.font.width(line));
             return;
@@ -325,14 +329,14 @@ abstract class Form extends Screen {
 
     protected void section(String name) {
         if (measuring) {
-            measureLine(this.font.width(name) + 40);
+            measureLine(this.font.width(Lang.t(name)) + 40);
             return;
         }
         endSection();
         curRow++;
         skip = false;
         if (filtering()) {
-            secMatches = hit(name);
+            secMatches = hit(Lang.t(name));
             if (!secMatches) {
                 pendingSec = name; // erscheint erst, wenn eine Zeile darin passt
                 return;
@@ -357,7 +361,7 @@ abstract class Form extends Screen {
             float t = Ui.ease(key, 0, isCollapsed(key) ? 1f : 0f, 0.25f);
             int x1 = ox + PAD;
             int x2 = ox + pw - PAD;
-            int lw = this.font.width(name);
+            int lw = this.font.width(Lang.t(name));
             Ui.text(g, this.font, name, x1, oy + y + 6, Ui.lerp(Theme.accent(), 0xFFFFFFFF, hv * 0.5f), true);
             Ui.fill(g, x1 + lw + 8, oy + y + 10, x2 - 16, oy + y + 11, Ui.HAIR);
             // Plus (zugeklappt) / Minus (offen), weich ueberblendet
@@ -391,8 +395,10 @@ abstract class Form extends Screen {
      * Auswahl als Reihe kleiner Farbfelder statt Durchklicken: ein Klick waehlt direkt.
      * colors liefert je Moeglichkeit {links, rechts} fuer einen kleinen Farbverlauf.
      */
-    protected void swatches(String name, String[] names, IntFunction<int[]> colors, IntSupplier get, IntConsumer set,
+    protected void swatches(String rawName, String[] rawNames, IntFunction<int[]> colors, IntSupplier get, IntConsumer set,
             int def) {
+        String name = Lang.t(rawName);
+        String[] names = Lang.all(rawNames);
         int n = names.length;
         int sw = 18;
         int gap = 4;
@@ -437,7 +443,8 @@ abstract class Form extends Screen {
     }
 
     /** Hinweiszeile; zu lange Texte werden umbrochen. Aendert sich der Text, passt sich die Hoehe an. */
-    protected void note(Supplier<String> text) {
+    protected void note(Supplier<String> raw) {
+        Supplier<String> text = () -> Lang.t(raw.get());
         if (measuring) {
             measureLine(this.font.width(text.get()));
             return;
@@ -477,6 +484,28 @@ abstract class Form extends Screen {
         relY += height;
     }
 
+    /**
+     * Eigene Zeile mit Klickflaechen: widgets bekommt die Zeilenposition und legt mit {@link #hotspot}
+     * unsichtbare Knoepfe an (gezeichnet wird alles in drawAt).
+     */
+    protected void customRow(int height, IntFunction<Draw> drawAt, java.util.function.IntConsumer widgets) {
+        if (measuring) return;
+        curRow++;
+        skip = filtering() && !secMatches;
+        if (skip) return;
+        flushSection();
+        int y = relY;
+        rowY = y;
+        addDraw(drawAt.apply(y));
+        widgets.accept(y);
+        relY += height;
+    }
+
+    /** Unsichtbare Klickflaeche fuer eigene Zeilen (rx/ry relativ zum Fenster, wie bei customRow). */
+    protected Button hotspot(int rx, int ry, int w, int h, Runnable action) {
+        return place(Button.builder(Component.empty(), b -> action.run()).bounds(0, 0, w, h).build(), rx, ry);
+    }
+
     /** Zuruecksetzen-Symbol rechts: erscheint nur, wenn der Wert vom Standard abweicht. */
     private void resetButton(int y, Runnable reset, BooleanSupplier changed) {
         Button b = place(Button.builder(Component.empty(), x -> {
@@ -491,7 +520,8 @@ abstract class Form extends Screen {
         });
     }
 
-    protected void toggle(String name, BooleanSupplier get, Consumer<Boolean> set, boolean def) {
+    protected void toggle(String rawName, BooleanSupplier get, Consumer<Boolean> set, boolean def) {
+        String name = Lang.t(rawName);
         if (measureRow(name, 20)) return;
         int y = beginRow(name);
         Button b = place(Button.builder(Component.empty(), x -> {
@@ -505,7 +535,9 @@ abstract class Form extends Screen {
         resetButton(y, () -> set.accept(def), () -> get.getAsBoolean() != def);
     }
 
-    protected void choice(String name, String[] names, IntSupplier get, IntConsumer set, int def) {
+    protected void choice(String rawName, String[] rawNames, IntSupplier get, IntConsumer set, int def) {
+        String name = Lang.t(rawName);
+        String[] names = Lang.all(rawNames);
         int dots = Math.min(names.length, 8);
         int dotsW = dots * 4 - 2;
         if (measuring) {
@@ -540,33 +572,74 @@ abstract class Form extends Screen {
         resetButton(y, () -> set.accept(def), () -> get.getAsInt() != def);
     }
 
-    protected void slider(String name, int min, int max, IntSupplier get, IntConsumer set, int def) {
+    protected void slider(String rawName, int min, int max, IntSupplier get, IntConsumer set, int def) {
+        slider(rawName, min, max, get, set, def, false);
+    }
+
+    /**
+     * Regler mit einer Nachkommastelle: die Werte sind Zehntel (35 = 3,5), im Feld steht "3,5"
+     * (auf Englisch "3.5"); eingeben kann man beides.
+     */
+    protected void sliderTenths(String rawName, int min, int max, IntSupplier get, IntConsumer set, int def) {
+        slider(rawName, min, max, get, set, def, true);
+    }
+
+    private static String tenths(int v) {
+        String sep = "en".equals(Lang.code()) ? "." : ",";
+        return (v < 0 ? "-" : "") + Math.abs(v) / 10 + sep + Math.abs(v) % 10;
+    }
+
+    /** Wie clean(), laesst aber ein Komma bzw. einen Punkt stehen. */
+    private static String cleanDecimal(String s, boolean allowNeg) {
+        StringBuilder sb = new StringBuilder();
+        boolean sep = false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c >= '0' && c <= '9') {
+                sb.append(c);
+            } else if ((c == ',' || c == '.') && !sep && sb.length() > 0) {
+                sb.append(c);
+                sep = true;
+            } else if (c == '-' && allowNeg && sb.length() == 0) {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    private void slider(String rawName, int min, int max, IntSupplier get, IntConsumer set, int def,
+            boolean decimal) {
+        String name = Lang.t(rawName);
         if (measureRow(name, 40 + 6 + 104)) return;
         int y = beginRow(name);
         int bw = 40;
         int sx = ctrlX + bw + 6;
         int sw = Math.max(40, ctrlX + ctrlW - sx);
         int start = Math.max(min, Math.min(max, get.getAsInt()));
+        java.util.function.IntFunction<String> show = decimal ? Form::tenths : Integer::toString;
 
         EditBox box = new EditBox(this.font, 0, 0, bw, 20, Component.literal(name));
         box.setMaxLength(6);
-        box.setValue(Integer.toString(start));
+        box.setValue(show.apply(start));
         Slide slide = new Slide(sw, min, max, start, v -> {
             set.accept(v);
             syncing = true;
-            box.setValue(Integer.toString(v));
+            box.setValue(show.apply(v));
             syncing = false;
         });
         box.setResponder(s -> {
             if (syncing) return;
-            String f = clean(s, min < 0);
+            String f = decimal ? cleanDecimal(s, min < 0) : clean(s, min < 0);
             if (!f.equals(s)) {
                 syncing = true;
                 box.setValue(f);
                 syncing = false;
             }
             try {
-                int v = Math.max(min, Math.min(max, Integer.parseInt(f)));
+                int parsed = decimal
+                        ? (int) Math.round(Double.parseDouble(f.replace(',', '.')) * 10.0)
+                        : Integer.parseInt(f);
+                int v = Math.max(min, Math.min(max, parsed));
                 set.accept(v);
                 slide.setFraction((v - min) / (double) (max - min));
             } catch (NumberFormatException e) {
@@ -597,7 +670,8 @@ abstract class Form extends Screen {
         resetButton(y, () -> set.accept(def), () -> get.getAsInt() != def);
     }
 
-    protected void number(String name, IntSupplier get, IntConsumer set, int def) {
+    protected void number(String rawName, IntSupplier get, IntConsumer set, int def) {
+        String name = Lang.t(rawName);
         if (measureRow(name, 90)) return;
         int y = beginRow(name);
         EditBox box = new EditBox(this.font, 0, 0, 90, 20, Component.literal(name));
@@ -623,11 +697,22 @@ abstract class Form extends Screen {
     }
 
     /** Freies Textfeld. */
-    protected void text(String name, Supplier<String> get, Consumer<String> set, String def) {
+    protected void text(String rawName, Supplier<String> get, Consumer<String> set, String def) {
+        text(rawName, get, set, def, 32, null);
+    }
+
+    /**
+     * Freies Textfeld mit eigener Hoechstlaenge; hint (darf null sein) erscheint grau, solange das Feld leer ist
+     * (der Text wird wie alle Beschriftungen uebersetzt).
+     */
+    protected void text(String rawName, Supplier<String> get, Consumer<String> set, String def, int maxLength,
+            Supplier<String> hint) {
+        String name = Lang.t(rawName);
         if (measureRow(name, MIN_CTRL)) return;
         int y = beginRow(name);
         EditBox box = new EditBox(this.font, 0, 0, ctrlW, 20, Component.literal(name));
-        box.setMaxLength(32);
+        box.setMaxLength(maxLength);
+        if (hint != null) hints.put(box, hint);
         box.setValue(get.get());
         box.setResponder(s -> {
             if (!syncing) set.accept(s);
@@ -637,8 +722,75 @@ abstract class Form extends Screen {
         resetButton(y, () -> set.accept(def), () -> !String.valueOf(get.get()).equals(def));
     }
 
+    /**
+     * Schnellwahl: kleine Knoepfe, die einen festen Text in ein Feld schreiben (z.B. /home oder /spawn).
+     * Der Knopf, der zum aktuellen Text passt, ist hervorgehoben.
+     */
+    protected void presets(String rawName, String[] values, Supplier<String> get, Consumer<String> set) {
+        String name = Lang.t(rawName);
+        int gap = 4;
+        int[] widths = new int[values.length];
+        int total = -gap;
+        for (int i = 0; i < values.length; i++) {
+            widths[i] = this.font.width(values[i]) + 14;
+            total += widths[i] + gap;
+        }
+        if (measureRow(name, total)) return;
+        int y = beginRow(name);
+        List<Button> bs = new ArrayList<>();
+        int x = ctrlX;
+        for (int i = 0; i < values.length; i++) {
+            final String value = values[i];
+            bs.add(place(Button.builder(Component.empty(), b -> {
+                set.accept(value);
+                TestConfig.save();
+                this.rebuildWidgets(); // Textfeld mit dem neuen Wert neu fuellen
+            }).bounds(0, 0, widths[i], 20).build(), x, y));
+            x += widths[i] + gap;
+        }
+        addDraw((g, ox, oy, mx, my) -> {
+            label(g, ox, oy, y, name);
+            String cur = String.valueOf(get.get()).strip();
+            for (int i = 0; i < bs.size(); i++) {
+                Button b = bs.get(i);
+                int bx = b.getX();
+                int by = b.getY();
+                Ui.box20(g, b, bx, by, widths[i], mx, my, true);
+                boolean sel = cur.equalsIgnoreCase(values[i]);
+                float s = Ui.ease(b, 1, sel ? 1f : 0f, 0.3f);
+                if (s > 0.02f) {
+                    Ui.fill(g, bx + 4, by + 16, bx + widths[i] - 4, by + 17,
+                            Ui.withA(Theme.accent(), Math.round(255 * s)));
+                }
+                int tw = this.font.width(values[i]);
+                Ui.text(g, this.font, values[i], bx + (widths[i] - tw) / 2, by + 6, sel ? Ui.TEXT : Ui.MUTED, true);
+            }
+        });
+    }
+
+    /**
+     * Zeile mit einem festen Namen (z.B. ein Spielername; wird nie uebersetzt) und einem kleinen Knopf daneben.
+     * Nach dem Klick wird gespeichert und das Menue neu aufgebaut.
+     */
+    protected void nameRow(String plainName, int color, String rawButton, Runnable action) {
+        String btn = Lang.t(rawButton);
+        int bw = this.font.width(btn) + 16;
+        if (measureRow(plainName, bw)) return;
+        int y = beginRow(plainName);
+        Button b = place(Button.builder(Component.literal(btn), x -> {
+            action.run();
+            TestConfig.save();
+            this.rebuildWidgets();
+        }).bounds(0, 0, bw, 20).build(), ctrlX, y);
+        addDraw((g, ox, oy, mx, my) -> {
+            g.text(this.font, plainName, ox + PAD, oy + y + 6, Ui.mul(color), true);
+            Ui.button(g, this.font, b, mx, my, Ui.STYLE_NORMAL);
+        });
+    }
+
     /** Hex-Farbe RRGGBB; leer bedeutet -1 (Standard). Daneben eine kleine Vorschau der Farbe. */
-    protected void hex(String name, IntSupplier get, IntConsumer set) {
+    protected void hex(String rawName, IntSupplier get, IntConsumer set) {
+        String name = Lang.t(rawName);
         if (measureRow(name, 70 + 6 + 20)) return;
         int y = beginRow(name);
         EditBox box = new EditBox(this.font, 0, 0, 70, 20, Component.literal(name));
@@ -671,7 +823,8 @@ abstract class Form extends Screen {
     }
 
     /** Drei Zahlenfelder X/Y/Z mit "Hier"-Knopf (aktuelle Spielerposition). */
-    protected void coords(String name, Supplier<int[]> get, Consumer<int[]> set) {
+    protected void coords(String rawName, Supplier<int[]> get, Consumer<int[]> set) {
+        String name = Lang.t(rawName);
         int hereW = Math.max(34, Ui.buttonWidth(this.font, "Hier"));
         if (measureRow(name, 3 * 44 + hereW - 4 - RESET_W)) return;
         int y = beginRow(name);
@@ -721,13 +874,19 @@ abstract class Form extends Screen {
 
     /** Breiter Knopf ueber die ganze Panelbreite (beendet den aktuellen Abschnitt). */
     protected Button wideButton(String text, boolean primary, Runnable action) {
+        return wideButton(text, primary, action, false);
+    }
+
+    /** Breiter Knopf; inSection = true: gehoert zum aktuellen Abschnitt (klappt mit ihm ein). */
+    protected Button wideButton(String rawText, boolean primary, Runnable action, boolean inSection) {
+        String text = Lang.t(rawText);
         if (measuring) {
             rowsSeen++;
             needLine = Math.max(needLine, Ui.buttonWidth(this.font, text));
             return Button.builder(Component.literal(text), x -> {
             }).bounds(0, 0, 20, 20).build();
         }
-        endSection();
+        if (!inSection) endSection();
         int y = beginRow(text);
         Button b = place(Button.builder(Component.literal(text), x -> action.run())
                 .bounds(0, 0, pw - 2 * PAD, 20).build(), PAD, y);
@@ -740,7 +899,7 @@ abstract class Form extends Screen {
     protected void footer(BooleanSupplier active, Consumer<Boolean> setActive) {
         String backText = CommonComponents.GUI_BACK.getString();
         int backW = Math.max(72, Ui.buttonWidth(this.font, backText));
-        int activeW = 16 + 6 + this.font.width("Aktiv") + 4;
+        int activeW = 16 + 6 + this.font.width(Lang.t("Aktiv")) + 4;
         if (measuring) {
             needLine = Math.max(needLine, (active != null ? activeW + 12 : 0) + backW);
             return;
@@ -912,6 +1071,10 @@ abstract class Form extends Screen {
             Ui.alpha = a;
             eb.extractRenderState(g, bmx, bmy, delta);
             Ui.field(g, eb);
+            Supplier<String> hint = hints.get(eb);
+            if (hint != null && eb.getValue().isEmpty() && !eb.isFocused()) {
+                Ui.fitText(g, this.font, hint.get(), eb.getX() + 4, eb.getY() + 6, eb.getWidth() - 8, Ui.MUTED, false);
+            }
         }
         g.disableScissor();
         Ui.alpha = ga;

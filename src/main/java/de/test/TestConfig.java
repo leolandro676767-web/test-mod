@@ -24,7 +24,10 @@ public final class TestConfig {
     private TestConfig() {}
 
     public static void load() {
-        if (!Files.exists(FILE)) return;
+        if (!Files.exists(FILE)) {
+            Keybinds.load(new Properties()); // erster Start: Standardtasten (G, J, K) im 1912-Menue
+            return;
+        }
         Properties p = new Properties();
         try (InputStream in = Files.newInputStream(FILE)) {
             p.load(in);
@@ -53,6 +56,8 @@ public final class TestConfig {
         Theme.menuScale = num(p, "themeMenuScale", Theme.menuScale);
         Theme.menuMode = num(p, "themeMenuMode", Theme.menuMode) == 1 ? 1 : 0;
         Theme.hudList = num(p, "themeHudList", 1) == 1;
+        Theme.lowFx = num(p, "themeLowFx", 0) == 1;
+        Theme.hudCorner = Math.max(0, Math.min(3, num(p, "themeHudCorner", 0)));
         Theme.hudListSize = Math.max(0, Math.min(3, num(p, "themeHudListSize", Theme.hudListSize)));
         Theme.collapsed = num(p, "menuCollapsed", Theme.collapsed) & 0x7F;
         Theme.clamp();
@@ -140,7 +145,15 @@ public final class TestConfig {
         loadStatics(p, RenderMods.class, "rm.");
         readIds(p.getProperty("rm.blockEspBlocks"), BuiltInRegistries.BLOCK, RenderMods.blockEspBlocks);
         loadStatics(p, MiscMods.class, "mm.");
+        loadStatics(p, DebrisMiner.class, "dm.");
+        loadStatics(p, Friends.class, "fr.");
+        loadStatics(p, KillAura.class, "ka.");
+        loadStatics(p, BotGuard.class, "bg.");
+        loadStatics(p, Survival.class, "sv.");
+        loadStatics(p, InfoHud.class, "ih.");
         Keybinds.load(p);
+        InvLayout.load(p);
+        Lang.language = Math.max(0, Math.min(Lang.NAMES.length - 1, num(p, "language", Lang.language)));
         Esp.enabled = bool(p, "espEnabled", Esp.enabled);
         Esp.colPlayer = color(num(p, "espColPlayer", Esp.colPlayer));
         Esp.colMob = color(num(p, "espColMob", Esp.colMob));
@@ -176,6 +189,11 @@ public final class TestConfig {
                 TestClient.selectedBlock = b == Blocks.AIR ? null : b;
             }
         }
+        Walker.allowPlace = bool(p, "walkPlace", Walker.allowPlace);
+        Walker.allowParkour = bool(p, "walkParkour", Walker.allowParkour);
+        Walker.sprint = bool(p, "walkSprint", Walker.sprint);
+        Walker.showPath = bool(p, "walkShowPath", Walker.showPath);
+        Walker.maxFall = Math.max(1, Math.min(10, num(p, "walkMaxFall", Walker.maxFall)));
         TestClient.gx = num(p, "gx", TestClient.gx);
         TestClient.gy = num(p, "gy", TestClient.gy);
         TestClient.gz = num(p, "gz", TestClient.gz);
@@ -211,6 +229,8 @@ public final class TestConfig {
         p.setProperty("themeMenuScale", Integer.toString(Theme.menuScale));
         p.setProperty("themeMenuMode", Integer.toString(Theme.menuMode));
         p.setProperty("themeHudList", Theme.hudList ? "1" : "0");
+        p.setProperty("themeLowFx", Theme.lowFx ? "1" : "0");
+        p.setProperty("themeHudCorner", Integer.toString(Theme.hudCorner));
         p.setProperty("themeHudListSize", Integer.toString(Theme.hudListSize));
         StringJoiner drops = new StringJoiner(",");
         for (Item it : TestClient.dropItems) {
@@ -301,7 +321,15 @@ public final class TestConfig {
         saveStatics(p, RenderMods.class, "rm.");
         p.setProperty("rm.blockEspBlocks", writeIds(RenderMods.blockEspBlocks, BuiltInRegistries.BLOCK));
         saveStatics(p, MiscMods.class, "mm.");
+        saveStatics(p, DebrisMiner.class, "dm.");
+        saveStatics(p, Friends.class, "fr.");
+        saveStatics(p, KillAura.class, "ka.");
+        saveStatics(p, BotGuard.class, "bg.");
+        saveStatics(p, Survival.class, "sv.");
+        saveStatics(p, InfoHud.class, "ih.");
         Keybinds.save(p);
+        InvLayout.save(p);
+        p.setProperty("language", Integer.toString(Lang.language));
         p.setProperty("espEnabled", Boolean.toString(Esp.enabled));
         p.setProperty("espColPlayer", Integer.toString(Esp.colPlayer));
         p.setProperty("espColMob", Integer.toString(Esp.colMob));
@@ -322,6 +350,11 @@ public final class TestConfig {
         if (TestClient.selectedBlock != null) {
             p.setProperty("block", BuiltInRegistries.BLOCK.getKey(TestClient.selectedBlock).toString());
         }
+        p.setProperty("walkPlace", Boolean.toString(Walker.allowPlace));
+        p.setProperty("walkParkour", Boolean.toString(Walker.allowParkour));
+        p.setProperty("walkSprint", Boolean.toString(Walker.sprint));
+        p.setProperty("walkShowPath", Boolean.toString(Walker.showPath));
+        p.setProperty("walkMaxFall", Integer.toString(Walker.maxFall));
         p.setProperty("gx", Integer.toString(TestClient.gx));
         p.setProperty("gy", Integer.toString(TestClient.gy));
         p.setProperty("gz", Integer.toString(TestClient.gz));
@@ -338,6 +371,66 @@ public final class TestConfig {
             }
         } catch (IOException e) {
             System.err.println("[1912] Konnte Einstellungen nicht speichern: " + e);
+        }
+    }
+
+    // ---------- Profile ----------
+
+    private static final Path PROFILES = FabricLoader.getInstance().getConfigDir().resolve("1912-profiles");
+
+    /** Erlaubte Zeichen fuer Profilnamen (wird auch der Dateiname). */
+    static String cleanProfileName(String name) {
+        String n = name == null ? "" : name.strip().replaceAll("[^A-Za-z0-9 _\\-\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc\u00df]", "");
+        return n.length() > 24 ? n.substring(0, 24).strip() : n;
+    }
+
+    static java.util.List<String> profiles() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (!Files.isDirectory(PROFILES)) return out;
+        try (var stream = Files.list(PROFILES)) {
+            stream.map(f -> f.getFileName().toString())
+                    .filter(n -> n.endsWith(".properties"))
+                    .map(n -> n.substring(0, n.length() - ".properties".length()))
+                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    .forEach(out::add);
+        } catch (IOException e) {
+            // keine Profile lesbar
+        }
+        return out;
+    }
+
+    /** Speichert alle aktuellen Einstellungen als Profil. Gibt eine Fehlermeldung zurueck oder null. */
+    static String saveProfile(String name) {
+        String n = cleanProfileName(name);
+        if (n.isEmpty()) return "Bitte erst einen Namen eintragen";
+        save();
+        try {
+            Files.createDirectories(PROFILES);
+            Files.copy(FILE, PROFILES.resolve(n + ".properties"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return null;
+        } catch (IOException e) {
+            return "Speichern fehlgeschlagen";
+        }
+    }
+
+    /** Laedt ein Profil: ersetzt alle Einstellungen. */
+    static String loadProfile(String name) {
+        Path f = PROFILES.resolve(cleanProfileName(name) + ".properties");
+        if (!Files.exists(f)) return "Profil nicht gefunden";
+        try {
+            Files.copy(f, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            return "Laden fehlgeschlagen";
+        }
+        load();
+        return null;
+    }
+
+    static void deleteProfile(String name) {
+        try {
+            Files.deleteIfExists(PROFILES.resolve(cleanProfileName(name) + ".properties"));
+        } catch (IOException e) {
+            // egal
         }
     }
 

@@ -1,0 +1,1157 @@
+# 1912 Client: alle deutschen Texte des Menüs (Nummer TAB Text).
+# "~" am Anfang = Teilstück eines zusammengesetzten Textes, \n = Zeilenumbruch.
+1	Bereich abbauen
+2	Abbau STOPPEN
+3	Abbau STARTEN
+4	Baut alle Blöcke zwischen zwei Ecken ab.
+5	Bereich
+6	Ecke 1
+7	Ecke 2
+8	~Größe: 
+9	~ Blöcke (max. 50000)
+10	Anzeige
+11	Ziele hervorheben
+12	Bereichsrahmen
+13	Umriss-Stil
+14	Bereich abgebrochen
+15	Spieler
+16	~ ms
+17	~Haltbarkeit: 
+18	~Nährwert: 
+19	~  Sättigung: 
+20	~ weitere
+21	Tasten-Übersicht
+22	Alle Tasten, die du im Hauptmenü mit „Tasten zuweisen“ vergeben hast. Halten = Modul ist nur an, solange die Taste gedrückt ist.
+23	Tasten
+24	Noch keine Tasten vergeben. Im Hauptmenü auf „Tasten zuweisen“ klicken, dann ein Modul anklicken und eine Taste drücken.
+25	Halten statt Umschalten
+26	Tasten entfernen
+27	~Taste von „
+28	~“ entfernen
+29	Block wählen
+30	Block abbauen
+31	~Block aus Liste wählen (
+32	Wähle einen Block aus der Liste aller Blöcke\noder übernimm den anvisierten.
+33	Anvisierten Block übernehmen
+34	Erst einen Block anvisieren
+35	Suche
+36	Radius (Blöcke)
+37	Höhe (Blöcke)
+38	Abbau gestoppt
+39	§c1912: Kamera konnte nicht erstellt werden
+40	§e1912: Freecam startet, sobald du am Boden stehst
+41	AutoClicker
+42	Schlägt im Takt des Tool-Cooldowns.
+43	Allgemein
+44	Nur beim Halten
+45	Auch früher schlagen
+46	Zufall (%)
+47	Design anpassen
+48	So sieht dein Menü aus. Änderungen siehst du sofort.
+49	~Sprache / Language: 
+50	Module
+51	Modus
+52	Standard zeigt nur die einfachen Module. Experte zeigt alle.
+53	Anzeige im Spiel
+54	Aktive Module anzeigen
+55	Größe der Liste
+56	Position
+57	Zeigt alle Module, die gerade an sind, in der gewählten Ecke.
+58	Farben
+59	Farbschema
+60	Vorschau
+61	Eingeschaltetes Modul
+62	Eigene Farben
+63	Kopffarbe
+64	Akzentfarbe
+65	Hex-Code wie 9A74E6. Leer lassen = Farbe vom Farbschema.
+66	Größe
+67	Menü-Größe
+68	Spaltenbreite
+69	Auto: so groß wie möglich, aber alle Spalten passen nebeneinander. Spalten werden von selbst breiter, wenn ein Name mehr Platz braucht.
+70	Logo
+71	Logo anzeigen
+72	Logo-Größe
+73	Effekte
+74	Animationen
+75	Weniger Effekte
+76	Animationen aus = alles erscheint sofort. Weniger Effekte = ruhigerer Hintergrund ohne Partikel, für schwächere PCs.
+77	Alles auf Standard zurücksetzen
+78	AutoDrop
+79	ESP
+80	~ gewählt
+81	Zeigt Ziele durch Wände an.\nNur in der Ego-Ansicht.
+82	Ziele
+83	Mobs
+84	Items am Boden
+85	Blöcke
+86	Darstellung
+87	Umriss
+88	Scan-Tempo
+89	Welle
+90	Linien
+91	Name + Entfernung
+92	Farben (leer = Standard)
+93	Items
+94	Reichweite
+95	Radius
+96	Block-Radius
+97	~Mobs wählen (
+98	ESP: Mobs
+99	~Items wählen (
+100	ESP: Items
+101	~Blöcke wählen (
+102	ESP: Blöcke
+103	Leere Mob- oder Item-Auswahl = alle anzeigen.
+104	Suchen
+105	Standard
+106	Hier
+107	Aktiv
+108	~Nichts gefunden für „
+109	Zu Koordinaten gehen
+110	Gehen STOPPEN
+111	Losgehen
+112	Sucht den besten Weg zum Ziel: läuft gerade Strecken am Stück,\nspringt auf Stufen und über Lücken, schwimmt und baut nur ab,\nwenn es nicht anders geht.
+113	Ziel
+114	Koordinaten
+115	Bereit
+116	Weg
+117	Blöcke abbauen
+118	Blöcke setzen
+119	Über Lücken springen
+120	Sprinten
+121	Max. Fallhöhe
+122	Weg anzeigen
+123	Von der Seite zuschauen (Free Look)
+124	Ziel hervorheben
+125	Gehen abgebrochen
+126	Schwert
+127	Spitzhacke
+128	Axt
+129	Schaufel
+130	Hacke
+131	Baublöcke (Bruchstein, Erde, Stein)
+132	Irgendein Block
+133	Essen
+134	Enderperlen
+135	Wassereimer
+136	Lavaeimer
+137	Goldene Äpfel
+138	Totem der Unsterblichkeit
+139	Schild
+140	Bogen
+141	Armbrust
+142	Pfeile
+143	Feuerwerksraketen
+144	Feuerzeug
+145	Erst die Aufteilung festlegen
+146	Hauptmenü: Inventar sortieren, Punkte
+147	Inventar nicht sortiert
+148	Erst Truhe/Menü schließen
+149	Inventar ist schon sortiert
+150	Inventar sortiert
+151	~ Stapel verschoben
+152	nicht alles ließ sich umräumen
+153	Inventar sortieren
+154	~Zweite Hand
+155	~Hotbar 
+156	~Inventar 
+157	Lege fest, was in welchem Platz liegen soll. Mit der Taste für\n„Inventar sortieren“ räumt er dein Inventar dann genau so ein.\nBei Werkzeugen nimmt er immer das beste (z.B. Diamant vor Eisen).
+158	Aufteilung
+159	Aus meinem Inventar übernehmen
+160	Vorschlag laden (Werkzeuge vorne)
+161	Alles leeren
+162	Sortieren
+163	Gleiche Stapel vorher zusammenlegen
+164	Jetzt sortieren
+165	~Taste: 
+166	~. Ändern im Hauptmenü mit „Tasten zuweisen“.
+167	Noch keine Taste: im Hauptmenü „Tasten zuweisen“ anklicken, dann „Inventar sortieren“ und die gewünschte Taste drücken.
+168	Inventar
+169	Hotbar
+170	2. Hand
+171	~egal (wird nicht umgeräumt)
+172	~   ·   Klicken zum Ändern
+173	Klicke auf einen Platz, um festzulegen, was dort hin soll.
+174	Was soll hier liegen? Bei Werkzeugen nimmt er immer das beste,\nbei Essen das nahrhafteste, sonst den größten Stapel.
+175	Werkzeuge, Blöcke und Essen
+176	Gegenstände
+177	Sonstiges
+178	~Anderes Item: 
+179	Anderes Item auswählen
+180	Leer lassen (egal, was hier liegt)
+181	~: Item wählen
+182	Alle Module aus / an
+183	Stopp / Auto Walk
+184	Server-Schutz
+185	Kein Modul war an
+186	~Alle Module aus (
+187	Nochmal
+188	~: wieder an
+189	~ Modul
+190	~ Module
+191	~ wieder an
+192	~Num 
+193	Leertaste
+194	Rücktaste
+195	Einfg
+196	Entf
+197	Rechts
+198	Links
+199	Runter
+200	Hoch
+201	Bild hoch
+202	Bild runter
+203	Pos1
+204	Ende
+205	Feststell
+206	Shift links
+207	Shift rechts
+208	Strg links
+209	Strg rechts
+210	Alt Gr
+211	Num Enter
+212	Num +
+213	Num -
+214	Num *
+215	Num /
+216	Num ,
+217	Pause
+218	Druck
+219	Rollen
+220	Num
+221	~Taste 
+222	Sprache / Language
+223	Sprache des 1912-Menüs. „Automatisch“ nimmt die Sprache, die in Minecraft eingestellt ist.
+224	Sprache
+225	Tempo
+226	Eile
+227	Resistenz
+228	Sprungkraft
+229	Stärke
+230	Keine
+231	Regeneration
+232	Hauptwirkung stärker
+233	§c1912: Book Bot - erst Buch und Feder in die Hand nehmen
+234	~§a1912: Book Bot - 
+235	~ Seiten geschrieben
+236	~ und signiert
+237	Im Hauptmenü
+238	~Spielt auf 
+239	Spielt im Mehrspieler
+240	Spielt im Einzelspieler
+241	~§e1912: Server-Schutz - auf 
+242	~ wurden alle Module ausgeschaltet.
+243	~§a1912: Leuchtfeuer gesetzt: 
+244	~§e1912: Werkzeug fast kaputt (
+245	§c1912: Totem verbraucht!
+246	Anti Packet Kick
+247	Begrenzt ausgehende Pakete, um „too many\npackets“-Kicks zu vermeiden.
+248	Max. Pakete/Tick
+249	Auto Reconnect
+250	Verbindet nach einem Rauswurf automatisch\nneu zum letzten Server.
+251	Verzögerung (s)
+252	Better Beacons
+253	Wählt Leuchtfeuer-Wirkungen unabhängig von der Größe der Pyramide.\nLeuchtfeuer öffnen, Bezahl-Item (z.B. Eisenbarren) reinlegen - fertig.
+254	Wirkungen
+255	Hauptwirkung
+256	Zweite Wirkung
+257	Die zweite Wirkung gibt Minecraft nur bei voller Pyramide (4 Stufen).
+258	Better Chat
+259	Verbessert den Chat.
+260	Uhrzeit davor
+261	Wiederholungen ausblenden
+262	Zeitfenster (s)
+263	Book Bot
+264	Beschreibt Buch und Feder in deiner Hand\nund schaltet sich danach wieder aus.
+265	Inhalt
+266	Text je Seite
+267	Seiten
+268	Signieren
+269	Buch signieren
+270	Titel
+271	Discord Presence
+272	Zeigt in Discord, dass du gerade spielst.\nDiscord muss auf diesem PC laufen.
+273	App-ID
+274	Zweite Zeile
+275	Server-Adresse zeigen
+276	~Status: 
+277	App-ID: auf discord.com/developers/applications eine Anwendung anlegen. Ihr Name erscheint in Discord als Spiel. Die Application ID dann hier eintragen.
+278	Inventory Tweaks
+279	Sortiert dein Inventar nach deiner eigenen Aufteilung\n(Schwert, Werkzeuge, Blöcke, Perlen und mehr auf feste Plätze).
+280	Aufteilung festlegen
+281	Message Aura
+282	Schreibt Spielern in der Nähe automatisch.\n%name% wird ersetzt.
+283	Text
+284	Pause je Spieler (s)
+285	Notebot
+286	Spielt ein Lied auf Notenblöcken in deiner Nähe.\nStell dich so hin, dass du alle erreichst (ca. 4 Blöcke).
+287	Lied
+288	Tempo (Ticks je Note)
+289	Wiederholen
+290	Stimmen
+291	Pause je Klick (Ticks)
+292	~Eigene Datei: config/
+293	~ - Noten mit Leerzeichen: c d e f g a h, c2 = höhere Oktave, c# = Halbton, - = Pause, c+e+g = Akkord. Nicht im Kreativmodus. Über jedem Notenblock muss Luft sein.
+294	Notifier
+295	Meldet wichtige Ereignisse im Chat.
+296	Haltbarkeit
+297	Warnen bei (%)
+298	Totem verbraucht
+299	Packet Canceller
+300	Blockiert gewählte ausgehende Pakete.\nVorsicht: kann dich vom Server trennen.
+301	Blockieren
+302	Schlagen (Swing)
+303	Interagieren
+304	Block-Aktion
+305	Bewegung
+306	Server Spoof
+307	Meldet dem Server beim Verbinden eine\nandere Client-Marke (z.B. vanilla).\nGilt ab der nächsten Verbindung.
+308	Marke
+309	Sound Blocker
+310	Stummt Geräusche, die der Server schickt\n(Mobs, Portale, Gewitter, Explosionen ...).
+311	Geräusche
+312	Teile des Namens, mit Komma getrennt - z.B. ghast, portal, thunder, explode, villager.
+313	Spam
+314	Schreibt wiederholt eine Nachricht.\nBeginnt mit / für Befehle.
+315	Abstand (s)
+316	Schaltet beim Betreten bestimmter Server automatisch alle Module aus - damit du dort nicht aus Versehen etwas anhast, das verboten ist.
+317	Server
+318	Adressen
+319	Teile der Adresse, mit Komma getrennt. Mit J holst du die Module zurück.
+320	Swarm
+321	Steuert mehrere eigene Spiele gemeinsam: eines ist der Host,\ndie anderen verbinden sich als Worker und machen mit.
+322	Verbindung
+323	Rolle
+324	Host-Adresse
+325	Port
+326	Auch andere PCs (LAN)
+327	Auto: das erste Spiel auf diesem PC wird Host, alle weiteren werden Worker.
+328	Host steuert die Worker
+329	Module spiegeln
+330	Worker folgen mir
+331	Nachricht
+332	Nachricht von allen Workern senden
+333	Alle Worker zu mir holen
+334	Alle Worker stoppen
+335	~§c1912: Swarm - 
+336	AutoWalk
+337	Läuft automatisch geradeaus und baut\nHindernisse ab (Taste G).
+338	Sprint-Jump
+339	Hindernisse abbauen
+340	Slippy
+341	Jeder Boden fühlt sich rutschig an wie Eis.
+342	Rutschigkeit (%)
+343	Sneak
+344	Hält die Schleichen-Taste dauerhaft gedrückt.
+345	Nur beim Laufen
+346	Speed
+347	Läuft schneller in die gedrückte Richtung.
+348	Tempo (Blöcke/s)
+349	Nur am Boden
+350	Auto-Springen
+351	Spider
+352	Klettert an Wänden hoch, wenn man\ndagegen läuft.
+353	Klettertempo
+354	Sprint
+355	Sprintet automatisch, solange man läuft.
+356	Alle Richtungen
+357	Step
+358	Steigt höhere Stufen ohne Springen hoch.\nBeim Schleichen aus.
+359	Trident Boost
+360	Verstärkt den Schub von Dreizacken\nmit Sog (Riptide).
+361	Stärke (%)
+362	High Jump
+363	Springt höher. Achtung: Fallschaden,\nam besten mit No Fall.
+364	Sprunghöhe (Blöcke)
+365	Jesus
+366	Läuft über Wasser. Mit Schleichen\ntaucht man ab.
+367	Auch Lava
+368	Long Jump
+369	Springt beim Laufen weiter.
+370	Weite (%)
+371	No Fall
+372	Verhindert Fallschaden.\nWirkt nicht beim Elytra-Fliegen.
+373	Ab Fallhöhe (Blöcke)
+374	No Slow
+375	Beim Essen, Trinken, Blocken und\nBogenspannen normal schnell laufen.
+376	Essen / Trinken
+377	Bogen / Armbrust
+378	Sonstige
+379	Tempo (%)
+380	Parkour
+381	Springt automatisch an der Blockkante.
+382	Vorlauf (Ticks)
+383	Nur beim Sprinten
+384	Reverse Step
+385	Fällt von Kanten sofort herunter\nstatt langsam zu sinken.
+386	Safe Walk
+387	Schleicht automatisch an Kanten,\ndamit man nicht herunterfällt.
+388	Abstand zur Kante (x0,1)
+389	Beim Springen aus
+390	Scaffold
+391	Setzt beim Laufen Blöcke unter die Füße.\nNimmt Blöcke aus der Hotbar.
+392	Nach unten schauen
+393	Blöcke pro Tick
+394	Velocity
+395	Schwächt den Rückstoß ab, wenn man\ngetroffen wird. 0 % = kein Rückstoß.
+396	Horizontal (%)
+397	Vertikal (%)
+398	Hochspringen
+399	Schweben
+400	Kreativ-Flug
+401	1912: Blink funktioniert in dieser Version nicht (Paket-Hook fehlt)
+402	Air Jump
+403	Springen auch in der Luft.
+404	Sprünge (0 = unbegrenzt)
+405	Anchor
+406	Zieht dich in ein 1x1-Loch unter dir.
+407	Max. Höhe
+408	Zugkraft (%)
+409	Anti Void
+410	Rettet dich, wenn du in die Leere fällst.
+411	Auto Jump
+412	Springt automatisch, sobald du am Boden bist.
+413	Auto Wasp
+414	Fliegt mit der Elytra automatisch\nzum nächsten Spieler.
+415	Blink
+416	Hält deine Bewegung zurück. Beim Ausschalten\nspringst du für andere zur neuen Stelle.
+417	Auto-Senden (s, 0=aus)
+418	~Zurückgehalten: 
+419	~ Pakete
+420	Click Tp
+421	Rechtsklick mit leerer Hand teleportiert\ndich auf den anvisierten Block.
+422	Elytra Boost
+423	Beschleunigt beim Elytra-Fliegen\nin Blickrichtung.
+424	Max. Tempo (Blöcke/s)
+425	Nur mit Vorwärts-Taste
+426	Elytra Fly
+427	Steuert die Elytra frei: Laufen-Tasten,\nSpringen = hoch, Schleichen = runter.
+428	Hoch/Runter (Blöcke/s)
+429	Entity Control
+430	Reittiere und Boote fahren schneller\nund in Blickrichtung.
+431	Fast Climb
+432	Klettert Leitern und Ranken schneller.
+433	Flight
+434	Fliegen wie im Kreativ-Modus.\nSpringen = hoch, Schleichen = runter.
+435	Anti-Kick
+436	Gui Move
+437	Laufen und Springen, während ein Menü\n(z.B. Inventar) offen ist. Nicht beim Tippen.
+438	Auch Schleichen
+439	Alle meine Entchen
+440	Freude schöner Götterfunken
+441	Tonleiter
+442	Eigene Datei
+443	~§e1912: Notebot - Beispiel angelegt: config/
+444	§c1912: Notebot - nicht im Kreativmodus (Linksklick würde die Blöcke abbauen)
+445	§c1912: Notebot - das Lied enthält keine Noten
+446	~§c1912: Notebot - das Lied braucht 
+447	~ Notenblöcke in Reichweite, gefunden: 
+448	~§a1912: Notebot - stimme 
+449	~ Notenblöcke
+450	§c1912: Notebot - Stimmen dauert zu lange (Blöcke geschützt?)
+451	§c1912: Notebot - ein Notenblock fehlt plötzlich
+452	~§a1912: Notebot - spiele „
+453	§a1912: Notebot - fertig
+454	Alle Items durchsuchen
+455	Alle Mobs durchsuchen
+456	Alle Blöcke durchsuchen
+457	~Ausgewählt: 
+458	Noch nichts ausgewählt
+459	Wechseln
+460	Elytra
+461	Brustpanzer
+462	FakePlayer
+463	Enderperle
+464	Feuerwerk
+465	XP-Flasche
+466	Ich
+467	Aus
+468	Fest
+469	Einrasten 45°
+470	1912: Chest Swap - nichts zum Tauschen gefunden
+471	1912: Fake Player konnte nicht erstellt werden
+472	Air Place
+473	Setzt Blöcke in die Luft, wenn du\nmit Rechtsklick ins Leere zielst.
+474	Abstand (Blöcke)
+475	Anti Afk
+476	Bewegt dich regelmäßig, damit der\nServer dich nicht wegen AFK kickt.
+477	Springen
+478	Schlagen
+479	Drehen
+480	Anti Hunger
+481	Verringert den Hunger, indem dem Server\nweniger Bewegung gemeldet wird.
+482	Sprinten verbergen
+483	Boden verbergen
+484	Auto Eat
+485	Isst automatisch das beste Essen\naus der Hotbar.
+486	Essen bei Hunger ≤
+487	Goldäpfel erlauben
+488	Auto Fish
+489	Holt die Angel bei einem Biss ein\nund wirft sie neu aus.
+490	Neu auswerfen nach (Ticks)
+491	Auto Gap
+492	Isst einen Goldapfel, wenn das Leben\nniedrig ist (verzauberte zuerst).
+493	Leben ≤ (2 = 1 Herz)
+494	Auto Mend
+495	Legt beschädigte Items mit Mending in die\nzweite Hand, damit XP sie repariert.
+496	Nur unter Haltbarkeit (%)
+497	Auch aus der Hotbar
+498	Auto Replenish
+499	Füllt Hotbar-Stapel aus dem Inventar auf.
+500	Auffüllen ab (Stück)
+501	Auto Respawn
+502	Klickt nach dem Tod automatisch auf\n„Wiederbeleben“.
+503	Verzögerung (Ticks)
+504	Auto Tool
+505	Nimmt beim Abbauen das schnellste\nWerkzeug aus der Hotbar.
+506	Zurückwechseln
+507	Fast kaputte schonen
+508	Break Delay
+509	Wartezeit zwischen zwei abgebauten\nBlöcken (normal 5 Ticks).
+510	Wartezeit (Ticks)
+511	Chest Swap
+512	Tauscht einmal Elytra ↔ Brustpanzer\nund schaltet sich wieder aus.
+513	Exp Thrower
+514	Wirft XP-Flaschen aus der Hotbar\nauf deine Füße.
+515	Abstand (Ticks)
+516	Fake Player
+517	Erzeugt eine Kopie von dir an deiner\nStelle (nur bei dir sichtbar).\nÄnderungen gelten beim nächsten Einschalten.
+518	Name
+519	Leben
+520	Inventar kopieren
+521	Fast Use
+522	Benutzt Items und setzt Blöcke schneller\n(normal 4 Ticks Pause).
+523	Pause (Ticks)
+524	Ghost Hand
+525	Öffnet Kisten und ähnliches durch Wände\n(Rechtsklick ohne Block in der Hand).
+526	Reichweite (Blöcke)
+527	Instant Rebreak
+528	Baut einen gerade abgebauten Block sofort\nwieder ab, wenn er neu gesetzt wird.
+529	Liquid Interact
+530	Blöcke direkt auf Wasser oder Lava\nsetzen.
+531	Middle Click Extra
+532	Mittlere Maustaste benutzt ein Item aus\nder Hotbar, ohne zu wechseln.
+533	Item
+534	Multitask
+535	Abbauen und angreifen, während du isst\noder mit dem Schild blockst.
+536	Erlauben
+537	Abbauen
+538	Angreifen
+539	Name Protect
+540	Ersetzt deinen Namen im Chat.
+541	Ersatzname
+542	No Interact
+543	Verhindert Rechtsklick auf gewählte\nBlöcke und Wesen.
+544	No Interact: Blöcke
+545	~Wesen wählen (
+546	No Interact: Wesen
+547	No Mining Trace
+548	Baut durch Wesen hindurch ab, die\nvor dem Block stehen.
+549	Nur mit Werkzeug
+550	No Rotate
+551	Der Server kann deine Blickrichtung\nnicht mehr verstellen.
+552	Festhalten
+553	Drehung (links/rechts)
+554	Neigung (hoch/runter)
+555	No Status Effects
+556	Entfernt störende Effekte bei dir.
+557	Blindheit
+558	Dunkelheit
+559	Übelkeit
+560	Schwebeeffekt
+561	Langsamkeit
+562	Abbaulähmung
+563	Portals
+564	Menüs und Chat bleiben in Netherportalen\noffen.
+565	Potion Saver
+566	Hält Tränke an, solange du stillstehst.\nWirkt nur auf manchen Servern.
+567	Reach
+568	Größere Reichweite (normal 4,5 / 3).\nServer begrenzen das oft.
+569	Wesen
+570	Rotation
+571	Blickrichtung festhalten oder einrasten.
+572	Drehung
+573	Drehung (°)
+574	Neigung
+575	Neigung (°)
+576	Speed Mine
+577	Baut schneller ab. Über ~140 % lehnen\nviele Server den Abbau ab.
+578	Profile
+579	Speichert alle Einstellungen (Module, Design, Tasten) unter einem Namen, z.B. PvP, Bauen oder Farmen. Laden ersetzt die aktuellen Einstellungen.
+580	Neues Profil
+581	Aktuelle Einstellungen speichern
+582	~Gespeichert: „
+583	Laden
+584	Noch keine Profile gespeichert.
+585	~Laden: „
+586	~Geladen: „
+587	Löschen
+588	~Löschen: „
+589	~Gelöscht: „
+590	2D-Kasten
+591	3D-Rahmen
+592	3D + Scan-Linie
+593	Nachtsicht
+594	Gamma
+595	Normal
+596	Farbig
+597	Versteckt
+598	Better Tab
+599	Boss Stack
+600	~ hat ein Totem verbraucht (
+601	~ (Logout 
+602	~ (Logout)
+603	Block Esp
+604	Hebt gewählte Blöcke durch Wände hervor.
+605	Stil
+606	Farbe (RRGGBB)
+607	Storage Esp
+608	Hebt Kisten, Fässer, Öfen usw. hervor.
+609	Hole Esp
+610	Zeigt sichere 1x1-Löcher zum Hineinstellen.
+611	Void Esp
+612	Zeigt Löcher, durch die man in die Leere fällt.
+613	City Esp
+614	Hebt Blöcke rund um Gegner hervor (PvP).
+615	Tunnel Esp
+616	Hebt gegrabene 1x2-Gänge hervor.
+617	Tracers
+618	Linien von der Bildschirmmitte zu Zielen.
+619	Nametags
+620	Namen über Spielern und Mobs, durch Wände.
+621	Leben zeigen
+622	Entity Owner
+623	Zeigt den Besitzer von Tieren und Geschossen.
+624	Zahme Tiere
+625	Geschosse
+626	Item Highlight
+627	Rahmt am Boden liegende Items ein.
+628	Marker
+629	Waypoints
+630	Gespeicherte Orte im Spiel anzeigen.
+631	Lichtstrahl
+632	Neuer Name
+633	~Gespeichert: 
+634	Alle löschen
+635	Logout Spots
+636	Markiert, wo Spieler sich ausgeloggt haben.
+637	Kasten zeigen
+638	Entfernung zeigen
+639	~Gemerkt: 
+640	Trail
+641	Zieht eine Linie hinter dir her.
+642	Länge
+643	Breadcrumbs
+644	Punkte entlang deines Wegs.
+645	Trajectories
+646	Zeigt die Flugbahn von Bögen und Wurfobjekten.
+647	Länge (Schritte)
+648	Aufprall markieren
+649	Light Overlay
+650	Markiert dunkle Blöcke, auf denen Mobs spawnen.
+651	Break Indicators
+652	Zeigt den Abbaufortschritt an Blöcken\n(rot = gerade begonnen, grün = gleich weg).
+653	Prozent anzeigen
+654	Auch andere Spieler
+655	Fullbright
+656	Macht alles hell.
+657	Gamma (%) [nur Gamma-Modus]
+658	Time Changer
+659	Ändert die Tageszeit (nur bei dir).\nServer setzt sie oft zurück.
+660	Zeit
+661	Camera Tweaks
+662	Kamera in der 3rd-Person-Ansicht.
+663	Abstand
+664	Durch Blöcke
+665	Free Look
+666	Schaut dir schräg von der Seite zu, während du läufst\nund baust, z.B. bei „Zu Koordinaten gehen“. Mit der Maus\ndrehst du die Kamera um dich herum, die Laufrichtung bleibt.
+667	Kamera
+668	3rd Person (schräg von der Seite)
+669	Winkel zur Seite
+670	Schwenkt mit der Laufrichtung
+671	0° = genau hinter dir, 90° = von der Seite. Den Abstand stellst du bei Camera Tweaks ein.
+672	Freecam
+673	Kamera frei bewegen, dein Körper bleibt stehen.\nLaufen-Tasten, Springen = hoch, Schleichen = runter,\nSprinten = doppelt so schnell.
+674	Klicks sperren
+675	Erst am Boden starten
+676	Für den Server stehst du nur still: es wird keine Bewegung gesendet. In der Luft gestartet würde dein Körper dort hängen bleiben, das kann wie Fliegen aussehen.
+677	No Render
+678	Blendet störende Effekte aus.
+679	Feuer-Overlay
+680	Wasser-Overlay
+681	Kürbis-Overlay
+682	Nebel
+683	Trefferwackeln
+684	Block Selection
+685	Ändert den Auswahlrahmen von Blöcken.
+686	Hand View
+687	Verschiebt und skaliert deine Hand (Ego-Sicht).
+688	Seitlich
+689	Höhe
+690	Tiefe
+691	Größe (%)
+692	Chams
+693	Färbt Spieler und Mobs als farbige Fläche ein -\nauch durch Wände sichtbar. Farben wie beim ESP.
+694	Nur hinter Wänden
+695	Deckkraft (%)
+696	Wall Hack
+697	Zeigt Erze durch Wände: leuchtende Kästen in der Farbe des Erzes.
+698	Erze
+699	Diamant
+700	Antiker Schrott
+701	Gold
+702	Smaragd
+703	Eisen
+704	Redstone
+705	Lapislazuli
+706	Kupfer
+707	Kohle
+708	Netherquarz
+709	Item Physics
+710	Items am Boden liegen flach, statt sich zu drehen und zu hüpfen.
+711	Blur
+712	Dunkler Hintergrund bei offenem Menü.\n(Vereinfacht, kein echter Weichzeichner.)
+713	Fasst gleiche Bossleisten zu einer zusammen (mit Anzahl).\nGilt für Leisten, die nach dem Einschalten erscheinen.
+714	Eigene Spielerliste beim Halten von Tab:\nalle Namen mit Ping in Millisekunden.
+715	Pop Chams
+716	Zeigt einen verblassenden Geist, wenn\njemand ein Totem verbraucht.
+717	Dauer (s)
+718	Meldung im Chat
+719	Auch eigene
+720	Better Tooltips
+721	Zusätzliche Infos im Item-Tooltip.
+722	Anzeigen
+723	Shulker-Inhalt
+724	Shulker-Zeilen
+725	Nährwert
+726	Eigene Markierungen an deiner Position.
+727	~Gesetzt: 
+728	~§c1912: Fehler in „
+729	~“ abgefangen. Details stehen in logs/latest.log.
+730	Auto
+731	Host
+732	Worker
+733	Nur der Host kann das
+734	Nicht im Spiel
+735	Erst eine Nachricht eintragen
+736	Swarm: gestoppt
+737	1912: AutoDrop konnte nicht ausgeführt werden und wurde ausgeschaltet
+738	Zu groß (max. 50000 Blöcke)
+739	~1912: Auto Walk 
+740	AN
+741	AUS
+742	1912: Kein Block anvisiert
+743	~1912: Block gewählt: 
+744	Erst einen Block wählen
+745	~ nicht in der Nähe gefunden
+746	1912: Auto-Logout bei 2 Herzen
+747	~Kein 
+748	~ mehr in der Nähe
+749	~Kein erreichbarer 
+750	~ mehr in der Nähe (
+751	~ nicht erreichbar)
+752	Bereich fertig
+753	~Bereich fertig (
+754	~ Blöcke nicht erreichbar)
+755	Gehen
+756	Gehen abgebrochen (Fehler)
+757	Laufen
+758	Fehler
+759	1912: Keine Baublöcke (z.B. Bruchstein) in der Hotbar
+760	Tasten zuweisen
+761	Auto Walk
+762	Auto Clicker
+763	Welt
+764	Block
+765	Auto-Logout
+766	Menü
+767	Menü-Taste ändern
+768	Schließen
+769	Module suchen
+770	~Keine Module gefunden für „
+771	~Menü 
+772	~Klick: an/aus
+773	~Punkte: Einstellungen
+774	~Mausrad: scrollen
+775	~Tasten: 
+776	Klick: an/aus
+777	~Alle Module: Design anpassen, Modus Experte
+778	~Drücke jetzt eine Taste für 
+779	~Rücktaste oder Entf: Taste entfernen
+780	Drücke jetzt eine Taste
+781	Taste drücken
+782	~Klick auf ein Modul, dann die gewünschte Taste drücken
+783	~Die Tasten wirken im Spiel
+784	Klick auf ein Modul, dann Taste drücken
+785	Modul anklicken
+786	Flieder
+787	Blau
+788	Grün
+789	Orange
+790	Rot
+791	Grau
+792	Klein
+793	Mittel
+794	Groß
+795	Schmal
+796	Breit
+797	Wie im Spiel
+798	Kleiner
+799	Sehr klein
+800	Experte
+801	Sehr groß
+802	Oben links
+803	Oben rechts
+804	Unten links
+805	Unten rechts
+806	Ziel erreicht
+807	Plant den Weg
+808	~ – noch 
+809	~ Blöcke
+810	Gehen beendet
+811	Ziel nicht erreichbar (kein Fortschritt)
+812	Ziel nicht erreichbar (Weg immer wieder blockiert)
+813	Wartet auf Chunks
+814	Kein Weg gefunden (für höhere Ziele Baublöcke wie Bruchstein in die Hotbar)
+815	Kein Weg zum Ziel gefunden
+816	Schwimmt
+817	Läuft
+818	Springt hoch
+819	Springt
+820	Baut hoch
+821	Gräbt nach unten
+822	Baut Brücke
+823	Öffnet Tür
+824	Baut ab
+825	Automatisch (wie Minecraft)
+826	egal
+827	an
+828	aus
+829	alle
+830	keine
+831	keiner
+832	Status: Aus
+833	Keine App-ID eingetragen
+834	App-ID besteht nur aus 17 bis 20 Ziffern
+835	Discord nicht gefunden (läuft Discord auf diesem PC?)
+836	Discord lehnt die App-ID ab
+837	Verbunden
+838	Verbindung zu Discord fehlgeschlagen
+839	Verbindung zu Discord getrennt
+840	Host konnte nicht starten
+841	Host: Fehler beim Annehmen
+842	~Bitte erst einen Namen eintragen
+843	~Speichern fehlgeschlagen
+844	~Profil nicht gefunden
+845	~Laden fehlgeschlagen
+846	~ ist schon belegt
+847	~Host auf Port 
+848	~ Worker verbunden
+849	~Worker: verbinde mit 
+850	~Worker: verbunden mit 
+851	~ nicht erreichbar, neuer Versuch
+852	Zurück
+853	/home
+854	Blickrichtung
+855	Norden
+856	Osten
+857	Süden
+858	Westen
+859	Umgehen
+860	Zubauen
+861	Prozent
+862	Punkten
+863	Debris Miner aus
+864	Debris Miner geht nur im Nether
+865	Gräbt Tunnel
+866	Geht auf Ziel-Höhe
+867	~Debris Miner gestartet: Richtung 
+868	~, Höhe 
+869	~Tunnel-Länge: 
+870	~Debris: 
+871	Debris Miner
+872	Debris Miner angehalten (Fehler)
+873	Totem ausgelöst
+874	~Spieler in der Nähe: 
+875	Wenig Leben
+876	Inventar voll
+877	Inventar voll – Debris Miner angehalten
+878	Totem ausgelöst – noch ein Ersatz-Totem da, Debris Miner läuft weiter
+879	~1912: Debris Miner – 
+880	~Rückzug: 
+881	~ gesendet (
+882	Ziel-Höhe nicht erreichbar – Debris Miner angehalten
+883	~Tunnel fertig: 
+884	~ Blöcke, 
+885	~ Debris
+886	Zurück zur Tunnelachse
+887	Baut Lava zu
+888	Baut Boden
+889	Lava im Weg – Debris Miner angehalten
+890	Geht zurück (Lava)
+891	Lava ringsum – Debris Miner angehalten
+892	Weg blockiert – Debris Miner angehalten
+893	Umgeht Lava
+894	~Antiker Schrott gefunden bei 
+895	Baut Debris ab
+896	Debris nicht erreichbar
+897	Debris neben Lava übersprungen
+898	Debris über Lava oder Loch übersprungen
+899	Debris ließ sich nicht abbauen
+900	Gräbt zum Debris
+901	Sammelt ein
+902	Kehrt zum Tunnel zurück
+903	Rückweg zum Tunnel nicht gefunden – Debris Miner angehalten
+904	Isst
+905	Neue Spitzhacke aus dem Inventar genommen
+906	Keine Spitzhacke mehr
+907	Keine brauchbare Spitzhacke mehr – Debris Miner angehalten
+908	~Spitzhacke fast kaputt (
+909	~ – wechsle
+910	~ – kein Ersatz
+911	Wirft Gestein weg
+912	Holt Nachschub
+913	Macht Platz für die Kiste
+914	Kein Platz für die Kiste
+915	Kiste ließ sich nicht aufstellen
+916	~Nachschub geholt: 
+917	~ Spitzhacken, 
+918	~ Essen
+919	Endertruhe bleibt stehen (keine Spitzhacke mit Behutsamkeit)
+920	Debris Miner STOPPEN
+921	Debris Miner starten
+922	Gräbt im Nether einen Tunnel auf der eingestellten Höhe und baut Antiken Schrott ab,\nsobald er am Tunnel sichtbar wird - auch ganze Adern. Danach geht es auf der alten\nTunnelachse weiter. Für Server mit Anti-Xray: Es wird nur die direkte Umgebung geprüft.
+923	Abbau
+924	Ziel-Höhe (Y)
+925	Tunnel-Muster
+926	Richtung
+927	Scan-Verzögerung (Ticks)
+928	Scan-Radius (Blöcke)
+929	Max. Länge (0 = unbegrenzt)
+930	Nur echte Erze (gegen Anti-Xray-Tarnung)
+931	Netherrack und Gestein wegwerfen
+932	Netherrack behalten (Stapel)
+933	Scan-Verzögerung: so lange wartet er nach jedem Block, bis der Server die Nachbarn zeigt. Scan-Radius: so weit um den Tunnel wird geschaut (der Server deckt meist 2 Blöcke auf). „Nur echte Erze“ zählt nur Debris, das an Luft grenzt oder nahe an einem gerade abgebauten Block liegt - getarnte Erze im Gestein werden ignoriert. Weggeworfen wird nach hinten, damit er es nicht wieder aufsammelt.
+934	Einsammeln
+935	Gedropptes Debris einsammeln
+936	Suchradius (Blöcke)
+937	Max. Wartezeit (s)
+938	Lava
+939	Lava-Schutz
+940	Sicherheitsabstand (Blöcke)
+941	Verhalten
+942	Blöcke direkt neben Lava baut er nie ab. Umgehen: seitlich ausweichen, an der Lava vorbei und danach zurück auf die alte Tunnelachse. Zubauen: sichtbare Lava und Lava-Böden mit Netherrack zuschütten und darüber weiter (Lava hinter Gestein wird trotzdem umgangen).
+943	Nachschub
+944	Nachschub holen
+945	Spitzhacken
+946	Aus Shulker-Kisten
+947	Aus der Endertruhe
+948	Holt Spitzhacken und Essen aus dem Inventar in die Hotbar und isst bei Hunger. Ist nichts mehr da, stellt er eine Shulker-Kiste oder Endertruhe im Tunnel auf, nimmt Nachschub heraus und baut sie wieder ab (die Endertruhe nur mit einer Spitzhacke mit Behutsamkeit).
+949	Werkzeugschutz
+950	Grenze in
+951	Grenze (%)
+952	Grenze (Punkte)
+953	Warnton
+954	Warnung im Bild
+955	Anhalten, wenn keine Spitzhacke mehr da ist
+956	Erreicht eine Spitzhacke die Grenze, wird gewarnt und auf eine andere gewechselt. Gezählt werden nur Spitzhacken, die Antiken Schrott abbauen können (Diamant oder Netherit).
+957	Spieler in der Nähe
+958	Verbindung trennen (Auto-Log)
+959	Radius (0 = ganze Sichtweite)
+960	Freunde (mit Komma getrennt)
+961	Totem
+962	Nach Totem trennen (Auto-Log)
+963	Verzögerung (Ticks, 0 = sofort)
+964	Ignorieren, solange noch ein Totem da ist
+965	Rückzug (Auto-Home)
+966	Rückzug-Befehl senden
+967	Befehl
+968	Bei wenig Leben
+969	Leben ≤ (Herzen)
+970	Bei vollem Inventar
+971	Ohne Spitzhacke
+972	Bei Spieler in der Nähe
+973	Schickt den Befehl (z.B. /home oder /spawn) und hält den Debris Miner an. „Spieler in der Nähe“ nutzt Radius und Freunde von oben und greift nur, wenn dort „Verbindung trennen“ aus ist.
+974	Zustand im Bild anzeigen
+975	Debris und nächsten Abschnitt hervorheben
+976	Gräbt im Nether einen Tunnel auf der eingestellten Höhe und baut Antiken Schrott ab, sobald er am Tunnel sichtbar wird - auch ganze Adern. Danach geht es auf der alten Tunnelachse weiter. Für Server mit Anti-Xray: Es wird nur die direkte Umgebung geprüft.
+977	~Nicht gestartet – Spieler in der Nähe: 
+978	Ziel-Höhe nicht erreichbar
+979	Weg blockiert
+980	Lava ringsum
+981	Rückweg nicht gefunden
+982	Spitzhacke an der Grenze – Debris Miner angehalten
+983	Tunnel
+984	Erst auf die Ziel-Höhe gehen
+985	Löcher im Boden zubauen
+986	Nach Umwegen zurück auf die Achse
+987	Ohne „Erst auf die Ziel-Höhe gehen“ gräbt er auf der Höhe, auf der du gerade stehst. Ohne „Löcher im Boden zubauen“ weicht er Löchern aus. Weggeworfen wird nach hinten, damit er es nicht wieder aufsammelt.
+988	Ganze Ader abbauen
+989	Zu verdecktem Debris graben
+990	Debris unter dem Boden abbauen
+991	Debris über der Decke abbauen
+992	Fund im Chat melden
+993	Ton bei Fund
+994	Scan-Verzögerung: so lange wartet er nach jedem Block, bis der Server die Nachbarn zeigt. Scan-Radius: so weit um den Tunnel wird geschaut (der Server deckt meist 2 Blöcke auf). „Nur echte Erze“ zählt nur Debris, das an Luft grenzt oder nahe an einem gerade abgebauten Block liegt - getarnte Erze im Gestein werden ignoriert. Ohne „Zu verdecktem Debris graben“ baut er nur ab, was er vom Tunnel aus sehen kann.
+995	Hoch liegende Items herunterholen
+996	Für Items in Gruben hinuntersteigen
+997	Zurücklaufen, wenn es seitlich nicht weitergeht
+998	Spitzhacken in die Hotbar holen
+999	Essen in die Hotbar holen
+1000	Baublöcke in die Hotbar holen
+1001	Bei Hunger essen
+1002	Goldäpfel nicht essen
+1003	Kiste danach wieder abbauen
+1004	Holt Spitzhacken und Essen aus dem Inventar in die Hotbar. Ist nichts mehr da, stellt er eine Shulker-Kiste oder Endertruhe im Tunnel auf und nimmt Nachschub heraus (die Endertruhe baut er nur mit einer Spitzhacke mit Behutsamkeit wieder ab). „Bei Hunger essen“ geht auch ohne Nachschub.
+1005	Automatisch wechseln
+1006	Warnung im Chat
+1007	Erreicht eine Spitzhacke die Grenze, wird gewarnt und auf eine andere gewechselt. Ohne „Automatisch wechseln“ gräbt er mit ihr weiter - oder hält an, wenn „Anhalten“ an ist. Gezählt werden nur Spitzhacken, die Antiken Schrott abbauen können (Diamant oder Netherit).
+1008	Nicht starten, wenn schon jemand da ist
+1009	Nach Totem
+1010	Wenn er feststeckt
+1011	Schickt den Befehl (z.B. /home oder /spawn) und hält den Debris Miner an. „Spieler in der Nähe“ nutzt Radius und Freunde von oben; „Spieler in der Nähe“ und „Nach Totem“ greifen nur, wenn das Trennen dort aus ist. „Wenn er feststeckt“: Lava ringsum, Weg blockiert oder kein Rückweg.
+1012	Weg bei Umwegen anzeigen
+1013	/spawn
+1014	/hub
+1015	/lobby
+1016	Schnellwahl
+1017	Pause zwischen mehreren Befehlen (Ticks)
+1018	Der Befehl ist frei wählbar, z.B. /home, /home farm, /spawn oder /warp shop - der / am Anfang ist egal. Mehrere Befehle mit ; trennen (z.B. /spawn; /afk), dazwischen wartet er die Pause (20 Ticks = 1 Sekunde). Danach hält der Debris Miner an.
+1019	Befehl bei wenig Leben
+1020	Befehl bei vollem Inventar
+1021	Befehl ohne Spitzhacke
+1022	Befehl bei Spieler in der Nähe
+1023	Befehl nach Totem
+1024	Befehl, wenn er feststeckt
+1025	Jeder Auslöser kann einen eigenen Befehl haben (z.B. bei wenig Leben /spawn, bei vollem Inventar /home lager). Leer = der Befehl von oben. „Bei Spieler in der Nähe“ nutzt Radius und Freunde von oben; „Bei Spieler in der Nähe“ und „Nach Totem“ greifen nur, wenn das Trennen dort aus ist. „Wenn er feststeckt“: Lava ringsum, Weg blockiert oder kein Rückweg.
+1026	~wie oben: 
+1027	Freundesliste des Clients mitbenutzen
+1028	Weitere Freunde (mit Komma getrennt)
+1029	~1912: Freund hinzugefügt: 
+1030	~1912: Freund entfernt: 
+1031	~1912: Freund online: 
+1032	~1912: Freund offline: 
+1033	~1912: Freund in Sichtweite: 
+1034	Freunde
+1035	Freunde werden nicht angegriffen und überall in ihrer eigenen Farbe angezeigt. Mittelklick auf einen Spieler fügt ihn hinzu oder entfernt ihn wieder.
+1036	Freundesliste
+1037	Spielername
+1038	z.B. Notch
+1039	Hinzufügen
+1040	Entfernen
+1041	Noch keine Freunde. Trag oben einen Namen ein, wähl unten einen Spieler aus der Nähe oder klick einen Spieler mit dem Mausrad an.
+1042	Leuchtende Namen sind gerade online, graue nicht.
+1043	Gerade ist kein anderer Spieler in der Nähe.
+1044	Freundesfarbe
+1045	ESP in Freundesfarbe
+1046	Tracers in Freundesfarbe
+1047	Chams in Freundesfarbe
+1048	Nametags in Freundesfarbe
+1049	Better Tab: Freunde oben und farbig
+1050	Leere Freundesfarbe = Mintgrün.
+1051	Schutz
+1052	Nicht angreifen (Auto Clicker, Multitask)
+1053	Auch eigene Schläge abfangen
+1054	Auto Wasp fliegt nicht zu Freunden
+1055	City Esp lässt Freunde aus
+1056	Mit „Auch eigene Schläge abfangen“ triffst du Freunde auch mit der Hand nicht mehr. Message Aura und Debris Miner haben dazu eigene Einstellungen.
+1057	Bedienung
+1058	Mittelklick auf Spieler: hinzufügen oder entfernen
+1059	Mittelklick-Reichweite
+1060	Melden, wenn ein Freund online oder offline geht
+1061	Melden, wenn ein Freund in Sichtweite kommt
+1062	Alle
+1063	Nur Freunde
+1064	Keine Freunde
+1065	Wen anschreiben
+1066	Nicht angreifen (Kill Aura, Auto Clicker, Multitask)
+1067	Nächstes
+1068	Wenigste Leben
+1069	Kleinster Winkel
+1070	Am Ziel bleiben
+1071	Bei jedem Schlag wechseln
+1072	Nur zum Server
+1073	Kopf drehen
+1074	Kill Aura
+1075	Greift Wesen in Reichweite automatisch an. Freunde aus der Freundesliste, Spieler im Kreativ- oder Zuschauermodus, Dorfbewohner und Golems greift sie nie an.
+1076	Feindliche Mobs
+1077	Tiere
+1078	Neutrale Mobs nur, wenn sie angreifen
+1079	Gezähmte und benannte Tiere auslassen
+1080	Durch Wände
+1081	Blickfeld (°)
+1082	Zuerst angreifen
+1083	Neutrale Mobs sind Zombie-Piglins, Endermen und Piglins - greift man einen an, kommen oft alle. Normal sind es 3 Blöcke, mehr geht nur mit Reach und wird auf vielen Servern erkannt. Blickfeld 360° = rundherum.
+1084	Takt
+1085	Auf die Abklingzeit warten
+1086	Schlagen ab Abklingzeit (%)
+1087	Schläge pro Sekunde (min)
+1088	Schläge pro Sekunde (max)
+1089	Kritische Treffer (in der Luft erst beim Fallen)
+1090	Pause beim Essen und Benutzen
+1091	Nur bei gedrückter Angriffstaste
+1092	Mit Abklingzeit schlägt sie, sobald der Schlag voll aufgeladen ist (volle Wirkung). Ohne Abklingzeit gelten die Schläge pro Sekunde - für Server ohne Abklingzeit.
+1093	Waffe
+1094	Nur mit Waffe in der Hand
+1095	Beste Waffe aus der Hotbar nehmen
+1096	Arm sichtbar schwingen
+1097	Waffen sind Schwerter, Äxte, Speere, Streitkolben und Dreizacke. Schwerter werden vor Äxten gewählt.
+1098	Blick
+1099	Drehgeschwindigkeit (°/Tick)
+1100	„Nur zum Server“ schickt die Blickrichtung zum Ziel mit, deine Kamera bleibt still. „Kopf drehen“ dreht den Blick sichtbar und schlägt erst, wenn das Ziel im Fadenkreuz ist. Während Debris Miner oder Abbau-Bots laufen, dreht sie nur zum Server.
+1101	Ziel-Info unter dem Fadenkreuz
+1102	Farbe
+1103	Zielen
+1104	Verteidigung
+1105	Mobs abwehren
+1106	Einstellungen der Bot-Verteidigung
+1107	~1912: Bot wehrt sich: 
+1108	Bot-Verteidigung
+1109	Während ein Bot selbst läuft oder abbaut, wehrt er Monster in Reichweite ab. Tiere und neutrale Mobs nur, wenn sie dich gerade angreifen. Solange er kämpft, hält der Bot an und macht danach mit seinem Werkzeug weiter.
+1110	Bots
+1111	Monster
+1112	Tiere und neutrale Mobs, wenn sie angreifen
+1113	Creeper sofort schlagen
+1114	Spieler greift die Bot-Verteidigung nie an, gezähmte Tiere auch nicht. Zombie-Piglins, Endermen und Piglins zählen als neutral. Creeper werden zuerst und ohne volle Abklingzeit geschlagen, damit sie zurückfliegen, bevor sie explodieren.
+1115	Kampf
+1116	Beste Waffe nehmen, danach zurück zum Werkzeug
+1117	Ziel aufgeben nach (s)
+1118	Ein Ziel, das in dieser Zeit nicht stirbt (z.B. weil die Schläge nicht treffen), lässt er 30 Sekunden in Ruhe.
+1119	Wehrt einen Mob ab
+1120	Info-Anzeige
+1121	ClientboundSetTimePacket
+1122	XYZ
+1123	Oberwelt
+1124	Nether
+1125	FPS
+1126	Ping
+1127	TPS
+1128	Uhrzeit
+1129	Rüstung
+1130	Totems
+1131	Kleines Feld im Bild mit den wichtigsten Werten. Jede Zeile lässt sich einzeln abschalten.
+1132	Platz
+1133	Ecke
+1134	Zeilen
+1135	Nether-/Oberwelt-Koordinaten
+1136	TPS des Servers
+1137	Uhrzeit im Spiel
+1138	Rüstung (Haltbarkeit)
+1139	TPS zeigt, wie schnell der Server läuft (20 = normal, weniger = Server laggt). Nether-Koordinaten: im Nether siehst du, wo du in der Oberwelt rauskommst, und umgekehrt.
+1140	§c1912: Auto Totem - keine Totems mehr!
+1141	Auto Totem
+1142	Hält immer ein Totem der Unsterblichkeit in der zweiten Hand. Nach einem verbrauchten Totem kommt sofort das nächste nach.
+1143	Immer in der zweiten Hand
+1144	Sonst ab Leben ≤ (2 = 1 Herz)
+1145	Auch aus der Hotbar nehmen
+1146	Melden, wenn keine Totems mehr da sind
+1147	Ohne „Immer in der zweiten Hand“ bleibt dein Gegenstand in der zweiten Hand (z.B. Schild), bis das Leben unter die Grenze fällt. In Kisten und anderen Menüs tauscht er nicht.
+1148	Auto Armor
+1149	Zieht automatisch die beste Rüstung aus deinem Inventar an.
+1150	Angezogene Elytra behalten
+1151	Verzauberte Teile vorziehen
+1152	Reihenfolge: Netherit, Diamant, Eisen (und Schildkrötenpanzer), Kette, Kupfer, Gold, Leder. Bei gleichem Material gewinnt das verzauberte, dann das weniger abgenutzte Teil. Kürbisse und Köpfe auf dem Kopf bleiben, wo sie sind.
+1153	Auto Totem/Armor
+1154	Während der Debris Miner läuft, wehrt er Monster in Reichweite ab. Tiere und neutrale Mobs nur, wenn sie dich gerade angreifen. Solange er kämpft, hält der Bot an und macht danach mit seinem Werkzeug weiter.
+1155	1912 Debris Miner

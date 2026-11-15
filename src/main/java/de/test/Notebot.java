@@ -14,7 +14,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.NoteBlock;
@@ -56,7 +55,7 @@ public final class Notebot {
     private static int tuneTimeout;
 
     private static void say(LocalPlayer p, String text) {
-        p.sendSystemMessage(Component.literal(text));
+        p.sendSystemMessage(Lang.literal(text));
     }
 
     private static void stop(String reason, LocalPlayer p) {

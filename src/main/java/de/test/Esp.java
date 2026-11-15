@@ -86,47 +86,28 @@ public final class Esp {
     private static final int SCAN_INTERVAL = 10;
 
     private static final List<BlockPos> foundBlocks = new ArrayList<>();
-    private static int scanCooldown = 0;
+    private static final BlockScan SCAN = new BlockScan(MAX_BLOCKS);
 
     public static void register() {
-        HudElementRegistry.addFirst(Identifier.fromNamespaceAndPath("test", "esp"), Esp::render);
+        HudElementRegistry.addFirst(Identifier.fromNamespaceAndPath("test", "esp"), Safe.hud("ESP", Esp::render));
     }
 
     /** Nach Aenderungen an der Blockauswahl sofort neu suchen. */
     public static void rescan() {
-        scanCooldown = 0;
+        SCAN.restart();
     }
 
     // ---------- Bloecke suchen (im Tick, nicht pro Frame) ----------
 
     public static void tick(Minecraft mc) {
         if (!enabled || !blocks || blockTypes.isEmpty() || mc.player == null || mc.level == null) {
-            if (!foundBlocks.isEmpty()) foundBlocks.clear();
+            SCAN.clear(foundBlocks);
             return;
         }
-        if (--scanCooldown > 0) return;
-        scanCooldown = SCAN_INTERVAL;
-
+        // verteilt auf SCAN_INTERVAL Ticks statt alles auf einmal (kein Ruckler bei grossem Radius)
         Level level = mc.level;
-        BlockPos c = mc.player.blockPosition();
-        int r = blockRadius;
-        int r2 = r * r;
-        List<BlockPos> found = new ArrayList<>();
-        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dy = -r; dy <= r; dy++) {
-                for (int dz = -r; dz <= r; dz++) {
-                    if (dx * dx + dy * dy + dz * dz > r2) continue;
-                    m.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz);
-                    if (blockTypes.contains(level.getBlockState(m).getBlock())) {
-                        found.add(m.immutable());
-                    }
-                }
-            }
-        }
-        found.sort((a, b) -> Double.compare(a.distSqr(c), b.distSqr(c)));
-        foundBlocks.clear();
-        foundBlocks.addAll(found.size() > MAX_BLOCKS ? found.subList(0, MAX_BLOCKS) : found);
+        SCAN.stepSphere(mc.player.blockPosition(), blockRadius, SCAN_INTERVAL,
+                pos -> blockTypes.contains(level.getBlockState(pos).getBlock()), foundBlocks);
     }
 
     // ---------- Zeichnen (ueber Render3D) ----------
@@ -160,7 +141,7 @@ public final class Esp {
                     String name;
                     if (e instanceof Player) {
                         if (!players) continue;
-                        color = playerColor();
+                        color = Friends.espColor(e, playerColor());
                         name = e.getName().getString();
                     } else if (e instanceof ItemEntity ie) {
                         if (!items) continue;

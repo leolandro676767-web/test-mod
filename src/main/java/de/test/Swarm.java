@@ -135,9 +135,16 @@ final class Swarm {
         } else if (line.startsWith("GOTO ")) {
             String[] p = line.substring(5).trim().split(" ");
             if (p.length != 3) return;
-            int x = Integer.parseInt(p[0]);
-            int y = Integer.parseInt(p[1]);
-            int z = Integer.parseInt(p[2]);
+            int x;
+            int y;
+            int z;
+            try {
+                x = Integer.parseInt(p[0]);
+                y = Integer.parseInt(p[1]);
+                z = Integer.parseInt(p[2]);
+            } catch (NumberFormatException e) {
+                return; // kaputte Zeile vom Host: ignorieren
+            }
             if (TestClient.areaActive && TestClient.gx == x && TestClient.gy == y && TestClient.gz == z) return;
             if (TestClient.areaActive) TestClient.stopArea(mc, null);
             TestClient.gx = x;

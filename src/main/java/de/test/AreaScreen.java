@@ -46,6 +46,10 @@ public class AreaScreen extends Form {
         toggle("Ziele hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
         toggle("Bereichsrahmen", () -> RenderMods.miningShowArea, v -> RenderMods.miningShowArea = v, true);
         choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
+        section("Verteidigung");
+        toggle("Mobs abwehren", () -> BotGuard.forArea, v -> BotGuard.forArea = v, true);
+        wideButton("Einstellungen der Bot-Verteidigung", false,
+                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
         footer(null, null);
     }
 

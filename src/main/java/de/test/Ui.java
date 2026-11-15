@@ -143,12 +143,6 @@ final class Ui {
         pose.popMatrix();
     }
 
-    /** Rechteck mit abgeschnittenen Ecken (je 1 Pixel). */
-    static void rounded(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
-        fill(g, x + 1, y, x + w - 1, y + h, color);
-        fill(g, x, y + 1, x + w, y + h - 1, color);
-    }
-
     /** Wie weit Zeile i (0 = aeusserste) einer runden Ecke mit Radius r eingerueckt ist. */
     static int inset(int r, int i) {
         double dy = r - i - 0.5;
@@ -201,7 +195,7 @@ final class Ui {
     // ---------- Text ----------
 
     static void text(GuiGraphicsExtractor g, Font font, String s, int x, int y, int color, boolean shadow) {
-        g.text(font, s, x, y, mul(color), shadow);
+        g.text(font, Lang.t(s), x, y, mul(color), shadow);
     }
 
     /**
@@ -209,6 +203,7 @@ final class Ui {
      * (nie gekuerzt und nie mit Punkten abgeschnitten).
      */
     static void fitText(GuiGraphicsExtractor g, Font font, String s, int x, int y, int max, int color, boolean shadow) {
+        s = Lang.t(s);
         int w = font.width(s);
         if (max <= 0 || w <= max) {
             text(g, font, s, x, y, color, shadow);
@@ -226,6 +221,7 @@ final class Ui {
     /** Wie {@link #fitText}, aber um cx zentriert. */
     static void fitCentered(GuiGraphicsExtractor g, Font font, String s, int cx, int y, int max, int color,
             boolean shadow) {
+        s = Lang.t(s);
         int w = font.width(s);
         if (max <= 0 || w <= max) {
             text(g, font, s, cx - w / 2, y, color, shadow);
@@ -236,6 +232,7 @@ final class Ui {
 
     /** Bricht einen Text an Leerzeichen so um, dass jede Zeile in die Breite passt. */
     static List<String> wrap(Font font, String text, int max) {
+        text = Lang.t(text);
         List<String> out = new ArrayList<>();
         for (String para : text.split("\n", -1)) {
             if (max <= 0 || font.width(para) <= max) {
@@ -404,7 +401,7 @@ final class Ui {
 
     /** So breit muss ein Knopf sein, damit sein Text ganz hineinpasst. */
     static int buttonWidth(Font font, String text) {
-        return font.width(text) + 16;
+        return font.width(Lang.t(text)) + 16;
     }
 
     static void button(GuiGraphicsExtractor g, Font font, Button b, int mx, int my, int style) {

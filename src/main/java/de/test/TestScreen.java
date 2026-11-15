@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -33,7 +34,8 @@ public class TestScreen extends Screen {
     private static final int MUTED = Ui.MUTED;
 
     private static final class Entry {
-        final String name;
+        final String name;   // fester Name (Tasten, Speichern) - auf Deutsch
+        final String label;  // angezeigter Name in der gewaehlten Sprache
         final BooleanSupplier state; // null = reiner Button ohne An/Aus
         final Runnable action;
         Supplier<Screen> settings; // null = keine Einstellungen
@@ -44,6 +46,7 @@ public class TestScreen extends Screen {
 
         Entry(String name, BooleanSupplier state, Runnable action) {
             this.name = name;
+            this.label = Lang.t(name);
             this.state = state;
             this.action = action;
         }
@@ -64,7 +67,7 @@ public class TestScreen extends Screen {
         float laneHover = 0f;
 
         Column(String title) {
-            this.title = title;
+            this.title = Lang.t(title);
         }
     }
 
@@ -206,6 +209,8 @@ public class TestScreen extends Screen {
                 () -> PlayerMods.autoEat = !PlayerMods.autoEat, () -> PlayerMods.screen("Auto Eat", this)));
         player.entries.add(module("Auto Fish", () -> PlayerMods.autoFish,
                 () -> PlayerMods.autoFish = !PlayerMods.autoFish, () -> PlayerMods.screen("Auto Fish", this)));
+        player.entries.add(module("Auto Armor", () -> Survival.autoArmor,
+                () -> Survival.autoArmor = !Survival.autoArmor, () -> Survival.armorScreen(this)));
         player.entries.add(module("Auto Gap", () -> PlayerMods.autoGap,
                 () -> PlayerMods.autoGap = !PlayerMods.autoGap, () -> PlayerMods.screen("Auto Gap", this)));
         player.entries.add(module("Auto Mend", () -> PlayerMods.autoMend,
@@ -214,6 +219,8 @@ public class TestScreen extends Screen {
                 () -> PlayerMods.autoReplenish = !PlayerMods.autoReplenish, () -> PlayerMods.screen("Auto Replenish", this)));
         player.entries.add(module("Auto Respawn", () -> PlayerMods.autoRespawn,
                 () -> PlayerMods.autoRespawn = !PlayerMods.autoRespawn, () -> PlayerMods.screen("Auto Respawn", this)));
+        player.entries.add(module("Auto Totem", () -> Survival.autoTotem,
+                () -> Survival.autoTotem = !Survival.autoTotem, () -> Survival.totemScreen(this)));
         player.entries.add(module("Auto Tool", () -> PlayerMods.autoTool,
                 () -> PlayerMods.autoTool = !PlayerMods.autoTool, () -> PlayerMods.screen("Auto Tool", this)));
         player.entries.add(module("Break Delay", () -> PlayerMods.breakDelay,
@@ -230,6 +237,8 @@ public class TestScreen extends Screen {
                 () -> PlayerMods.ghostHand = !PlayerMods.ghostHand, () -> PlayerMods.screen("Ghost Hand", this)));
         player.entries.add(module("Instant Rebreak", () -> PlayerMods.instantRebreak,
                 () -> PlayerMods.instantRebreak = !PlayerMods.instantRebreak, () -> PlayerMods.screen("Instant Rebreak", this)));
+        player.entries.add(module("Kill Aura", () -> KillAura.enabled, KillAura::toggle,
+                () -> new KillAuraScreen(this)));
         player.entries.add(module("Liquid Interact", () -> PlayerMods.liquidInteract,
                 () -> PlayerMods.liquidInteract = !PlayerMods.liquidInteract, () -> PlayerMods.screen("Liquid Interact", this)));
         player.entries.add(module("Middle Click Extra", () -> PlayerMods.middleClickExtra,
@@ -292,6 +301,8 @@ public class TestScreen extends Screen {
                 () -> RenderMods.handView = !RenderMods.handView, () -> RenderMods.screen("Hand View", this)));
         render.entries.add(module("Hole Esp", () -> RenderMods.holeEsp,
                 () -> RenderMods.holeEsp = !RenderMods.holeEsp, () -> RenderMods.screen("Hole Esp", this)));
+        render.entries.add(module("Info-Anzeige", () -> InfoHud.enabled,
+                () -> InfoHud.enabled = !InfoHud.enabled, () -> InfoHud.screen(this)));
         render.entries.add(module("Item Highlight", () -> RenderMods.itemHighlight,
                 () -> RenderMods.itemHighlight = !RenderMods.itemHighlight, () -> RenderMods.screen("Item Highlight", this)));
         render.entries.add(module("Item Physics", () -> RenderMods.itemPhysics,
@@ -333,16 +344,25 @@ public class TestScreen extends Screen {
         world.entries.add(open("Bereich", () -> new AreaScreen(this)));
         world.entries.add(open("Block", () -> new BlockScreen(this)));
         world.entries.add(open("Koordinaten", () -> new GotoScreen(this)));
+        world.entries.add(new Entry(Keybinds.STOP_NAME, null, () -> TestClient.stopOrWalk(Minecraft.getInstance())));
+        world.entries.add(new Entry(Keybinds.SELECT_NAME, null, () -> TestClient.selectLookedAt(Minecraft.getInstance())));
         world.entries.add(toggle("Auto-Logout", () -> TestClient.autoLogout,
                 () -> TestClient.autoLogout = !TestClient.autoLogout));
         world.entries.add(module("ESP", () -> Esp.enabled, () -> {
             Esp.enabled = !Esp.enabled;
             Esp.rescan();
         }, () -> new EspScreen(this)));
+        world.entries.add(module("Debris Miner", DebrisMiner::isRunning, DebrisMiner::toggle,
+                () -> new DebrisScreen(this)));
+        world.entries.add(module("Bot-Verteidigung", () -> BotGuard.enabled,
+                () -> BotGuard.enabled = !BotGuard.enabled, () -> new BotGuardScreen(this)));
 
         Column inv = new Column("Inventar");
         inv.entries.add(module("AutoDrop", () -> TestClient.autoDrop,
                 () -> TestClient.autoDrop = !TestClient.autoDrop, () -> new DropScreen(this)));
+        Entry sort = new Entry(Keybinds.SORT_NAME, null, () -> InvLayout.request(Minecraft.getInstance()));
+        sort.settings = () -> new InvLayoutScreen(this); // Punkte: Aufteilung festlegen
+        inv.entries.add(sort);
 
         Column misc2 = new Column("Misc");
         misc2.entries.add(module("Anti Packet Kick", () -> MiscMods.antiPacketKick,
@@ -357,6 +377,8 @@ public class TestScreen extends Screen {
                 () -> MiscMods.bookBot = !MiscMods.bookBot, () -> MiscMods.screen("Book Bot", this)));
         misc2.entries.add(module("Discord Presence", () -> MiscMods.discordPresence,
                 () -> MiscMods.discordPresence = !MiscMods.discordPresence, () -> MiscMods.screen("Discord Presence", this)));
+        misc2.entries.add(module("Freunde", () -> Friends.enabled, () -> Friends.enabled = !Friends.enabled,
+                () -> new FriendsScreen(this)));
         misc2.entries.add(module("Inventory Tweaks", () -> MiscMods.inventoryTweaks,
                 () -> MiscMods.inventoryTweaks = !MiscMods.inventoryTweaks, () -> MiscMods.screen("Inventory Tweaks", this)));
         misc2.entries.add(module("Message Aura", () -> MiscMods.messageAura,
@@ -373,14 +395,19 @@ public class TestScreen extends Screen {
                 () -> MiscMods.soundBlocker = !MiscMods.soundBlocker, () -> MiscMods.screen("Sound Blocker", this)));
         misc2.entries.add(module("Spam", () -> MiscMods.spam,
                 () -> MiscMods.spam = !MiscMods.spam, () -> MiscMods.screen("Spam", this)));
+        misc2.entries.add(module("Server-Schutz", () -> MiscMods.serverGuard,
+                () -> MiscMods.serverGuard = !MiscMods.serverGuard, () -> MiscMods.screen("Server-Schutz", this)));
         misc2.entries.add(module("Swarm", () -> MiscMods.swarm,
                 () -> MiscMods.swarm = !MiscMods.swarm, () -> MiscMods.screen("Swarm", this)));
 
         Column misc = new Column("Men\u00fc");
         misc.entries.add(open("Design anpassen", () -> new DesignScreen(this)));
-        misc.entries.add(open("Tasten \u00e4ndern",
+        misc.entries.add(open("Sprache / Language", () -> new LanguageScreen(this)));
+        misc.entries.add(open("Men\u00fc-Taste \u00e4ndern",
                 () -> new KeyBindsScreen(this, this.minecraft.options)));
-        misc.entries.add(new Entry("Alle Module aus / an", null, Keybinds::panic));
+        misc.entries.add(open("Profile", () -> new ProfileScreen(this)));
+        misc.entries.add(open("Tasten-\u00dcbersicht", () -> new BindsScreen(this)));
+        misc.entries.add(new Entry(Keybinds.PANIC_NAME, null, Keybinds::panic));
         misc.entries.add(new Entry("Schlie\u00dfen", null, this::onClose));
 
         columns.add(move);
@@ -398,16 +425,20 @@ public class TestScreen extends Screen {
             if (col == misc) continue;
             for (Entry e : col.entries) Keybinds.ACTIONS.put(e.name, new Keybinds.Action(e.state, e.action));
         }
+        Keybinds.ACTIONS.put(Keybinds.PANIC_NAME, new Keybinds.Action(null, Keybinds::panic));
     }
 
     /** Die einfachen Module, die der Standardmodus zeigt (Welt, Inventar und Menue sind immer komplett). */
     private static final java.util.Set<String> SIMPLE = java.util.Set.of(
             "Auto Jump", "Auto Walk", "Flight", "High Jump", "No Fall", "Safe Walk", "Sneak", "Speed", "Sprint", "Step",
-            "Anti Afk", "Auto Clicker", "Auto Eat", "Auto Fish", "Auto Respawn", "Auto Tool", "Fast Use", "Reach",
+            "Anti Afk", "Auto Armor", "Auto Clicker", "Auto Eat", "Auto Fish", "Auto Respawn", "Auto Tool",
+            "Auto Totem", "Fast Use", "Info-Anzeige", "Kill Aura",
+            "Reach",
             "Speed Mine",
             "Better Tooltips", "Chams", "Freecam", "Fullbright", "Item Highlight", "Nametags", "Time Changer",
             "Tracers", "Waypoints",
-            "Auto Reconnect", "Better Chat", "Discord Presence", "Inventory Tweaks", "Notifier");
+            "Auto Reconnect", "Better Chat", "Discord Presence", "Freunde", "Inventory Tweaks", "Notifier",
+            "Server-Schutz");
 
     /**
      * Ob ein Eintrag im aktuellen Modus zu sehen ist. Im Standardmodus bleiben ausserdem alle Module
@@ -419,8 +450,9 @@ public class TestScreen extends Screen {
         return e.state != null && e.state.getAsBoolean();
     }
 
-    private boolean bindable(Column col) {
-        return col.index != columns.size() - 1; // die Menue-Spalte bekommt keine Tasten
+    /** Die Menue-Spalte bekommt keine Tasten - ausser "Alle Module aus / an". */
+    private boolean bindable(Column col, Entry en) {
+        return col.index != columns.size() - 1 || en.name.equals(Keybinds.PANIC_NAME);
     }
 
     private void initLayout() {
@@ -467,7 +499,7 @@ public class TestScreen extends Screen {
     /** Platz, den ein Eintrag braucht, damit sein Name ganz zu lesen ist. */
     private int needWidth(Entry e) {
         int right = e.state != null ? 4 + 16 + 2 + DOTS_W : (e.settings != null ? 4 + DOTS_W : 4);
-        return 8 + this.font.width(e.name) + 2 + badgeW(e) + right + SCROLL_W;
+        return 8 + this.font.width(e.label) + 2 + badgeW(e) + right + SCROLL_W;
     }
 
     /** Platz fuer das Tasten-Schild eines Eintrags. */
@@ -518,7 +550,8 @@ public class TestScreen extends Screen {
             boolean titleHit = !q.isEmpty() && col.title.toLowerCase(Locale.ROOT).contains(q);
             for (Entry e : col.entries) {
                 // die Suche findet immer alle Module, auch die im Standardmodus ausgeblendeten
-                boolean hit = q.isEmpty() ? inMode(col, e) : titleHit || e.name.toLowerCase(Locale.ROOT).contains(q);
+                boolean hit = q.isEmpty() ? inMode(col, e) : titleHit || e.label.toLowerCase(Locale.ROOT).contains(q)
+                        || e.name.toLowerCase(Locale.ROOT).contains(q);
                 if (hit) col.matches.add(e);
             }
             if (!col.matches.isEmpty()) shown.add(col);
@@ -526,7 +559,7 @@ public class TestScreen extends Screen {
 
         int maxW = this.width - 16;
         logoScale = Theme.logoSize > 0 ? Theme.logoSize : (this.height >= 300 ? 2 : 1);
-        int logoH = Theme.showLogo ? Logo.H * logoScale : 10;
+        int logoH = Theme.showLogo ? Logo.height(logoScale) : 10;
         int topY = 8 + logoH + 8 + SEARCH_H + 10;
         int rowGap = 12;
         int availV = this.height - FOOTER_H - 6 - topY;
@@ -549,8 +582,8 @@ public class TestScreen extends Screen {
         // Suchfeld (bleibt dasselbe Objekt, damit Text und Cursor beim Neuaufbau erhalten bleiben)
         int sw = Math.min(200, this.width - 40);
         if (searchBox == null) {
-            searchBox = new EditBox(this.font, 0, 0, sw, SEARCH_H, Component.literal("Suchen"));
-            searchBox.setHint(Component.literal("Module suchen"));
+            searchBox = new EditBox(this.font, 0, 0, sw, SEARCH_H, Lang.literal("Suchen"));
+            searchBox.setHint(Lang.literal("Module suchen"));
             searchBox.setMaxLength(40);
             searchBox.setValue(query);
             searchBox.setResponder(s -> {
@@ -560,13 +593,13 @@ public class TestScreen extends Screen {
                 pendingRebuild = true;
             });
         }
-        int bw = this.font.width(BIND_TEXT) + 18;
+        int bw = this.font.width(Lang.t(BIND_TEXT)) + 18;
         int sx0 = (this.width - (sw + 6 + bw)) / 2;
         searchBox.setWidth(sw);
         searchBox.setX(sx0);
         searchBox.setY(searchY);
         addWidget(searchBox); // gezeichnet wird es von uns selbst (nach dem Hintergrund)
-        bindBtn = addWidget(Button.builder(Component.literal(BIND_TEXT), b -> {
+        bindBtn = addWidget(Button.builder(Lang.literal(BIND_TEXT), b -> {
             bindMode = !bindMode;
             waiting = null;
             pendingRebuild = true; // Spalten brauchen im Zuweisen-Modus etwas mehr Platz
@@ -610,7 +643,7 @@ public class TestScreen extends Screen {
             // links umschalten, rechts (Punkte) Einstellungen oeffnen
             int dotsX = col.x + col.w - SCROLL_W - DOTS_W;
             int toggleW = en.settings != null ? dotsX - en.x : col.w - SCROLL_W;
-            boolean canBind = bindable(col);
+            boolean canBind = bindable(col, en);
             addWidget(Button.builder(Component.empty(), b -> {
                 if (collapsed(col)) return;
                 if (bindMode && canBind) {
@@ -746,8 +779,7 @@ public class TestScreen extends Screen {
         // Logo (oder nur Schriftzug)
         int cx = this.width / 2;
         if (Theme.showLogo) {
-            int logoW = Logo.W * logoScale;
-            Logo.draw3d(g, cx - logoW / 2, logoY, logoScale, ga, dy, Fx.mouseX(), Fx.mouseY());
+            Logo.drawMenu(g, this.font, cx, logoY, logoScale, ga, dy, Fx.mouseX(), Fx.mouseY());
         } else {
             String title = "1 9 1 2";
             Ui.text(g, this.font, title, cx - this.font.width(title) / 2, logoY + dy, 0xFFFFFFFF, true);
@@ -775,8 +807,7 @@ public class TestScreen extends Screen {
         // Fusszeile: weicher Uebergang nach unten, darin eine kurze Bedienhilfe
         Ui.alpha = ga;
         Ui.gradientV(g, 0, this.height - 26, this.width, this.height, 0x00000000, 0x96000000);
-        String keys = TestClient.toggleKey.getTranslatedKeyMessage().getString()
-                + " / " + TestClient.guiKey.getTranslatedKeyMessage().getString();
+        String keys = "Men\u00fc " + TestClient.guiKey.getTranslatedKeyMessage().getString();
         String sep = "   ·   ";
         String[] hints = {
             "Klick: an/aus" + sep + "Punkte: Einstellungen" + sep + "Mausrad: scrollen" + sep + "Tasten: " + keys,
@@ -794,13 +825,14 @@ public class TestScreen extends Screen {
         }
         if (bindMode) {
             hints = waiting != null
-                    ? new String[] {"Dr\u00fccke jetzt eine Taste f\u00fcr " + waiting + sep
+                    ? new String[] {"Dr\u00fccke jetzt eine Taste f\u00fcr " + Lang.t(waiting) + sep
                             + "R\u00fccktaste oder Entf: Taste entfernen", "Dr\u00fccke jetzt eine Taste", "Taste dr\u00fccken"}
                     : new String[] {"Klick auf ein Modul, dann die gew\u00fcnschte Taste dr\u00fccken" + sep
                             + "Die Tasten wirken im Spiel", "Klick auf ein Modul, dann Taste dr\u00fccken", "Modul anklicken"};
         }
-        for (String hint : hints) {
+        for (String rawHint : hints) {
             // die ausfuehrlichste Hilfe, die ganz in die Breite passt
+            String hint = Lang.t(rawHint);
             if (this.font.width(hint) <= this.width - 16) {
                 Ui.text(g, this.font, hint, cx - this.font.width(hint) / 2, this.height - 11, MUTED, true);
                 break;
@@ -881,7 +913,7 @@ public class TestScreen extends Screen {
             // Tasten-Schild: zeigt die zugewiesene Taste (im Zuweisen-Modus auch freie Plaetze)
             Integer key = Keybinds.get(en.name);
             boolean wait = en.name.equals(waiting);
-            String badge = wait ? "?" : key != null ? Keybinds.keyName(key) : (bindMode && bindable(col) ? "+" : null);
+            String badge = wait ? "?" : key != null ? Keybinds.keyName(key) : (bindMode && bindable(col, en) ? "+" : null);
             if (badge != null) {
                 int bw = this.font.width(badge) + 8;
                 int bx = nameEnd - bw;
@@ -893,7 +925,7 @@ public class TestScreen extends Screen {
                 Ui.text(g, this.font, badge, bx + 4, ey + 5, tc, false);
                 nameEnd = bx - 4;
             }
-            name(g, en.name, nameX, ey + 5, nameEnd - nameX, textColor);
+            name(g, en.label, nameX, ey + 5, nameEnd - nameX, textColor);
 
             if (en.settings != null) {
                 // Drei Punkte fuer die Einstellungen; leuchten, wenn die Maus darueber ist

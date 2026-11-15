@@ -148,7 +148,7 @@ public final class Fx {
         glow(g, mx, my, big * 0.16f, withAlpha(Ui.lerp(accent, 0xFFFFFFFF, 0.2f), Math.round(0x30 * mouseGlow)));
         glow(g, mx, my, big * 0.05f, withAlpha(0xFFFFFFFF, Math.round(0x18 * mouseGlow)));
 
-        particles(g, w, h, t, accent, mx, my);
+        if (!Theme.lowFx) particles(g, w, h, t, accent, mx, my);
         part(g, VIGNETTE, 0, 0, w, h, 0, 0, VIGNETTE_SIZE, VIGNETTE_SIZE, VIGNETTE_SIZE, withAlpha(0xFF000000, 0x78));
     }
 

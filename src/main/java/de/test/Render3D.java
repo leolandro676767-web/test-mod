@@ -1,6 +1,8 @@
 package de.test;
 
+import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
@@ -25,11 +27,13 @@ public final class Render3D {
     private static float partial;
     private static boolean ready;
 
-    /** Nur in der Ego-Ansicht zuverlaessig; sonst meldet das keine gueltige Projektion. */
+    /** Ego-Ansicht und 3rd Person von hinten (auch Free Look); von vorne gibt es keine Projektion. */
     public static boolean begin(Minecraft mc, float pt) {
         ready = false;
         if (mc.player == null || mc.level == null) return false;
-        if (!mc.options.getCameraType().isFirstPerson()) return false;
+        CameraType view = mc.options.getCameraType();
+        boolean third = !view.isFirstPerson();
+        if (third && view.isMirrored()) return false;
         Entity cam = mc.getCameraEntity() != null ? mc.getCameraEntity() : mc.player;
         partial = pt;
         Vec3 eye = cam.getEyePosition(pt);
@@ -42,12 +46,33 @@ public final class Render3D {
         cosYaw = Math.cos(yaw);
         sinPitch = Math.sin(pitch);
         cosPitch = Math.cos(pitch);
+        if (third) {
+            // 3rd Person: die Kamera sitzt hinter dem Kopf, entgegen der Blickrichtung
+            double fx = -sinYaw * cosPitch;
+            double fy = -sinPitch;
+            double fz = cosYaw * cosPitch;
+            double d = thirdPersonDistance(mc, eye, fx, fy, fz);
+            camX -= fx * d;
+            camY -= fy * d;
+            camZ -= fz * d;
+        }
         screenW = mc.getWindow().getGuiScaledWidth();
         screenH = mc.getWindow().getGuiScaledHeight();
         double fov = mc.options.fov().get();
         focal = 1.0 / Math.tan(Math.toRadians(fov) / 2.0) * (screenH / 2.0);
         ready = true;
         return true;
+    }
+
+    /** Abstand der 3rd-Person-Kamera: wie im Spiel 4 Bloecke, an Waenden kuerzer (Camera Tweaks: eingestellt). */
+    private static double thirdPersonDistance(Minecraft mc, Vec3 eye, double fx, double fy, double fz) {
+        if (RenderMods.cameraTweaks && RenderMods.cameraNoClip) return RenderMods.cameraDistance;
+        double max = 4.0;
+        for (double d = 0.1; d <= max; d += 0.1) {
+            BlockPos bp = BlockPos.containing(eye.x - fx * d, eye.y - fy * d, eye.z - fz * d);
+            if (!mc.level.getBlockState(bp).getCollisionShape(mc.level, bp).isEmpty()) return Math.max(0.0, d - 0.15);
+        }
+        return max;
     }
 
     public static boolean ready() {
@@ -110,10 +135,6 @@ public final class Render3D {
         double iy = lerp(e.yo, e.getY()) - e.getY();
         double iz = lerp(e.zo, e.getZ()) - e.getZ();
         return e.getBoundingBox().move(ix, iy, iz);
-    }
-
-    public static Vec3 smoothPos(Entity e) {
-        return new Vec3(lerp(e.xo, e.getX()), lerp(e.yo, e.getY()), lerp(e.zo, e.getZ()));
     }
 
     private static double lerp(double a, double b) {

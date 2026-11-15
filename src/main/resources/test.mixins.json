@@ -1,5 +1,5 @@
 {
-  "required": true,
+  "required": false,
   "minVersion": "0.8",
   "package": "de.test.mixin",
   "compatibilityLevel": "JAVA_21",
@@ -8,8 +8,12 @@
     "ClientPacketListenerMixin",
     "ConnectionMixin",
     "GameRendererMixin",
+    "ItemEntityRendererMixin",
+    "ItemInHandRendererMixin",
     "LivingEntityMixin",
-    "LocalPlayerMixin"
+    "LocalPlayerMixin",
+    "MinecraftMixin",
+    "MultiPlayerGameModeMixin"
   ],
   "injectors": {
     "defaultRequire": 0

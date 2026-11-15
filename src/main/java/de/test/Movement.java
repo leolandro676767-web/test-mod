@@ -171,7 +171,7 @@ public final class Movement {
         // Schleichen zuletzt: Sneak-Modul oder Safe Walk an einer Kante
         boolean jumping = !inScreen && mc.options.keyJump.isDown();
         boolean edge = !bot && safeWalk && moving && p.onGround() && !(safeWalkNotJumping && jumping)
-                && edgeAhead(mc.level, p, moveDir(p, fwd, back, left, right), safeWalkDist / 10.0);
+                && edgeAhead(mc.level, p, Look.moveDir(p, fwd, back, left, right), safeWalkDist / 10.0);
         runSneak(mc, (sneak && !bot && (!sneakOnlyMoving || moving)) || edge);
         wasOnGround = p.onGround();
     }
@@ -264,19 +264,7 @@ public final class Movement {
 
     // ---------- Hilfen ----------
 
-    /** Laufrichtung aus den Tasten als Einheitsvektor {x, z}, oder null wenn keine Taste gedrueckt ist. */
-    private static double[] moveDir(LocalPlayer p, boolean fwd, boolean back, boolean left, boolean right) {
-        double f = (fwd ? 1 : 0) - (back ? 1 : 0);
-        double s = (left ? 1 : 0) - (right ? 1 : 0);
-        double len = Math.sqrt(f * f + s * s);
-        if (len < 1e-6) return null;
-        f /= len;
-        s /= len;
-        double yaw = Math.toRadians(p.getYRot());
-        return new double[] {-Math.sin(yaw) * f + Math.cos(yaw) * s, Math.cos(yaw) * f + Math.sin(yaw) * s};
-    }
-
-    /** true, wenn unter dem um (dir * dist + Geschwindigkeit) verschobenen Spieler kein Boden mehr ist. */
+    /** Laufrichtung aus den Tasten als Einheitsvektor {x, z}, oder null wenn keine Taste gedrueckt ist. */    /** true, wenn unter dem um (dir * dist + Geschwindigkeit) verschobenen Spieler kein Boden mehr ist. */
     private static boolean edgeAhead(Level level, LocalPlayer p, double[] dir, double dist) {
         if (dir == null) return false;
         Vec3 v = p.getDeltaMovement();
@@ -371,7 +359,7 @@ public final class Movement {
         if (!p.isUsingItem() || !p.onGround() || p.isPassenger()) return;
         if (speed) return; // Speed setzt das Tempo ohnehin
         if (!noSlowAllowed(p.getUseItem())) return;
-        double[] dir = moveDir(p, fwd, back, left, right);
+        double[] dir = Look.moveDir(p, fwd, back, left, right);
         if (dir == null) return;
         double perTick = (p.isSprinting() ? 5.6 : 4.3) / 20.0 * (noSlowPercent / 100.0);
         Vec3 v = p.getDeltaMovement();
@@ -532,6 +520,10 @@ public final class Movement {
             f.toggle("Sprinten", () -> TestClient.sprint, v -> TestClient.sprint = v, false);
             f.toggle("Sprint-Jump", () -> TestClient.sprintJump, v -> TestClient.sprintJump = v, false);
             f.toggle("Hindernisse abbauen", () -> TestClient.autoMine, v -> TestClient.autoMine = v, true);
+            f.toggle("Mobs abwehren", () -> BotGuard.forWalk, v -> BotGuard.forWalk = v, true);
+            f.wideButton("Einstellungen der Bot-Verteidigung", false,
+                    () -> Minecraft.getInstance().gui.setScreen(new BotGuardScreen(Minecraft.getInstance().gui.screen())),
+                    true);
             f.footer(() -> TestClient.walking, v -> TestClient.walking = v);
         });
     }

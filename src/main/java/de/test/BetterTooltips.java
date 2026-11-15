@@ -20,12 +20,12 @@ final class BetterTooltips {
             int left = max - stack.getDamageValue();
             int pct = left * 100 / Math.max(1, max);
             ChatFormatting c = pct > 50 ? ChatFormatting.GREEN : pct > 20 ? ChatFormatting.YELLOW : ChatFormatting.RED;
-            lines.add(Component.literal("Haltbarkeit: " + left + "/" + max + " (" + pct + "%)").withStyle(c));
+            lines.add(Lang.literal("Haltbarkeit: " + left + "/" + max + " (" + pct + "%)").withStyle(c));
         }
         if (RenderMods.tipFood) {
             FoodProperties food = stack.get(DataComponents.FOOD);
             if (food != null) {
-                lines.add(Component.literal("N\u00e4hrwert: " + food.nutrition() + "  S\u00e4ttigung: "
+                lines.add(Lang.literal("N\u00e4hrwert: " + food.nutrition() + "  S\u00e4ttigung: "
                         + String.format("%.1f", food.saturation())).withStyle(ChatFormatting.GOLD));
             }
         }
@@ -46,7 +46,7 @@ final class BetterTooltips {
                         .append(st.getHoverName().copy().withStyle(ChatFormatting.AQUA)));
             }
             if (more > 0) {
-                lines.add(Component.literal("  + " + more + " weitere").withStyle(ChatFormatting.DARK_GRAY));
+                lines.add(Lang.literal("  + " + more + " weitere").withStyle(ChatFormatting.DARK_GRAY));
             }
         }
     }

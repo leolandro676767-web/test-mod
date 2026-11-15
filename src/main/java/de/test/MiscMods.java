@@ -33,6 +33,8 @@ public final class MiscMods {
     public static int autoReconnectDelay = 5;       // Sekunden
 
     public static boolean betterBeacons = false;
+    public static int beaconPrimary = 4;     // Index in BEACON_NAMES (Staerke)
+    public static int beaconSecondary = 1;   // 0 = keiner, 1 = Regeneration, 2 = Hauptwirkung verstaerken
 
     public static boolean betterChat = false;
     public static boolean betterChatDedup = true;   // gleiche Nachricht buendeln (x2, x3)
@@ -51,12 +53,13 @@ public final class MiscMods {
     public static boolean discordShowServer = false;
 
     public static boolean inventoryTweaks = false;
-    public static boolean sortHotbar = false;
 
     public static boolean messageAura = false;
     public static int messageAuraRange = 8;
     public static int messageAuraDelay = 60;        // Sekunden pro Spieler
     public static String messageAuraText = "Hi %name%!";
+    public static int messageAuraWho = 0;            // 0 = alle, 1 = nur Freunde, 2 = keine Freunde
+    static final String[] MESSAGE_AURA_WHO = {"Alle", "Nur Freunde", "Keine Freunde"};
 
     public static boolean notebot = false;
     public static int notebotSong = 0;
@@ -86,6 +89,10 @@ public final class MiscMods {
     public static int spamDelay = 5;                // Sekunden
     public static String spamText = "1912 Client";
 
+    public static boolean serverGuard = false;
+    /** Server-Adressen (Teile reichen), mit Komma getrennt, z.B. "hypixel, gommehd". */
+    public static String serverGuardList = "hypixel, gommehd";
+
     public static boolean swarm = false;
     public static int swarmMode = 0;                // 0 = Auto, 1 = Host, 2 = Worker
     public static String swarmHost = "127.0.0.1";
@@ -99,8 +106,15 @@ public final class MiscMods {
 
     private static int packetsThisTick = 0;
     private static int reconnectTicks = 0;
+    /** Nach einem Auto-Log (Debris Miner) nicht automatisch neu verbinden; gilt bis zur naechsten Verbindung. */
+    static boolean holdReconnect = false;
     private static ServerData lastServer = null;
     private static int spamTicks = 0;
+    private static int beaconSentFor = -1;
+    private static String guardLastServer = null;   // Fenster-ID, fuer das schon bezahlt wurde
+
+    static final String[] BEACON_NAMES = {"Tempo", "Eile", "Resistenz", "Sprungkraft", "St\u00e4rke"};
+    static final String[] BEACON_SECOND = {"Keine", "Regeneration", "Hauptwirkung st\u00e4rker"};
     private static boolean discordWasOn = false;
     private static long discordStart = 0;
     private static int discordTicks = 0;
@@ -148,7 +162,7 @@ public final class MiscMods {
     private static void runBookBot(Minecraft mc) {
         var p = mc.player;
         if (!p.getMainHandItem().is(net.minecraft.world.item.Items.WRITABLE_BOOK)) {
-            p.sendSystemMessage(Component.literal("\u00a7c1912: Book Bot - erst Buch und Feder in die Hand nehmen"));
+            p.sendSystemMessage(Lang.literal("\u00a7c1912: Book Bot - erst Buch und Feder in die Hand nehmen"));
             return;
         }
         String text = bookBotText == null || bookBotText.isBlank() ? "1912 Client" : bookBotText;
@@ -162,7 +176,7 @@ public final class MiscMods {
         }
         int slot = p.getInventory().getSelectedSlot();
         mc.getConnection().send(new net.minecraft.network.protocol.game.ServerboundEditBookPacket(slot, pages, title));
-        p.sendSystemMessage(Component.literal("\u00a7a1912: Book Bot - " + pages.size() + " Seiten geschrieben"
+        p.sendSystemMessage(Lang.literal("\u00a7a1912: Book Bot - " + pages.size() + " Seiten geschrieben"
                 + (bookBotSign ? " und signiert" : "")));
     }
 
@@ -187,9 +201,11 @@ public final class MiscMods {
         packetsThisTick = 0;
         if (mc.getCurrentServer() != null) lastServer = mc.getCurrentServer();
 
+        holdReconnect = false; // wieder verbunden
         if (autoReconnect) runAutoReconnect(mc);
         else reconnectTicks = 0;
 
+        runServerGuard(mc);
         Notebot.tick(mc);
         Swarm.tick(mc);
         if (discordPresence) {
@@ -212,9 +228,8 @@ public final class MiscMods {
             if (mc.getConnection() != null) runBookBot(mc);
         }
         if (messageAura) runMessageAura(mc);
-        if (inventoryTweaks) {
-            while (TestClient.sortKey != null && TestClient.sortKey.consumeClick()) sortInventory(mc);
-        }
+        if (betterBeacons) runBetterBeacons(mc);
+
     }
 
     /** Discord Presence: einmal pro Sekunde melden, was gerade angezeigt werden soll. */
@@ -236,6 +251,68 @@ public final class MiscMods {
         DiscordIpc.update(discordAppId, where, discordText, discordStart);
     }
 
+    /** true, wenn die Adresse auf der Schutz-Liste steht. */
+    static boolean guarded(String address) {
+        if (address == null) return false;
+        String a = address.toLowerCase(java.util.Locale.ROOT);
+        for (String part : serverGuardList.toLowerCase(java.util.Locale.ROOT).split(",")) {
+            String t = part.trim();
+            if (!t.isEmpty() && a.contains(t)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Server-Schutz: beim Betreten eines Servers von der Liste alle Module ausschalten (wie die
+     * J-Taste - mit J kommen sie zurueck, wenn man das wirklich will).
+     */
+    private static void runServerGuard(Minecraft mc) {
+        if (mc.level == null || mc.player == null) {
+            guardLastServer = null;
+            return;
+        }
+        String ip = mc.getCurrentServer() != null ? mc.getCurrentServer().ip : "";
+        if (ip.equals(guardLastServer)) return;
+        guardLastServer = ip;
+        if (!serverGuard || !guarded(ip)) return;
+        if (!Keybinds.PANIC.isEmpty()) return; // schon alles aus
+        Keybinds.panic();
+        mc.player.sendSystemMessage(Lang.literal("\u00a7e1912: Server-Schutz - auf " + ip
+                + " wurden alle Module ausgeschaltet."));
+    }
+
+    private static net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> beaconEffect(int i) {
+        return switch (i) {
+            case 0 -> net.minecraft.world.effect.MobEffects.SPEED;
+            case 1 -> net.minecraft.world.effect.MobEffects.HASTE;
+            case 2 -> net.minecraft.world.effect.MobEffects.RESISTANCE;
+            case 3 -> net.minecraft.world.effect.MobEffects.JUMP_BOOST;
+            default -> net.minecraft.world.effect.MobEffects.STRENGTH;
+        };
+    }
+
+    /**
+     * Better Beacons: sobald im Leuchtfeuer-Fenster ein Bezahl-Item liegt, werden die gewaehlten
+     * Wirkungen gesetzt - auch solche, die die Pyramide eigentlich noch nicht freischaltet.
+     */
+    private static void runBetterBeacons(Minecraft mc) {
+        var p = mc.player;
+        if (!(p.containerMenu instanceof net.minecraft.world.inventory.BeaconMenu menu)) {
+            beaconSentFor = -1;
+            return;
+        }
+        if (beaconSentFor == menu.containerId || !menu.getSlot(0).hasItem() || mc.getConnection() == null) return;
+        beaconSentFor = menu.containerId;
+        var primary = beaconEffect(beaconPrimary);
+        java.util.Optional<net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect>> second =
+                beaconSecondary == 1 ? java.util.Optional.of(net.minecraft.world.effect.MobEffects.REGENERATION)
+                        : beaconSecondary == 2 ? java.util.Optional.of(primary) : java.util.Optional.empty();
+        mc.getConnection().send(new net.minecraft.network.protocol.game.ServerboundSetBeaconPacket(
+                java.util.Optional.of(primary), second));
+        p.sendSystemMessage(Lang.literal("\u00a7a1912: Leuchtfeuer gesetzt: " + Lang.t(BEACON_NAMES[Math.floorMod(beaconPrimary, 5)])
+                + (beaconSecondary == 0 ? "" : " + " + BEACON_SECOND[beaconSecondary])));
+    }
+
     static void sendChat(Minecraft mc, String text) {
         if (mc.getConnection() == null || text == null || text.isBlank()) return;
         String msg = text.strip();
@@ -244,6 +321,12 @@ public final class MiscMods {
         } else {
             mc.getConnection().sendChat(msg);
         }
+    }
+
+    /** Ohne Welt (z.B. nach einem Rauswurf): nur Auto Reconnect. */
+    public static void tickOffline(Minecraft mc) {
+        if (autoReconnect && !holdReconnect) runAutoReconnect(mc);
+        else reconnectTicks = 0;
     }
 
     private static void runAutoReconnect(Minecraft mc) {
@@ -274,7 +357,7 @@ public final class MiscMods {
                 int pct = left * 100 / main.getMaxDamage();
                 if (pct <= notifyDurabilityAt && !durabilityWarned) {
                     durabilityWarned = true;
-                    p.sendSystemMessage(Component.literal("§e1912: Werkzeug fast kaputt (" + pct + "%)"));
+                    p.sendSystemMessage(Lang.literal("§e1912: Werkzeug fast kaputt (" + pct + "%)"));
                 } else if (pct > notifyDurabilityAt) {
                     durabilityWarned = false;
                 }
@@ -284,7 +367,7 @@ public final class MiscMods {
             boolean hasTotem = p.getOffhandItem().is(net.minecraft.world.item.Items.TOTEM_OF_UNDYING)
                     || p.getMainHandItem().is(net.minecraft.world.item.Items.TOTEM_OF_UNDYING);
             if (lastHadTotem && !hasTotem) {
-                p.sendSystemMessage(Component.literal("§c1912: Totem verbraucht!"));
+                p.sendSystemMessage(Lang.literal("§c1912: Totem verbraucht!"));
             }
             lastHadTotem = hasTotem;
         }
@@ -294,6 +377,8 @@ public final class MiscMods {
         for (var other : mc.level.players()) {
             if (other == mc.player) continue;
             if (other.distanceTo(mc.player) > messageAuraRange) continue;
+            if (messageAuraWho == 1 && !Friends.is(other)) continue;
+            if (messageAuraWho == 2 && Friends.is(other)) continue;
             String name = other.getName().getString();
             int cd = auraCooldown.getOrDefault(name, 0);
             if (cd > 0) {
@@ -303,23 +388,6 @@ public final class MiscMods {
             auraCooldown.put(name, messageAuraDelay * 20);
             sendChat(mc, messageAuraText.replace("%name%", name));
             return; // einer pro Tick
-        }
-    }
-
-    private static void sortInventory(Minecraft mc) {
-        // Einfaches Sortieren: gleiche Items im Hauptinventar zusammenlegen
-        if (mc.player == null || mc.gameMode == null) return;
-        var inv = mc.player.getInventory();
-        int start = sortHotbar ? 0 : 9;
-        for (int i = start; i < 36; i++) {
-            ItemStack a = inv.getItem(i);
-            if (a.isEmpty() || !a.isStackable() || a.getCount() >= a.getMaxStackSize()) continue;
-            for (int j = i + 1; j < 36; j++) {
-                ItemStack b = inv.getItem(j);
-                if (!b.isEmpty() && ItemStack.isSameItemSameComponents(a, b)) {
-                    PlayerMods.publicClick(mc.player, j, i);
-                }
-            }
         }
     }
 
@@ -339,8 +407,14 @@ public final class MiscMods {
                 f.slider("Verzögerung (s)", 1, 60, () -> autoReconnectDelay, v -> autoReconnectDelay = v, 5);
                 f.footer(() -> autoReconnect, v -> autoReconnect = v);
             });
-            case "Better Beacons" -> flag(parent, module, "Leuchtfeuer-Strahl überall sichtbar.\n(Braucht Mixin - evtl. wirkungslos.)",
-                    () -> betterBeacons, v -> betterBeacons = v);
+            case "Better Beacons" -> new ModuleScreen(parent, module, f -> {
+                f.description("W\u00e4hlt Leuchtfeuer-Wirkungen unabh\u00e4ngig von der Gr\u00f6\u00dfe der Pyramide.\nLeuchtfeuer \u00f6ffnen, Bezahl-Item (z.B. Eisenbarren) reinlegen - fertig.");
+                f.section("Wirkungen");
+                f.choice("Hauptwirkung", BEACON_NAMES, () -> beaconPrimary, v -> beaconPrimary = v, 4);
+                f.choice("Zweite Wirkung", BEACON_SECOND, () -> beaconSecondary, v -> beaconSecondary = v, 1);
+                f.note("Die zweite Wirkung gibt Minecraft nur bei voller Pyramide (4 Stufen).");
+                f.footer(() -> betterBeacons, v -> betterBeacons = v);
+            });
             case "Better Chat" -> new ModuleScreen(parent, module, f -> {
                 f.description("Verbessert den Chat.");
                 f.section("Allgemein");
@@ -365,15 +439,16 @@ public final class MiscMods {
                 f.text("App-ID", () -> discordAppId, v -> discordAppId = v, "");
                 f.text("Zweite Zeile", () -> discordText, v -> discordText = v, "1912 Client");
                 f.toggle("Server-Adresse zeigen", () -> discordShowServer, v -> discordShowServer = v, false);
-                f.note(() -> "Status: " + DiscordIpc.status());
+                f.note(() -> "Status: " + Lang.t(DiscordIpc.status()));
                 f.note("App-ID: auf discord.com/developers/applications eine Anwendung anlegen. Ihr Name "
                         + "erscheint in Discord als Spiel. Die Application ID dann hier eintragen.");
                 f.footer(() -> discordPresence, v -> discordPresence = v);
             });
             case "Inventory Tweaks" -> new ModuleScreen(parent, module, f -> {
-                f.description("Legt gleiche Items auf Tastendruck zusammen\n(Taste in \u201eTasten \u00e4ndern\u201c).");
-                f.section("Allgemein");
-                f.toggle("Hotbar einbeziehen", () -> sortHotbar, v -> sortHotbar = v, false);
+                f.description("Sortiert dein Inventar nach deiner eigenen Aufteilung\n"
+                        + "(Schwert, Werkzeuge, Bl\u00f6cke, Perlen und mehr auf feste Pl\u00e4tze).");
+                f.wideButton("Aufteilung festlegen", true, () -> Minecraft.getInstance().gui.setScreen(
+                        new InvLayoutScreen(Minecraft.getInstance().gui.screen())));
                 f.footer(() -> inventoryTweaks, v -> inventoryTweaks = v);
             });
             case "Message Aura" -> new ModuleScreen(parent, module, f -> {
@@ -382,6 +457,7 @@ public final class MiscMods {
                 f.text("Text", () -> messageAuraText, v -> messageAuraText = v, "Hi %name%!");
                 f.slider("Reichweite", 2, 32, () -> messageAuraRange, v -> messageAuraRange = v, 8);
                 f.slider("Pause je Spieler (s)", 5, 300, () -> messageAuraDelay, v -> messageAuraDelay = v, 60);
+                f.choice("Wen anschreiben", MESSAGE_AURA_WHO, () -> messageAuraWho, v -> messageAuraWho = v, 0);
                 f.footer(() -> messageAura, v -> messageAura = v);
             });
             case "Notebot" -> new ModuleScreen(parent, module, f -> {
@@ -434,6 +510,14 @@ public final class MiscMods {
                 f.slider("Abstand (s)", 1, 60, () -> spamDelay, v -> spamDelay = v, 5);
                 f.footer(() -> spam, v -> spam = v);
             });
+            case "Server-Schutz" -> new ModuleScreen(parent, module, f -> {
+                f.description("Schaltet beim Betreten bestimmter Server automatisch alle Module aus - "
+                        + "damit du dort nicht aus Versehen etwas anhast, das verboten ist.");
+                f.section("Server");
+                f.text("Adressen", () -> serverGuardList, v -> serverGuardList = v, "hypixel, gommehd");
+                f.note("Teile der Adresse, mit Komma getrennt. Mit J holst du die Module zur\u00fcck.");
+                f.footer(() -> serverGuard, v -> serverGuard = v);
+            });
             case "Swarm" -> new ModuleScreen(parent, module, f -> {
                 f.description("Steuert mehrere eigene Spiele gemeinsam: eines ist der Host,\ndie anderen verbinden sich als Worker und machen mit.");
                 f.section("Verbindung");
@@ -441,7 +525,7 @@ public final class MiscMods {
                 f.text("Host-Adresse", () -> swarmHost, v -> swarmHost = v, "127.0.0.1");
                 f.number("Port", () -> swarmPort, v -> swarmPort = v, 19120);
                 f.toggle("Auch andere PCs (LAN)", () -> swarmLan, v -> swarmLan = v, false);
-                f.note(() -> "Status: " + SwarmNet.status());
+                f.note(() -> "Status: " + Lang.t(SwarmNet.status()));
                 f.note("Auto: das erste Spiel auf diesem PC wird Host, alle weiteren werden Worker.");
                 f.section("Host steuert die Worker");
                 f.toggle("Module spiegeln", () -> swarmMirror, v -> swarmMirror = v, true);
@@ -496,14 +580,7 @@ public final class MiscMods {
     /** Zeigt eine Fehlermeldung eines Swarm-Knopfs im Chat (null = alles gut). */
     private static void swarmHint(String error) {
         var p = Minecraft.getInstance().player;
-        if (error != null && p != null) p.sendSystemMessage(Component.literal("\u00a7c1912: Swarm - " + error));
+        if (error != null && p != null) p.sendSystemMessage(Lang.literal("\u00a7c1912: Swarm - " + Lang.t(error)));
     }
 
-    private static Screen flag(Screen parent, String module, String desc,
-                               java.util.function.BooleanSupplier get, java.util.function.Consumer<Boolean> set) {
-        return new ModuleScreen(parent, module, f -> {
-            f.description(desc);
-            f.footer(get, set);
-        });
-    }
 }

@@ -11,7 +11,6 @@ import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.entity.Entity;
@@ -172,7 +171,7 @@ public final class Movement2 {
         if (blink) {
             if (!hookSeen && !hookWarned && p.tickCount > 40) {
                 hookWarned = true;
-                p.sendSystemMessage(Component.literal(
+                p.sendSystemMessage(Lang.literal(
                         "1912: Blink funktioniert in dieser Version nicht (Paket-Hook fehlt)"));
             }
             blinkTicks++;
@@ -190,7 +189,7 @@ public final class Movement2 {
         boolean jump = canMove && mc.options.keyJump.isDown();
         boolean sneak = canMove && mc.options.keyShift.isDown();
         boolean moving = fwd || back || left || right;
-        double[] dir = moveDir(p, fwd, back, left, right);
+        double[] dir = Look.moveDir(p, fwd, back, left, right);
 
         if (!bot) {
             if (airJump) runAirJump(p, jump);
@@ -211,18 +210,6 @@ public final class Movement2 {
         if (antiVoid) runAntiVoid(mc, p);
         jumpWasDown = jump;
     }
-
-    private static double[] moveDir(LocalPlayer p, boolean fwd, boolean back, boolean left, boolean right) {
-        double f = (fwd ? 1 : 0) - (back ? 1 : 0);
-        double s = (left ? 1 : 0) - (right ? 1 : 0);
-        double len = Math.sqrt(f * f + s * s);
-        if (len < 1e-6) return null;
-        f /= len;
-        s /= len;
-        double yaw = Math.toRadians(p.getYRot());
-        return new double[] {-Math.sin(yaw) * f + Math.cos(yaw) * s, Math.cos(yaw) * f + Math.sin(yaw) * s};
-    }
-
     private static boolean solid(Level level, BlockPos pos) {
         return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
     }
@@ -333,6 +320,7 @@ public final class Movement2 {
         double best = (double) waspRange * waspRange;
         for (Player other : mc.level.players()) {
             if (other == p || !other.isAlive() || other.isSpectator()) continue;
+            if (Friends.noChase(other)) continue; // nicht zu Freunden fliegen
             double d = other.distanceToSqr(p);
             if (d < best) {
                 best = d;

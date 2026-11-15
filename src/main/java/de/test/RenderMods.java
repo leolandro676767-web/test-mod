@@ -17,7 +17,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -37,10 +36,11 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Render-Module (Kategorie "Render"). ESP, Tracer, Nametags usw. werden ueber {@link Render3D}
- * selbst aufs HUD projiziert. Module, die tief in die Grafik eingreifen (Wall Hack,
- * Freecam, Blur, Item Physics, Hand View) setzen nur statische Schalter, die Mixins lesen -
- * ohne Mixin-Treffer in 26.2 bleiben sie wirkungslos.
+ * Render-Module (Kategorie "Render"): Schalter, Tick (Scans) und HUD-Zeichnung. ESP, Tracer,
+ * Nametags, Chams, Wall Hack usw. werden ueber {@link Render3D} selbst aufs HUD projiziert.
+ * Eigene Dateien: Boss Stack ({@link BossStack}), Better Tab ({@link BetterTab}), Freecam/Free Look
+ * ({@link CameraMods}); Hand View und Item Physics laufen ueber Mixins, die die Schalter hier lesen.
+ * Die Einstellungs-Fenster stehen in {@link RenderScreens}.
  */
 public final class RenderMods {
     private RenderMods() {
@@ -84,7 +84,6 @@ public final class RenderMods {
 
     public static boolean nametags = false;
     public static boolean nametagsHealth = true;
-    public static boolean nametagsItems = false;    // Items in Haenden/Ruestung (nur Zahlen hier vereinfacht)
     public static int nametagsRange = 64;
 
     public static boolean entityOwner = false;
@@ -131,6 +130,10 @@ public final class RenderMods {
     public static int cameraDistance = 4;
     public static boolean cameraNoClip = true;
     public static boolean freeLook = false;
+    public static boolean freeLookThird = true;   // Free Look: automatisch 3rd Person, schraeg von der Seite
+    public static int freeLookAngle = 50;         // Winkel zur Seite (0 = genau dahinter, 90 = seitlich)
+    public static int freeLookPitch = 25;         // Neigung von oben
+    public static boolean freeLookFollow = true;  // Kamera schwenkt mit der Laufrichtung mit
     public static boolean freecam = false;
     public static boolean freecamBlockClicks = true;
     public static boolean freecamWaitGround = true; // erst starten, wenn der Koerper am Boden steht
@@ -161,6 +164,10 @@ public final class RenderMods {
     public static final String[] BLOCK_SEL_MODES = {"Normal", "Farbig", "Versteckt"};
 
     public static boolean handView = false;
+    public static int handX = 0;          // Hundertstel Bloecke
+    public static int handY = 0;
+    public static int handZ = 0;
+    public static int handScale = 100;    // Prozent
     public static boolean chams = false;
     public static boolean chamsPlayers = true;
     public static boolean chamsMobs = true;
@@ -168,6 +175,17 @@ public final class RenderMods {
     public static int chamsRange = 64;
     public static int chamsAlpha = 45;             // Deckkraft in Prozent
     public static boolean wallHack = false;
+    public static int wallHackRadius = 24;
+    public static boolean wallDiamond = true;
+    public static boolean wallDebris = true;
+    public static boolean wallGold = true;
+    public static boolean wallIron = false;
+    public static boolean wallEmerald = true;
+    public static boolean wallRedstone = false;
+    public static boolean wallLapis = false;
+    public static boolean wallCoal = false;
+    public static boolean wallCopper = false;
+    public static boolean wallQuartz = false;
     public static boolean itemPhysics = false;
     public static boolean blur = false;
     public static int blurStrength = 100;       // Abdunkelung (0..200)
@@ -201,7 +219,7 @@ public final class RenderMods {
     private static final List<BlockPos> tunnels = new ArrayList<>();
     private static final List<BlockPos> miningBlocks = new ArrayList<>();
 
-    private record Pop(String name, AABB box, long time) {
+    record Pop(String name, AABB box, long time) {
     }
 
     private static final List<Pop> pops = new ArrayList<>();
@@ -216,9 +234,9 @@ public final class RenderMods {
     }
 
     public static void register() {
-        HudElementRegistry.addFirst(Identifier.fromNamespaceAndPath("test", "render"), RenderMods::render);
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("test", "better_tab"), RenderMods::renderTab);
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("test", "boss_stack"), RenderMods::renderBosses);
+        HudElementRegistry.addFirst(Identifier.fromNamespaceAndPath("test", "render"), Safe.hud("Render", RenderMods::render));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("test", "better_tab"), Safe.hud("Better Tab", BetterTab::render));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("test", "boss_stack"), Safe.hud("Boss Stack", BossStack::render));
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
             if (betterTooltips) BetterTooltips.append(stack, lines);
         });
@@ -226,6 +244,8 @@ public final class RenderMods {
 
     public static void rescan() {
         scanCooldown = 0;
+        SCAN_ESP.restart();
+        SCAN_ORES.restart();
     }
 
     // ---------- Tick: scannen, verfolgen, einfache Schalter ----------
@@ -237,6 +257,13 @@ public final class RenderMods {
             trailPts.clear();
             lastSeen.clear();
             logouts.clear();
+            // Welt verlassen: Suchen von vorn beginnen (sonst zeigen sie kurz Bloecke der alten Welt)
+            SCAN_ESP.clear(espBlocks);
+            SCAN_STORAGE.clear(storages);
+            SCAN_HOLES.clear(holes);
+            SCAN_LIGHT.clear(lights);
+            SCAN_TUNNELS.clear(tunnels);
+            SCAN_ORES.clear(ores);
             return;
         }
 
@@ -268,7 +295,8 @@ public final class RenderMods {
         // Logout Spots: zuletzt gesehene Spieler-Positionen, Verschwundene merken
         if (logoutSpots) trackLogouts(mc, self);
 
-        // Block-Scans gebuendelt
+        // Block-Scans: grosse verteilt auf jeden Tick, kleine gebuendelt
+        stepScans(mc, self);
         if (--scanCooldown <= 0) {
             scanCooldown = SCAN_INTERVAL;
             runScans(mc, self);
@@ -383,60 +411,81 @@ public final class RenderMods {
         }
     }
 
+    private static final List<BlockPos> ores = new ArrayList<>();
+
+    /** Wall Hack: Farbe eines gesuchten Erzes, 0 = nicht gesucht. */
+    private static int oreColor(Block b) {
+        if (wallDiamond && (b == Blocks.DIAMOND_ORE || b == Blocks.DEEPSLATE_DIAMOND_ORE)) return 0xFF4DE8FF;
+        if (wallDebris && b == Blocks.ANCIENT_DEBRIS) return 0xFFB07050;
+        if (wallGold && (b == Blocks.GOLD_ORE || b == Blocks.DEEPSLATE_GOLD_ORE || b == Blocks.NETHER_GOLD_ORE)) {
+            return 0xFFFFD84D;
+        }
+        if (wallIron && (b == Blocks.IRON_ORE || b == Blocks.DEEPSLATE_IRON_ORE)) return 0xFFE0B49A;
+        if (wallEmerald && (b == Blocks.EMERALD_ORE || b == Blocks.DEEPSLATE_EMERALD_ORE)) return 0xFF3DFF7A;
+        if (wallRedstone && (b == Blocks.REDSTONE_ORE || b == Blocks.DEEPSLATE_REDSTONE_ORE)) return 0xFFFF3B3B;
+        if (wallLapis && (b == Blocks.LAPIS_ORE || b == Blocks.DEEPSLATE_LAPIS_ORE)) return 0xFF3B5BFF;
+        if (wallCoal && (b == Blocks.COAL_ORE || b == Blocks.DEEPSLATE_COAL_ORE)) return 0xFF505050;
+        if (wallCopper && (b == Blocks.COPPER_ORE || b == Blocks.DEEPSLATE_COPPER_ORE)) return 0xFFE07B4D;
+        if (wallQuartz && b == Blocks.NETHER_QUARTZ_ORE) return 0xFFF2EEE6;
+        return 0;
+    }
+
+    // Grosse Suchen laufen verteilt ueber mehrere Ticks (siehe BlockScan), die kleinen alle SCAN_INTERVAL Ticks
+    private static final BlockScan SCAN_ESP = new BlockScan(MAX_DRAW);
+    private static final BlockScan SCAN_STORAGE = new BlockScan(MAX_DRAW);
+    private static final BlockScan SCAN_HOLES = new BlockScan(MAX_DRAW);
+    private static final BlockScan SCAN_LIGHT = new BlockScan(MAX_DRAW);
+    private static final BlockScan SCAN_TUNNELS = new BlockScan(MAX_DRAW);
+    private static final BlockScan SCAN_ORES = new BlockScan(MAX_DRAW);
+
+    /** Jeden Tick: ein Stueck der grossen Suchen. */
+    private static void stepScans(Minecraft mc, Player self) {
+        Level level = mc.level;
+        BlockPos c = self.blockPosition();
+        if (blockEsp && !blockEspBlocks.isEmpty()) {
+            SCAN_ESP.stepSphere(c, blockEspRadius, SCAN_INTERVAL,
+                    pos -> blockEspBlocks.contains(level.getBlockState(pos).getBlock()), espBlocks);
+        } else {
+            SCAN_ESP.clear(espBlocks);
+        }
+        if (storageEsp) {
+            // erst den (billigen) Blocktyp pruefen, dann erst nach dem Block-Entity fragen
+            SCAN_STORAGE.stepBox(c, storageEspRadius, 8, 8, SCAN_INTERVAL,
+                    pos -> isStorage(level.getBlockState(pos)) && level.getBlockEntity(pos) != null, storages);
+        } else {
+            SCAN_STORAGE.clear(storages);
+        }
+        if (holeEsp) {
+            SCAN_HOLES.stepBox(c, holeEspRadius, holeEspRadius, 4, SCAN_INTERVAL, pos -> isHole(level, pos), holes);
+        } else {
+            SCAN_HOLES.clear(holes);
+        }
+        if (lightOverlay) {
+            SCAN_LIGHT.stepBox(c, lightOverlayRadius, 3, 5, SCAN_INTERVAL, pos -> isDark(level, pos), lights);
+        } else {
+            SCAN_LIGHT.clear(lights);
+        }
+        if (tunnelEsp) {
+            SCAN_TUNNELS.stepBox(c, tunnelEspRadius, 8, 8, SCAN_INTERVAL, pos -> isTunnel(level, pos), tunnels);
+        } else {
+            SCAN_TUNNELS.clear(tunnels);
+        }
+        if (wallHack) {
+            SCAN_ORES.stepSphere(c, wallHackRadius, SCAN_INTERVAL,
+                    pos -> oreColor(level.getBlockState(pos).getBlock()) != 0, ores);
+        } else {
+            SCAN_ORES.clear(ores);
+        }
+    }
+
+    /** Alle SCAN_INTERVAL Ticks: die kleinen Suchen. */
     private static void runScans(Minecraft mc, Player self) {
-        espBlocks.clear();
-        storages.clear();
-        holes.clear();
         voids.clear();
-        lights.clear();
-        tunnels.clear();
         miningBlocks.clear();
         Level level = mc.level;
         BlockPos c = self.blockPosition();
-
-        if (blockEsp && !blockEspBlocks.isEmpty()) {
-            scanBlocks(level, c, blockEspRadius, pos -> blockEspBlocks.contains(level.getBlockState(pos).getBlock()), espBlocks);
-        }
-        if (storageEsp) {
-            int r = storageEspRadius;
-            for (int dx = -r; dx <= r; dx += 1) {
-                for (int dz = -r; dz <= r; dz += 1) {
-                    for (int dy = -8; dy <= 8; dy++) {
-                        BlockPos pos = c.offset(dx, dy, dz);
-                        if (level.getBlockEntity(pos) != null && isStorage(level.getBlockState(pos))) {
-                            storages.add(pos);
-                            if (storages.size() >= MAX_DRAW) break;
-                        }
-                    }
-                }
-            }
-        }
-        if (holeEsp) scanHoles(level, c, holeEspRadius);
         if (voidEsp && level.dimensionType().hasCeiling() == false) scanVoid(level, c);
-        if (lightOverlay) scanLight(level, c, lightOverlayRadius);
         if (miningHighlight && TestClient.blockMode && TestClient.selectedBlock != null) scanMining(level);
-        if (tunnelEsp) scanTunnels(level, c, tunnelEspRadius);
-    }
-
-    private interface PosTest {
-        boolean ok(BlockPos p);
-    }
-
-    private static void scanBlocks(Level level, BlockPos c, int r, PosTest test, List<BlockPos> out) {
-        int r2 = r * r;
-        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dy = -r; dy <= r; dy++) {
-                for (int dz = -r; dz <= r; dz++) {
-                    if (dx * dx + dy * dy + dz * dz > r2) continue;
-                    m.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz);
-                    if (test.ok(m)) {
-                        out.add(m.immutable());
-                        if (out.size() >= MAX_DRAW) return;
-                    }
-                }
-            }
-        }
     }
 
     private static boolean isStorage(BlockState s) {
@@ -444,7 +493,7 @@ public final class RenderMods {
         return b == Blocks.CHEST || b == Blocks.TRAPPED_CHEST || b == Blocks.BARREL || b == Blocks.HOPPER
                 || b == Blocks.ENDER_CHEST || b == Blocks.FURNACE || b == Blocks.BLAST_FURNACE || b == Blocks.SMOKER
                 || b == Blocks.DISPENSER || b == Blocks.DROPPER || b == Blocks.BREWING_STAND
-                || b.getName().getString().toLowerCase().contains("shulker");
+                || b instanceof net.minecraft.world.level.block.ShulkerBoxBlock; // alle 17 Farben
     }
 
     private static boolean solid(Level level, BlockPos pos) {
@@ -452,19 +501,9 @@ public final class RenderMods {
     }
 
     /** Sicheres 1x1-Loch: Boden solide, Kopf- und Fusshoehe frei, ringsum solide. */
-    private static void scanHoles(Level level, BlockPos c, int r) {
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dz = -r; dz <= r; dz++) {
-                for (int dy = -r; dy <= 4; dy++) {
-                    BlockPos p = c.offset(dx, dy, dz);
-                    if (solid(level, p) || solid(level, p.above()) || !solid(level, p.below())) continue;
-                    if (solid(level, p.north()) && solid(level, p.south()) && solid(level, p.east()) && solid(level, p.west())) {
-                        holes.add(p);
-                        if (holes.size() >= MAX_DRAW) return;
-                    }
-                }
-            }
-        }
+    private static boolean isHole(Level level, BlockPos p) {
+        if (solid(level, p) || solid(level, p.above()) || !solid(level, p.below())) return false;
+        return solid(level, p.north()) && solid(level, p.south()) && solid(level, p.east()) && solid(level, p.west());
     }
 
     private static void scanVoid(Level level, BlockPos c) {
@@ -487,43 +526,26 @@ public final class RenderMods {
         }
     }
 
-    private static void scanLight(Level level, BlockPos c, int r) {
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dz = -r; dz <= r; dz++) {
-                for (int dy = -4; dy <= 4; dy++) {
-                    BlockPos p = c.offset(dx, dy, dz);
-                    if (!solid(level, p) || solid(level, p.above()) || solid(level, p.above(2))) continue;
-                    if (level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, p.above()) <= 0) {
-                        lights.add(p.above());
-                        if (lights.size() >= MAX_DRAW) return;
-                    }
-                }
-            }
-        }
+    /** Light Overlay: auf diesem Luftblock koennte ein Monster spawnen (Boden fest, 2 Bloecke frei, kein Blocklicht). */
+    private static boolean isDark(Level level, BlockPos a) {
+        if (solid(level, a) || solid(level, a.above()) || !solid(level, a.below())) return false;
+        return level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, a) <= 0;
     }
 
     /** 1x2-Gang: Fuss- und Kopfhoehe frei, Boden und Decke fest, links/rechts fest (aber nicht ringsum). */
-    private static void scanTunnels(Level level, BlockPos c, int r) {
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dz = -r; dz <= r; dz++) {
-                for (int dy = -8; dy <= 8; dy++) {
-                    BlockPos p = c.offset(dx, dy, dz);
-                    if (solid(level, p) || solid(level, p.above())) continue;
-                    if (!solid(level, p.below()) || !solid(level, p.above(2))) continue;
-                    boolean ew = solid(level, p.east()) && solid(level, p.west())
-                            && solid(level, p.above().east()) && solid(level, p.above().west());
-                    boolean ns = solid(level, p.north()) && solid(level, p.south())
-                            && solid(level, p.above().north()) && solid(level, p.above().south());
-                    if (ew == ns) continue; // keiner = offen, beide = Loch statt Gang
-                    tunnels.add(p);
-                    if (tunnels.size() >= MAX_DRAW) return;
-                }
-            }
-        }
+    private static boolean isTunnel(Level level, BlockPos p) {
+        if (solid(level, p) || solid(level, p.above())) return false;
+        if (!solid(level, p.below()) || !solid(level, p.above(2))) return false;
+        boolean ew = solid(level, p.east()) && solid(level, p.west())
+                && solid(level, p.above().east()) && solid(level, p.above().west());
+        boolean ns = solid(level, p.north()) && solid(level, p.south())
+                && solid(level, p.above().north()) && solid(level, p.above().south());
+        return ew != ns; // keiner = offen, beide = Loch statt Gang
     }
 
     /** Vom LivingEntityMixin: jemand hat ein Totem verbraucht (Ereignis 35). */
     public static void onTotemPop(LivingEntity e) {
+        DebrisMiner.onTotemPop(e); // Auto-Log nach Totem
         if (!popChams) return;
         Minecraft mc = Minecraft.getInstance();
         if (e == mc.player && !popSelf) return;
@@ -531,7 +553,7 @@ public final class RenderMods {
         pops.add(new Pop(name, e.getBoundingBox(), System.currentTimeMillis()));
         int n = popCount.merge(name, 1, Integer::sum);
         if (popChat && mc.player != null) {
-            mc.player.sendSystemMessage(Component.literal("\u00a7d1912: " + name + " hat ein Totem verbraucht (" + n + ")"));
+            mc.player.sendSystemMessage(Lang.literal("\u00a7d1912: " + name + " hat ein Totem verbraucht (" + n + ")"));
         }
     }
 
@@ -662,17 +684,17 @@ public final class RenderMods {
     private static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
-        CameraMods.frame(mc); // Freecam / Free Look: jeden Frame fluessig drehen
-
-        // Better Tab: Minecrafts eigene Liste unterdruecken (Taste "loslassen") und unsere zeigen
-        tabHeld = false;
-        if (betterTab) {
-            long win = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
-            if (win != 0L && CameraMods.down(mc.options.keyPlayerList, win)) {
-                tabHeld = true;
-                mc.options.keyPlayerList.setDown(false);
-            }
+        try {
+            renderWorldOverlays(g, delta, mc);
+        } finally {
+            // Freecam / Free Look: jeden Frame fluessig drehen. Erst nach dem Zeichnen, damit Linien und
+            // Umrisse mit genau dem Blickwinkel gezeichnet werden, mit dem die Welt gerade gerendert wurde.
+            CameraMods.frame(mc);
         }
+    }
+
+    private static void renderWorldOverlays(GuiGraphicsExtractor g, DeltaTracker delta, Minecraft mc) {
+        BetterTab.frame(mc);
 
         // Blur: einfacher Abdunkel-Overlay bei offenem Menue (kein echter Weichzeichner)
         if (blur && mc.gui.screen() != null) {
@@ -698,6 +720,8 @@ public final class RenderMods {
             if (popChams) drawPops(g);
             if (breakIndicators) drawBreaking(g, mc);
             drawMining(g);
+            if (TestClient.areaActive) Walker.render(g); // geplanter Weg (Koordinaten, Bereich, Bloecke suchen)
+            if (DebrisMiner.isRunning()) DebrisMiner.render(g); // gefundenes Debris, naechster Tunnelabschnitt
         } finally {
             Ui.alpha = old;
         }
@@ -716,181 +740,22 @@ public final class RenderMods {
             AABB bb = Render3D.smoothBox(e);
             if (self.getEyePosition().distanceTo(bb.getCenter()) > chamsRange) continue;
             if (chamsHiddenOnly && self.hasLineOfSight(le)) continue;
-            int c = (player ? Esp.playerColor() : Esp.mobColor()) & 0xFFFFFF;
+            int c = (player ? Friends.chamsColor(e, Esp.playerColor()) : Esp.mobColor()) & 0xFFFFFF;
             // oben kraeftig, nach unten weich auslaufend
             if (Render3D.fillBox(g, bb, (a << 24) | c, ((a * 2 / 5) << 24) | c)) drawn++;
         }
     }
 
-    // ---------- Boss Stack ----------
-
-    /** Eine Bossleiste, wie der Server sie gemeldet hat. */
-    private static final class Boss {
-        volatile String name = "";
-        volatile float progress = 1f;
-        volatile int color = 0xFFB25DFF;
-    }
-
-    private static final Map<UUID, Boss> BOSSES = new java.util.concurrent.ConcurrentHashMap<>();
-
-    private static int bossColor(Object color) {
-        return switch (String.valueOf(color).toUpperCase(java.util.Locale.ROOT)) {
-            case "PINK" -> 0xFFEC00B8;
-            case "BLUE" -> 0xFF00B7EC;
-            case "RED" -> 0xFFEC3500;
-            case "GREEN" -> 0xFF1DEC00;
-            case "YELLOW" -> 0xFFE9EC00;
-            case "WHITE" -> 0xFFECECEC;
-            default -> 0xFF7B00EC;
-        };
-    }
-
-    /**
-     * Boss Stack (vom ClientPacketListenerMixin): merkt sich die Bossleisten selbst. true = Minecraft
-     * soll das Paket nicht mehr verarbeiten (dann zeichnen nur wir, gleiche Leisten zusammengefasst).
-     */
-    public static boolean onBossPacket(net.minecraft.network.protocol.game.ClientboundBossEventPacket packet) {
-        if (!bossStack) return false;
-        try {
-            packet.dispatch(new net.minecraft.network.protocol.game.ClientboundBossEventPacket.Handler() {
-                public void add(UUID id, Component name, float progress, net.minecraft.world.BossEvent.BossBarColor color,
-                        net.minecraft.world.BossEvent.BossBarOverlay overlay, boolean darken, boolean music, boolean fog) {
-                    Boss b = new Boss();
-                    b.name = name.getString();
-                    b.progress = progress;
-                    b.color = bossColor(color);
-                    BOSSES.put(id, b);
-                }
-
-                public void remove(UUID id) {
-                    BOSSES.remove(id);
-                }
-
-                public void updateProgress(UUID id, float progress) {
-                    Boss b = BOSSES.get(id);
-                    if (b != null) b.progress = progress;
-                }
-
-                public void updateName(UUID id, Component name) {
-                    Boss b = BOSSES.get(id);
-                    if (b != null) b.name = name.getString();
-                }
-
-                public void updateStyle(UUID id, net.minecraft.world.BossEvent.BossBarColor color,
-                        net.minecraft.world.BossEvent.BossBarOverlay overlay) {
-                    Boss b = BOSSES.get(id);
-                    if (b != null) b.color = bossColor(color);
-                }
-            });
-        } catch (RuntimeException e) {
-            return false;
-        }
-        return true;
-    }
-
-    /** Zeichnet die gemerkten Bossleisten: gleiche Namen als eine Leiste mit Anzahl. */
-    private static void renderBosses(GuiGraphicsExtractor g, DeltaTracker delta) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.player == null) {
-            BOSSES.clear();
-            return;
-        }
-        if (!bossStack || BOSSES.isEmpty()) return;
-        // nach Namen gruppieren: {Anzahl, Summe Fortschritt, niedrigster Fortschritt, Farbe}
-        Map<String, float[]> groups = new java.util.LinkedHashMap<>();
-        for (Boss b : BOSSES.values()) {
-            float[] v = groups.computeIfAbsent(b.name, k -> new float[] {0f, 0f, 1f, b.color});
-            v[0]++;
-            v[1] += b.progress;
-            v[2] = Math.min(v[2], b.progress);
-        }
-        int sw = mc.getWindow().getGuiScaledWidth();
-        int w = 182;
-        int x = (sw - w) / 2;
-        int y = 12;
-        float old = Ui.alpha;
-        Ui.alpha = 1f;
-        int shown = 0;
-        for (var e : groups.entrySet()) {
-            if (shown++ >= 6) break;
-            float[] v = e.getValue();
-            int n = Math.round(v[0]);
-            int color = (int) v[3] | 0xFF000000;
-            String label = n > 1 ? e.getKey() + "  x" + n : e.getKey();
-            Ui.text(g, mc.font, label, (sw - mc.font.width(label)) / 2, y - 9, 0xFFFFFFFF, true);
-            float avg = Math.max(0f, Math.min(1f, v[1] / Math.max(1f, v[0])));
-            Ui.roundRect(g, x - 1, y - 1, w + 2, 7, 3, 0xC0000000);
-            Ui.roundRect(g, x, y, w, 5, 2, Ui.lerp(color, 0xFF000000, 0.7f));
-            int fw = Math.round(w * avg);
-            if (fw > 0) Ui.roundGradientH(g, x, y, Math.max(4, fw), 5, 2, Ui.lerp(color, 0xFF000000, 0.25f), color, true, true);
-            if (n > 1) {
-                // bei mehreren: Strich beim schwaechsten Boss
-                int mx = x + Math.round(w * Math.max(0f, Math.min(1f, v[2])));
-                Ui.fill(g, Math.min(x + w - 1, mx), y - 1, Math.min(x + w, mx + 1), y + 6, 0xFFFFFFFF);
-            }
-            y += 19;
-        }
-        Ui.alpha = old;
-    }
-
-    // ---------- Better Tab ----------
-
-    private static boolean tabHeld;
-
-    /** Eigene Spielerliste mit Ping in Millisekunden, solange die Tab-Taste gehalten wird. */
-    private static void renderTab(GuiGraphicsExtractor g, DeltaTracker delta) {
-        Minecraft mc = Minecraft.getInstance();
-        if (!betterTab || !tabHeld || mc.player == null || mc.gui.screen() != null) return;
-        var conn = mc.getConnection();
-        if (conn == null) return;
-        List<String> names = new ArrayList<>();
-        Map<String, Integer> pings = new HashMap<>();
-        for (var info : conn.getOnlinePlayers()) {
-            String n = info.getProfile().name();
-            names.add(n);
-            pings.put(n, info.getLatency());
-        }
-        if (names.isEmpty()) return;
-        names.sort(String.CASE_INSENSITIVE_ORDER);
-        String me = mc.player.getGameProfile().name();
-
-        int sw = mc.getWindow().getGuiScaledWidth();
-        int sh = mc.getWindow().getGuiScaledHeight();
-        int rowH = 11;
-        int maxRows = Math.max(5, (sh - 80) / rowH);
-        int cols = Math.max(1, (names.size() + maxRows - 1) / maxRows);
-        int rows = (names.size() + cols - 1) / cols;
-        int nameW = 0;
-        for (String n : names) nameW = Math.max(nameW, mc.font.width(n));
-        int pingW = mc.font.width("0000 ms");
-        int colW = 6 + nameW + 14 + pingW + 6;
-        while (cols > 1 && cols * colW + 12 > sw) cols--; // sehr volle Server: lieber weniger Spalten
-        rows = Math.min(maxRows, (names.size() + cols - 1) / cols);
-        int w = cols * colW;
-        int h = Ui.HEADER_H + rows * rowH + 6;
-        int x = (sw - w) / 2;
-        int y = 12;
-
-        float old = Ui.alpha;
-        Ui.alpha = 1f;
-        Ui.panel(g, mc.font, x, y, w, h, "Spieler", 0);
-        String count = Integer.toString(names.size());
-        Ui.text(g, mc.font, count, x + w - 10 - mc.font.width(count), y + 7, 0xD0FFFFFF, true);
-        for (int i = 0; i < names.size() && i < rows * cols; i++) {
-            String n = names.get(i);
-            int cx = x + (i / rows) * colW;
-            int cy = y + Ui.HEADER_H + 4 + (i % rows) * rowH;
-            int ping = pings.getOrDefault(n, 0);
-            int pc = ping <= 0 ? Ui.MUTED : ping < 80 ? 0xFF7CF29A : ping < 160 ? 0xFFF2E27C : ping < 300 ? 0xFFFFB13B
-                    : 0xFFFF6B6B;
-            String pt = ping <= 0 ? "?" : ping + " ms";
-            Ui.text(g, mc.font, n, cx + 6, cy, n.equals(me) ? Theme.accent() : Ui.TEXT, true);
-            Ui.text(g, mc.font, pt, cx + colW - 6 - mc.font.width(pt), cy, pc, true);
-        }
-        Ui.alpha = old;
-    }
-
     private static void drawBlockLists(GuiGraphicsExtractor g) {
+        if (wallHack) {
+            Level level = Minecraft.getInstance().level;
+            for (BlockPos p : ores) {
+                int c = oreColor(level.getBlockState(p).getBlock());
+                if (c == 0) continue; // inzwischen abgebaut
+                Render3D.fillBox(g, cube(p), (0x40 << 24) | (c & 0xFFFFFF), (0x18 << 24) | (c & 0xFFFFFF));
+                Render3D.outline(g, cube(p), c, false);
+            }
+        }
         if (blockEsp) for (BlockPos p : espBlocks) Render3D.outline(g, cube(p), Esp.blockColor(), false);
         if (storageEsp) for (BlockPos p : storages) Render3D.outline(g, cube(p), C_STORAGE, true);
         if (holeEsp) for (BlockPos p : holes) Render3D.outline(g, new AABB(p), C_HOLE, false);
@@ -921,7 +786,9 @@ public final class RenderMods {
 
             if (e instanceof Player pl) {
                 if (cityEsp) drawCity(g, mc, pl);
-                if (tracers && tracersPlayers && dist <= tracersRange) Render3D.tracer(g, center, tracer(C_PLAYER));
+                if (tracers && tracersPlayers && dist <= tracersRange) {
+                    Render3D.tracer(g, center, tracer(Friends.tracerColor(pl, C_PLAYER)));
+                }
                 if (nametags && dist <= nametagsRange) drawNametag(g, mc, pl, bb);
             } else if (e instanceof ItemEntity ie) {
                 if (itemHighlight && dist <= itemHighlightRange) {
@@ -948,7 +815,8 @@ public final class RenderMods {
     private static void drawNametag(GuiGraphicsExtractor g, Minecraft mc, LivingEntity e, AABB bb) {
         String name = e.getName().getString();
         if (nametagsHealth) name += "  " + (int) Math.ceil(e.getHealth()) + "❤";
-        Render3D.label(g, mc, new Vec3(bb.getCenter().x, bb.maxY, bb.getCenter().z), name, 0xFFFFFFFF, -12);
+        Render3D.label(g, mc, new Vec3(bb.getCenter().x, bb.maxY, bb.getCenter().z), name,
+                Friends.nametagColor(e, 0xFFFFFFFF), -12);
     }
 
     private static void drawOwner(GuiGraphicsExtractor g, Minecraft mc, Entity e, AABB bb) {
@@ -965,7 +833,7 @@ public final class RenderMods {
 
     /** City Esp: Bloecke rund um einen Gegner hervorheben (Surround-Bypass-Hilfe). */
     private static void drawCity(GuiGraphicsExtractor g, Minecraft mc, Player enemy) {
-        if (enemy == mc.player) return;
+        if (enemy == mc.player || Friends.skipCity(enemy)) return;
         if (enemy.distanceTo(mc.player) > cityEspRange * 2) return;
         BlockPos base = enemy.blockPosition();
         for (BlockPos p : new BlockPos[] {base.below(), base.north(), base.south(), base.east(), base.west()}) {
@@ -1089,267 +957,9 @@ public final class RenderMods {
         return list == null || list.isEmpty() ? 0 : list.split(";").length;
     }
 
-    // ---------- Einstellungs-Menues ----------
+    // ---------- Einstellungs-Menues (stehen in RenderScreens.java) ----------
 
     public static Screen screen(String module, Screen parent) {
-        return switch (module) {
-            case "Block Esp" -> new ModuleScreen(parent, module, f -> {
-                f.description("Hebt gew\u00e4hlte Bl\u00f6cke durch W\u00e4nde hervor.");
-                f.section("Allgemein");
-                f.slider("Radius", 8, 64, () -> blockEspRadius, v -> {
-                    blockEspRadius = v;
-                    rescan();
-                }, 32);
-                f.wideButton("Bl\u00f6cke w\u00e4hlen (" + blockEspBlocks.size() + ")", false,
-                        () -> Minecraft.getInstance().gui.setScreen(new PickerScreen(f, "Block Esp",
-                                PickerScreen.Kind.BLOCK, PickerScreen.ofSet(blockEspBlocks), null, null)));
-                f.section("Umriss");
-                f.choice("Stil", Render3D.STYLES, () -> outlineStyle, v -> outlineStyle = v, 2);
-                f.slider("Scan-Tempo", 1, 10, () -> outlineScanSpeed, v -> outlineScanSpeed = v, 4);
-                f.toggle("Welle", () -> outlineWave, v -> outlineWave = v, true);
-                f.hex("Farbe (RRGGBB)", () -> Esp.colBlock, v -> Esp.colBlock = v);
-                f.footer(() -> blockEsp, v -> {
-                    blockEsp = v;
-                    rescan();
-                });
-            });
-            case "Storage Esp" -> new ModuleScreen(parent, module, f -> {
-                f.description("Hebt Kisten, Fässer, Öfen usw. hervor.");
-                f.section("Allgemein");
-                f.slider("Radius", 8, 64, () -> storageEspRadius, v -> storageEspRadius = v, 48);
-                f.footer(() -> storageEsp, v -> storageEsp = v);
-            });
-            case "Hole Esp" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zeigt sichere 1x1-Löcher zum Hineinstellen.");
-                f.section("Allgemein");
-                f.slider("Radius", 4, 32, () -> holeEspRadius, v -> holeEspRadius = v, 16);
-                f.footer(() -> holeEsp, v -> holeEsp = v);
-            });
-            case "Void Esp" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zeigt L\u00f6cher, durch die man in die Leere f\u00e4llt.");
-                f.section("Allgemein");
-                f.slider("Radius", 4, 24, () -> voidEspRadius, v -> voidEspRadius = v, 10);
-                f.footer(() -> voidEsp, v -> voidEsp = v);
-            });
-            case "City Esp" -> new ModuleScreen(parent, module, f -> {
-                f.description("Hebt Blöcke rund um Gegner hervor (PvP).");
-                f.section("Allgemein");
-                f.slider("Reichweite", 2, 12, () -> cityEspRange, v -> cityEspRange = v, 6);
-                f.footer(() -> cityEsp, v -> cityEsp = v);
-            });
-            case "Tunnel Esp" -> new ModuleScreen(parent, module, f -> {
-                f.description("Hebt gegrabene 1x2-G\u00e4nge hervor.");
-                f.section("Allgemein");
-                f.slider("Radius", 4, 32, () -> tunnelEspRadius, v -> tunnelEspRadius = v, 16);
-                f.footer(() -> tunnelEsp, v -> tunnelEsp = v);
-            });
-            case "Tracers" -> new ModuleScreen(parent, module, f -> {
-                f.description("Linien von der Bildschirmmitte zu Zielen.");
-                f.section("Ziele");
-                f.toggle("Spieler", () -> tracersPlayers, v -> tracersPlayers = v, true);
-                f.toggle("Mobs", () -> tracersMobs, v -> tracersMobs = v, false);
-                f.toggle("Items", () -> tracersItems, v -> tracersItems = v, false);
-                f.slider("Reichweite", 16, 256, () -> tracersRange, v -> tracersRange = v, 96);
-                f.footer(() -> tracers, v -> tracers = v);
-            });
-            case "Nametags" -> new ModuleScreen(parent, module, f -> {
-                f.description("Namen über Spielern und Mobs, durch Wände.");
-                f.section("Allgemein");
-                f.toggle("Leben zeigen", () -> nametagsHealth, v -> nametagsHealth = v, true);
-                f.slider("Reichweite", 16, 128, () -> nametagsRange, v -> nametagsRange = v, 64);
-                f.footer(() -> nametags, v -> nametags = v);
-            });
-            case "Entity Owner" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zeigt den Besitzer von Tieren und Geschossen.");
-                f.section("Allgemein");
-                f.toggle("Zahme Tiere", () -> ownerAnimals, v -> ownerAnimals = v, true);
-                f.toggle("Geschosse", () -> ownerProjectiles, v -> ownerProjectiles = v, true);
-                f.slider("Reichweite", 8, 64, () -> ownerRange, v -> ownerRange = v, 32);
-                f.footer(() -> entityOwner, v -> entityOwner = v);
-            });
-            case "Item Highlight" -> new ModuleScreen(parent, module, f -> {
-                f.description("Rahmt am Boden liegende Items ein.");
-                f.section("Allgemein");
-                f.slider("Reichweite", 8, 96, () -> itemHighlightRange, v -> itemHighlightRange = v, 48);
-                f.footer(() -> itemHighlight, v -> itemHighlight = v);
-            });
-            case "Marker" -> pointScreen(parent, module, false, () -> marker, v -> marker = v);
-            case "Waypoints" -> new ModuleScreen(parent, module, f -> {
-                f.description("Gespeicherte Orte im Spiel anzeigen.");
-                f.section("Allgemein");
-                f.toggle("Lichtstrahl", () -> waypointsBeam, v -> waypointsBeam = v, true);
-                f.text("Neuer Name", () -> "", v -> {
-                    if (!v.isBlank()) addPoint(true, v);
-                }, "");
-                f.note(() -> "Gespeichert: " + pointCount(waypointList));
-                f.wideButton("Alle löschen", false, () -> clearPoints(true));
-                f.footer(() -> waypoints, v -> waypoints = v);
-            });
-            case "Logout Spots" -> new ModuleScreen(parent, module, f -> {
-                f.description("Markiert, wo Spieler sich ausgeloggt haben.");
-                f.section("Allgemein");
-                f.toggle("Kasten zeigen", () -> logoutBox, v -> logoutBox = v, true);
-                f.toggle("Entfernung zeigen", () -> logoutDistance, v -> logoutDistance = v, true);
-                f.note(() -> "Gemerkt: " + logoutCount());
-                f.wideButton("Alle l\u00f6schen", false, RenderMods::clearLogouts);
-                f.footer(() -> logoutSpots, v -> logoutSpots = v);
-            });
-            case "Trail" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zieht eine Linie hinter dir her.");
-                f.section("Allgemein");
-                f.slider("Länge", 20, 300, () -> trailLength, v -> trailLength = v, 80);
-                f.footer(() -> trail, v -> trail = v);
-            });
-            case "Breadcrumbs" -> new ModuleScreen(parent, module, f -> {
-                f.description("Punkte entlang deines Wegs.");
-                f.section("Allgemein");
-                f.slider("Länge", 40, 500, () -> breadcrumbsLength, v -> breadcrumbsLength = v, 200);
-                f.footer(() -> breadcrumbs, v -> breadcrumbs = v);
-            });
-            case "Trajectories" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zeigt die Flugbahn von B\u00f6gen und Wurfobjekten.");
-                f.section("Allgemein");
-                f.slider("L\u00e4nge (Schritte)", 20, 200, () -> trajSteps, v -> trajSteps = v, 80);
-                f.toggle("Aufprall markieren", () -> trajLanding, v -> trajLanding = v, true);
-                f.footer(() -> trajectories, v -> trajectories = v);
-            });
-            case "Light Overlay" -> new ModuleScreen(parent, module, f -> {
-                f.description("Markiert dunkle Blöcke, auf denen Mobs spawnen.");
-                f.section("Allgemein");
-                f.slider("Radius", 4, 24, () -> lightOverlayRadius, v -> lightOverlayRadius = v, 12);
-                f.footer(() -> lightOverlay, v -> lightOverlay = v);
-            });
-            case "Break Indicators" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zeigt den Abbaufortschritt an Bl\u00f6cken\n(rot = gerade begonnen, gr\u00fcn = gleich weg).");
-                f.section("Allgemein");
-                f.toggle("Prozent anzeigen", () -> breakPercent, v -> breakPercent = v, true);
-                f.toggle("Auch andere Spieler", () -> breakOthers, v -> breakOthers = v, true);
-                f.footer(() -> breakIndicators, v -> breakIndicators = v);
-            });
-            case "Fullbright" -> new ModuleScreen(parent, module, f -> {
-                f.description("Macht alles hell.");
-                f.section("Allgemein");
-                f.choice("Modus", FULLBRIGHT_MODES, () -> fullbrightMode, v -> fullbrightMode = v, 0);
-                f.slider("Gamma (%) [nur Gamma-Modus]", 100, 1600, () -> fullbrightGamma, v -> fullbrightGamma = v, 1000);
-                f.footer(() -> fullbright, v -> fullbright = v);
-            });
-            case "Time Changer" -> new ModuleScreen(parent, module, f -> {
-                f.description("Ändert die Tageszeit (nur bei dir).\nServer setzt sie oft zurück.");
-                f.section("Allgemein");
-                f.slider("Zeit", 0, 23000, () -> timeChangerValue, v -> timeChangerValue = v, 6000);
-                f.footer(() -> timeChanger, v -> timeChanger = v);
-            });
-            case "Camera Tweaks" -> new ModuleScreen(parent, module, f -> {
-                f.description("Kamera in der 3rd-Person-Ansicht.");
-                f.section("Allgemein");
-                f.slider("Abstand", 2, 16, () -> cameraDistance, v -> cameraDistance = v, 4);
-                f.toggle("Durch Blöcke", () -> cameraNoClip, v -> cameraNoClip = v, true);
-                f.footer(() -> cameraTweaks, v -> cameraTweaks = v);
-            });
-            case "Free Look" -> new ModuleScreen(parent, module, f -> {
-                f.description("Umsehen, w\u00e4hrend du in deine Richtung\nweiterl\u00e4ufst. Nur Ego-Ansicht.");
-                f.footer(() -> freeLook, v -> {
-                    freeLook = v;
-                    if (v) freecam = false;
-                });
-            });
-            case "Freecam" -> new ModuleScreen(parent, module, f -> {
-                f.description("Kamera frei bewegen, dein K\u00f6rper bleibt stehen.\nLaufen-Tasten, Springen = hoch, Schleichen = runter,\nSprinten = doppelt so schnell.");
-                f.section("Allgemein");
-                f.slider("Tempo (Bl\u00f6cke/s)", 2, 40, () -> freecamSpeed, v -> freecamSpeed = v, 10);
-                f.toggle("Klicks sperren", () -> freecamBlockClicks, v -> freecamBlockClicks = v, true);
-                f.toggle("Erst am Boden starten", () -> freecamWaitGround, v -> freecamWaitGround = v, true);
-                f.note("F\u00fcr den Server stehst du nur still: es wird keine Bewegung gesendet. "
-                        + "In der Luft gestartet w\u00fcrde dein K\u00f6rper dort h\u00e4ngen bleiben, das kann wie Fliegen aussehen.");
-                f.footer(() -> freecam, v -> {
-                    freecam = v;
-                    if (v) freeLook = false;
-                });
-            });
-            case "No Render" -> new ModuleScreen(parent, module, f -> {
-                f.description("Blendet störende Effekte aus.");
-                f.section("Aus");
-                f.toggle("Feuer-Overlay", () -> noFire, v -> noFire = v, true);
-                f.toggle("Wasser-Overlay", () -> noWaterOverlay, v -> noWaterOverlay = v, true);
-                f.toggle("Übelkeit", () -> noNausea, v -> noNausea = v, true);
-                f.toggle("Kürbis-Overlay", () -> noPumpkin, v -> noPumpkin = v, true);
-                f.toggle("Nebel", () -> noFog, v -> noFog = v, false);
-                f.toggle("Trefferwackeln", () -> noHurtCam, v -> noHurtCam = v, false);
-                f.footer(() -> noRender, v -> noRender = v);
-            });
-            case "Block Selection" -> new ModuleScreen(parent, module, f -> {
-                f.description("Ändert den Auswahlrahmen von Blöcken.");
-                f.section("Allgemein");
-                f.choice("Modus", BLOCK_SEL_MODES, () -> blockSelMode, v -> blockSelMode = v, 0);
-                f.footer(() -> blockSelection, v -> blockSelection = v);
-            });
-            case "Hand View" -> flagScreen(parent, module, "Position der Hand anpassen.\n(Braucht Mixin - evtl. wirkungslos.)",
-                    () -> handView, v -> handView = v);
-            case "Chams" -> new ModuleScreen(parent, module, f -> {
-                f.description("F\u00e4rbt Spieler und Mobs als farbige Fl\u00e4che ein -\nauch durch W\u00e4nde sichtbar. Farben wie beim ESP.");
-                f.section("Ziele");
-                f.toggle("Spieler", () -> chamsPlayers, v -> chamsPlayers = v, true);
-                f.toggle("Mobs", () -> chamsMobs, v -> chamsMobs = v, true);
-                f.toggle("Nur hinter W\u00e4nden", () -> chamsHiddenOnly, v -> chamsHiddenOnly = v, false);
-                f.section("Darstellung");
-                f.slider("Reichweite", 8, 128, () -> chamsRange, v -> chamsRange = v, 64);
-                f.slider("Deckkraft (%)", 5, 100, () -> chamsAlpha, v -> chamsAlpha = v, 45);
-                f.footer(() -> chams, v -> chams = v);
-            });
-            case "Wall Hack" -> flagScreen(parent, module, "Durch Wände sehen (wie Xray für alles).\n(Braucht Render-Mixin - evtl. wirkungslos.)",
-                    () -> wallHack, v -> wallHack = v);
-            case "Item Physics" -> flagScreen(parent, module, "Items liegen flach auf dem Boden.\n(Braucht Render-Mixin - evtl. wirkungslos.)",
-                    () -> itemPhysics, v -> itemPhysics = v);
-            case "Blur" -> new ModuleScreen(parent, module, f -> {
-                f.description("Dunkler Hintergrund bei offenem Men\u00fc.\n(Vereinfacht, kein echter Weichzeichner.)");
-                f.section("Allgemein");
-                f.slider("St\u00e4rke", 0, 200, () -> blurStrength, v -> blurStrength = v, 100);
-                f.footer(() -> blur, v -> blur = v);
-            });
-            case "Boss Stack" -> flagScreen(parent, module, "Fasst gleiche Bossleisten zu einer zusammen (mit Anzahl).\nGilt f\u00fcr Leisten, die nach dem Einschalten erscheinen.",
-                    () -> bossStack, v -> bossStack = v);
-            case "Better Tab" -> flagScreen(parent, module, "Eigene Spielerliste beim Halten von Tab:\nalle Namen mit Ping in Millisekunden.",
-                    () -> betterTab, v -> betterTab = v);
-            case "Pop Chams" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zeigt einen verblassenden Geist, wenn\njemand ein Totem verbraucht.");
-                f.section("Allgemein");
-                f.slider("Dauer (s)", 1, 10, () -> popDuration, v -> popDuration = v, 3);
-                f.toggle("Meldung im Chat", () -> popChat, v -> popChat = v, true);
-                f.toggle("Auch eigene", () -> popSelf, v -> popSelf = v, false);
-                f.footer(() -> popChams, v -> popChams = v);
-            });
-            case "Better Tooltips" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zus\u00e4tzliche Infos im Item-Tooltip.");
-                f.section("Anzeigen");
-                f.toggle("Shulker-Inhalt", () -> tipShulker, v -> tipShulker = v, true);
-                f.slider("Shulker-Zeilen", 1, 27, () -> tipShulkerLines, v -> tipShulkerLines = v, 5);
-                f.toggle("Haltbarkeit", () -> tipDurability, v -> tipDurability = v, true);
-                f.toggle("N\u00e4hrwert", () -> tipFood, v -> tipFood = v, true);
-                f.footer(() -> betterTooltips, v -> betterTooltips = v);
-            });
-            default -> null;
-        };
-    }
-
-    private static Screen pointScreen(Screen parent, String module, boolean waypoint,
-                                      java.util.function.BooleanSupplier get, java.util.function.Consumer<Boolean> set) {
-        return new ModuleScreen(parent, module, f -> {
-            f.description("Eigene Markierungen an deiner Position.");
-            f.section("Allgemein");
-            f.text("Neuer Name", () -> "", v -> {
-                if (!v.isBlank()) addPoint(waypoint, v);
-            }, "");
-            f.note(() -> "Gesetzt: " + pointCount(markerList));
-            f.wideButton("Alle löschen", false, () -> clearPoints(waypoint));
-            f.footer(get, set);
-        });
-    }
-
-    private static Screen flagScreen(Screen parent, String module, String desc,
-                                     java.util.function.BooleanSupplier get, java.util.function.Consumer<Boolean> set) {
-        return new ModuleScreen(parent, module, f -> {
-            f.description(desc);
-            f.footer(get, set);
-        });
+        return RenderScreens.screen(module, parent);
     }
 }

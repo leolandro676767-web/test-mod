@@ -4,10 +4,12 @@ import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.player.RemotePlayer;
+import net.minecraft.world.phys.HitResult;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -17,7 +19,10 @@ import org.lwjgl.glfw.GLFW;
  * Spieler zurueckgedreht. Solange der Spieler nicht die Kamera ist, bewegt Minecraft ihn nicht und
  * schickt dem Server keine Bewegung - der Koerper bleibt also wirklich stehen.
  * <p>Free Look: Der Spieler bleibt die Kamera und dreht sich frei; nur fuer die Dauer seiner
- * Bewegungsberechnung (zwischen Tick-Anfang und -Ende) wird die alte Laufrichtung eingesetzt.
+ * Bewegungsberechnung (zwischen Tick-Anfang und -Ende) wird die eigentliche Laufrichtung eingesetzt.
+ * Standardmaessig schaltet Free Look in die 3rd-Person-Ansicht und schaut schraeg von der Seite zu;
+ * die Kamera folgt dabei weich der Laufrichtung. Was waehrend des Ticks die Laufrichtung aendert
+ * (z.B. "Zu Koordinaten gehen"), bleibt erhalten - so kann man dem Laufen und Bauen zuschauen.
  */
 public final class CameraMods {
     private CameraMods() {
@@ -33,8 +38,14 @@ public final class CameraMods {
     private static float camPitch;
     private static float bodyYaw;
     private static float bodyPitch;
-    private static float walkYaw;   // Free Look: feste Laufrichtung
-    private static float lookYaw;   // Free Look: aktuelle Blickrichtung
+    private static float walkYaw;   // Free Look: Laufrichtung des Koerpers
+    private static float walkPitch;
+    private static float lookYaw;   // Free Look: Blickrichtung der Kamera
+    private static float lookPitch;
+    private static float heading;   // Free Look: geglaettete Bewegungsrichtung (Kamera folgt ihr)
+    private static float rel;       // Free Look: Kamerawinkel relativ zur Bewegungsrichtung
+    private static long lastFrame;
+    private static CameraType prevCamera; // Ansicht vor Free Look (wird danach wiederhergestellt)
     private static boolean waitNoted; // Hinweis "wartet auf Boden" schon gezeigt
     private static int camIds;
 
@@ -47,14 +58,34 @@ public final class CameraMods {
     private static void start(Minecraft mc, LocalPlayer p, int newMode) {
         if (newMode == FREELOOK) {
             walkYaw = p.getYRot();
-            lookYaw = walkYaw;
+            walkPitch = p.getXRot();
+            heading = walkYaw;
+            prevCamera = null;
+            if (RenderMods.freeLookThird) {
+                // schraeg von der Seite: Kamera seitlich hinter dem Spieler, leicht von oben
+                rel = RenderMods.freeLookAngle;
+                lookYaw = walkYaw + rel;
+                lookPitch = Math.max(-90f, Math.min(90f, RenderMods.freeLookPitch));
+                prevCamera = mc.options.getCameraType();
+                if (prevCamera != CameraType.THIRD_PERSON_BACK) {
+                    mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                } else {
+                    prevCamera = null; // war schon so: nichts zurueckzustellen
+                }
+            } else {
+                rel = 0f;
+                lookYaw = walkYaw;
+                lookPitch = walkPitch;
+            }
+            lastFrame = System.nanoTime();
+            setRot(p, lookYaw, lookPitch); // Bild sofort aus dem neuen Winkel
             mode = FREELOOK;
             return;
         }
         try {
             cam = new RemotePlayer(mc.level, new GameProfile(UUID.randomUUID(), "1912-Kamera"));
         } catch (RuntimeException e) {
-            p.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+            p.sendSystemMessage(Lang.literal(
                     "§c1912: Kamera konnte nicht erstellt werden"));
             RenderMods.freecam = false;
             RenderMods.freeLook = false;
@@ -79,6 +110,13 @@ public final class CameraMods {
 
     private static void stop(Minecraft mc) {
         if (mode == FREELOOK) {
+            // wieder in Laufrichtung schauen (sonst dreht sich der Spieler auf den Kamerawinkel)
+            LocalPlayer p = mc.player;
+            if (p != null) setRot(p, walkYaw, walkPitch);
+            if (prevCamera != null && mc.options.getCameraType() == CameraType.THIRD_PERSON_BACK) {
+                mc.options.setCameraType(prevCamera);
+            }
+            prevCamera = null;
             mode = OFF;
             return;
         }
@@ -90,6 +128,11 @@ public final class CameraMods {
 
     /** Beim Verlassen der Welt alles zuruecksetzen (Freecam soll nach dem Beitreten nicht sofort an sein). */
     private static void reset() {
+        if (mode == FREELOOK && prevCamera != null) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.options.getCameraType() == CameraType.THIRD_PERSON_BACK) mc.options.setCameraType(prevCamera);
+        }
+        prevCamera = null;
         cam = null;
         mode = OFF;
         RenderMods.freecam = false;
@@ -129,8 +172,47 @@ public final class CameraMods {
 
     /** Jeden Frame aus dem HUD-Zeichnen aufgerufen: sorgt fuer fluessiges Umsehen. */
     public static void frame(Minecraft mc) {
+        if (mode == FREELOOK && mc.player != null) {
+            long now = System.nanoTime();
+            double dt = Math.min(0.1, (now - lastFrame) / 1e9);
+            lastFrame = now;
+            takeMouse(mc.player);
+            if (RenderMods.freeLookFollow && RenderMods.freeLookThird) {
+                // weich hinter der Laufrichtung herschwenken (ca. eine halbe Sekunde)
+                float target = heading + rel;
+                float diff = wrap(target - lookYaw);
+                lookYaw += diff * (float) (1.0 - Math.exp(-dt * 4.0));
+            }
+            setRot(mc.player, lookYaw, lookPitch);
+            return;
+        }
         if (mode != FREECAM || mc.player == null || cam == null) return;
         transferRotation(mc.player);
+    }
+
+    /** Free Look: Mausbewegung seit dem letzten Mal uebernehmen (sie dreht die Kamera um den Spieler). */
+    private static void takeMouse(LocalPlayer p) {
+        float dy = wrap(p.getYRot() - lookYaw);
+        float dp = p.getXRot() - lookPitch;
+        if (dy != 0f) {
+            lookYaw += dy;
+            rel = wrap(rel + dy);
+        }
+        if (dp != 0f) lookPitch = Math.max(-90f, Math.min(90f, lookPitch + dp));
+    }
+
+    private static void setRot(LocalPlayer p, float yaw, float pitch) {
+        p.setYRot(yaw);
+        p.yRotO = yaw;
+        p.setXRot(pitch);
+        p.xRotO = pitch;
+    }
+
+    private static float wrap(float a) {
+        a %= 360f;
+        if (a >= 180f) a -= 360f;
+        if (a < -180f) a += 360f;
+        return a;
     }
 
     // ---------- Ticks ----------
@@ -149,7 +231,7 @@ public final class CameraMods {
                 && !p.onGround() && !p.isPassenger() && !p.getAbilities().flying && !p.isSpectator()) {
             if (!waitNoted) {
                 waitNoted = true;
-                p.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                p.sendSystemMessage(Lang.literal(
                         "\u00a7e1912: Freecam startet, sobald du am Boden stehst"));
             }
             want = mode == FREELOOK ? OFF : mode;
@@ -161,10 +243,12 @@ public final class CameraMods {
             if (want != OFF) start(mc, p, want);
         }
         if (mode == FREELOOK) {
-            // Blickrichtung merken, fuer die Bewegung kurz die Laufrichtung einsetzen
-            lookYaw = p.getYRot();
-            p.setYRot(walkYaw);
-            p.yRotO = walkYaw;
+            // Blickrichtung merken, fuer Bewegung, Abbauen und Bauen die Laufrichtung einsetzen
+            takeMouse(p);
+            setRot(p, walkYaw, walkPitch);
+            // Fadenkreuz aus Sicht des Koerpers: abgebaut wird, wo der Spieler hinschaut, nicht die Kamera
+            HitResult hit = p.pick(4.5, 1.0f, false);
+            if (hit != null) mc.hitResult = hit;
             return;
         }
         if (mode == OFF || cam == null) return;
@@ -191,15 +275,28 @@ public final class CameraMods {
         }
     }
 
-    /** Tick-Ende: Kamera bewegen (Freecam) bzw. dem Spieler folgen lassen (Free Look). */
+    /**
+     * Free Look, ganz am Ende des Ticks (nach allen Modulen, auch nach "Zu Koordinaten gehen"):
+     * die neue Laufrichtung merken und fuer das Bild wieder die Kamera-Blickrichtung einsetzen.
+     */
+    public static void afterTick(Minecraft mc) {
+        LocalPlayer p = mc.player;
+        if (mode != FREELOOK || p == null) return;
+        walkYaw = p.getYRot();
+        walkPitch = p.getXRot();
+        // Bewegungsrichtung (rueckwaerts Bruecke bauen zaehlt als vorwaerts): der Kamera-Schwenk folgt ihr
+        double mx = p.getX() - p.xo;
+        double mz = p.getZ() - p.zo;
+        if (mx * mx + mz * mz > 0.03 * 0.03) {
+            float raw = (float) (Math.toDegrees(Math.atan2(mz, mx)) - 90.0);
+            heading += wrap(raw - heading) * 0.25f;
+        }
+        setRot(p, lookYaw, lookPitch);
+    }
+
+    /** Tick-Ende: Kamera bewegen (Freecam). */
     public static void endTick(Minecraft mc) {
         LocalPlayer p = mc.player;
-        if (mode == FREELOOK && p != null) {
-            // Nach der Bewegung wieder die Blickrichtung herstellen
-            p.setYRot(lookYaw);
-            p.yRotO = lookYaw;
-            return;
-        }
         if (mode != FREECAM || cam == null || p == null) return;
         cam.xo = cam.getX();
         cam.yo = cam.getY();

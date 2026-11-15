@@ -1,8 +1,9 @@
 package de.test.mixin;
 
+import de.test.Safe;
+import de.test.BossStack;
 import de.test.MiscMods;
 import de.test.PlayerMods;
-import de.test.RenderMods;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
@@ -69,17 +70,17 @@ public abstract class ClientPacketListenerMixin {
     // Sound Blocker: gewaehlte Geraeusche vom Server gar nicht erst abspielen
     @Inject(method = "handleSoundEvent", at = @At("HEAD"), cancellable = true, require = 0)
     private void test$sound(ClientboundSoundPacket packet, CallbackInfo ci) {
-        if (MiscMods.blockSound(packet)) ci.cancel();
+        if (Safe.test("Sound Blocker", () -> MiscMods.blockSound(packet))) ci.cancel();
     }
 
     @Inject(method = "handleSoundEntityEvent", at = @At("HEAD"), cancellable = true, require = 0)
     private void test$soundEntity(ClientboundSoundEntityPacket packet, CallbackInfo ci) {
-        if (MiscMods.blockSound(packet)) ci.cancel();
+        if (Safe.test("Sound Blocker", () -> MiscMods.blockSound(packet))) ci.cancel();
     }
 
     // Boss Stack: Bossleisten selbst verwalten und zusammengefasst zeichnen
     @Inject(method = "handleBossUpdate", at = @At("HEAD"), cancellable = true, require = 0)
     private void test$boss(ClientboundBossEventPacket packet, CallbackInfo ci) {
-        if (RenderMods.onBossPacket(packet)) ci.cancel();
+        if (Safe.test("Boss Stack", () -> BossStack.onPacket(packet))) ci.cancel();
     }
 }

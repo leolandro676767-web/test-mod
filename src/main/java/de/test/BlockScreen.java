@@ -40,6 +40,10 @@ public class BlockScreen extends Form {
         section("Anzeige");
         toggle("Ziele hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
         choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
+        section("Verteidigung");
+        toggle("Mobs abwehren", () -> BotGuard.forBlock, v -> BotGuard.forBlock = v, true);
+        wideButton("Einstellungen der Bot-Verteidigung", false,
+                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
         footer(null, null);
     }
 

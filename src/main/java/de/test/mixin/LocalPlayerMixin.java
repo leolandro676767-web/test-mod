@@ -1,5 +1,6 @@
 package de.test.mixin;
 
+import de.test.Safe;
 import de.test.PlayerMods;
 import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,6 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class LocalPlayerMixin {
     @Inject(method = "handlePortalTransitionEffect", at = @At("HEAD"), cancellable = true, require = 0)
     private void test$portal(boolean active, CallbackInfo ci) {
-        if (PlayerMods.portals) ci.cancel();
+        if (Safe.test("Portals", () -> PlayerMods.portals)) ci.cancel();
     }
 }

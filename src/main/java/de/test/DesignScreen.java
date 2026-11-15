@@ -12,6 +12,8 @@ public class DesignScreen extends Form {
     @Override
     protected void build() {
         description("So sieht dein Menü aus. Änderungen siehst du sofort.");
+        wideButton("Sprache / Language: " + Lang.t(Lang.NAMES[Lang.language]), false,
+                () -> this.minecraft.gui.setScreen(new LanguageScreen(this)));
 
         section("Module");
         choice("Modus", Theme.MODE_NAMES, () -> Theme.menuMode, v -> Theme.menuMode = v, 0);
@@ -20,7 +22,8 @@ public class DesignScreen extends Form {
         section("Anzeige im Spiel");
         toggle("Aktive Module anzeigen", () -> Theme.hudList, v -> Theme.hudList = v, true);
         choice("Gr\u00f6\u00dfe der Liste", Theme.HUD_SIZE_NAMES, () -> Theme.hudListSize, v -> Theme.hudListSize = v, 1);
-        note("Zeigt oben links alle Module, die gerade an sind.");
+        choice("Position", Theme.HUD_CORNER_NAMES, () -> Theme.hudCorner, v -> Theme.hudCorner = v, 0);
+        note("Zeigt alle Module, die gerade an sind, in der gew\u00e4hlten Ecke.");
 
         section("Farben");
         swatches("Farbschema", Theme.SCHEME_NAMES,
@@ -65,7 +68,9 @@ public class DesignScreen extends Form {
 
         section("Effekte");
         toggle("Animationen", () -> Theme.animations, v -> Theme.animations = v, true);
-        note("Aus = alles erscheint sofort, ohne Übergänge.");
+        toggle("Weniger Effekte", () -> Theme.lowFx, v -> Theme.lowFx = v, false);
+        note("Animationen aus = alles erscheint sofort. Weniger Effekte = ruhigerer Hintergrund "
+                + "ohne Partikel, f\u00fcr schw\u00e4chere PCs.");
 
         wideButton("Alles auf Standard zurücksetzen", false, () -> {
             Theme.reset();

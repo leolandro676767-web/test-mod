@@ -40,9 +40,13 @@ final class Theme {
     static int menuMode = 0;
     /** Liste der aktiven Module oben links im Spiel. */
     static boolean hudList = true;
+    /** Weniger Effekte im Menue-Hintergrund (fuer schwache PCs). */
+    static boolean lowFx = false;
     static final String[] HUD_SIZE_NAMES = {"Klein", "Normal", "Gro\u00df", "Sehr gro\u00df"};
     static final float[] HUD_SCALES = {0.75f, 1f, 1.5f, 2f};
     static int hudListSize = 1;
+    static final String[] HUD_CORNER_NAMES = {"Oben links", "Oben rechts", "Unten links", "Unten rechts"};
+    static int hudCorner = 0;
 
     static boolean isCollapsed(int col) {
         return (collapsed >> col & 1) != 0;
@@ -73,6 +77,8 @@ final class Theme {
         menuMode = 0;
         hudList = true;
         hudListSize = 1;
+        hudCorner = 0;
+        lowFx = false;
     }
 
     static int columnWidth() {
@@ -117,21 +123,8 @@ final class Theme {
         return Ui.lerp(0xE0140F1F, accentAlpha(0xE0), 0.16f);
     }
 
-    static int hoverBg() {
-        return Ui.lerp(0xE0140F1F, accentAlpha(0xE0), 0.09f);
-    }
-
     static int btnHover() {
         return Ui.lerp(Ui.BTN, accentAlpha(0xE0), 0.12f);
-    }
-
-    /** Kopfzeile der Untermenues: Farbe der zweiten Spalte. */
-    static int headTop() {
-        return Ui.lerp(head(1), 0xFFFFFFFF, 0.22f);
-    }
-
-    static int headBottom() {
-        return Ui.lerp(head(1), 0xFF000000, 0.18f);
     }
 
     static int parseHex(String s) {

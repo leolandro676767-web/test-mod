@@ -26,7 +26,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -80,8 +79,6 @@ public class TestClient implements ClientModInitializer {
         return new int[] {minX, minY, minZ, maxX, maxY, maxZ};
     }
     public static int gx = 0, gy = 64, gz = 0;
-    private static final int MAX_GOTO_TICKS = 12000;
-    private static final int MAX_GOTO_NO_PROGRESS = 200;
 
     // Block-Modus: einen Blocktyp waehlen, in der Naehe suchen, hinlaufen und abbauen
     public static boolean blockMode = false;
@@ -92,36 +89,24 @@ public class TestClient implements ClientModInitializer {
     private static final long MAX_AREA_VOLUME = 50000L;
     private static int minX, minY, minZ, maxX, maxY, maxZ;
     private static BlockPos areaTarget = null;
-    private static int walkTicks = 0;
-    private static int stuckTicks = 0;
+    /** Ziel, zu dem der Walker gerade laeuft (Bereich/Block-Modus). */
+    private static BlockPos walkTarget = null;
     private static int mineTicks = 0;
-    private static int noProgressTicks = 0;
-    private static double bestDist = Double.MAX_VALUE;
-    private static BlockPos digPos = null;
-    private static int digTicks = 0;
     private static boolean retried = false;
     // selbst platzierte Bloecke (Bruecken/Saeulen): werden nicht wieder abgebaut
     private static final Set<Long> placed = new HashSet<>();
-    private static final int NO_PILLAR = Integer.MIN_VALUE;
-    private static final int MAX_PILLAR_TICKS = 200;
-    private static final int MAX_STUCK_PILLARS = 3;
-    private static int pillarGoalY = NO_PILLAR;
-    private static int pillarTicks = 0;
-    private static int stuckPillars = 0;
-    private static BlockPos pillarBase = null;
-    // Festhaenge-Erkennung: Spieler bewegt sich ueber lange Zeit nicht von der Stelle
-    private static final int MAX_STALL_TICKS = 400;
-    private static final int MAX_STEPUP_TICKS = 20;
-    private static double stallX, stallY, stallZ;
-    private static boolean stallValid = false;
-    private static int stallTicks = 0;
-    private static int stepUpTicks = 0;
-    /** Nach dem Platzieren: Blick langsam wieder nach oben/vorne drehen. */
-    private static boolean restoreLook = false;
+
+    /** Wurde der Block (BlockPos.asLong) von uns selbst gesetzt? */
+    static boolean isPlaced(long pos) {
+        return placed.contains(pos);
+    }
+
+    /** Eigene gesetzte Bloecke vergessen: die Wegsuche darf sie dann wieder abbauen (Debris Miner). */
+    static void forgetPlaced() {
+        placed.clear();
+    }
     private static boolean noBlocksWarned = false;
     private static double[] reachPoint = null;
-    private static double lastX = 0.0;
-    private static double lastZ = 0.0;
     // nicht erreichbar (nur fuer die Wegsuche gesperrt, werden aber mitgenommen, wenn sie spaeter in Reichweite sind)
     private static final Set<Long> skipped = new HashSet<>();
     // lassen sich nicht abbauen (ueberall gesperrt)
@@ -134,12 +119,8 @@ public class TestClient implements ClientModInitializer {
     // nach einem Auto-Logout ueber der Schwelle war.
     private static boolean logoutArmed = true;
 
-    public static KeyMapping toggleKey;
+    /** Die einzige Taste in den Minecraft-Steuerungen: oeffnet das 1912-Menue. Alles andere wird im Menue zugewiesen. */
     public static KeyMapping guiKey;
-    public static KeyMapping selectKey;
-    public static KeyMapping espKey;
-    public static KeyMapping panicKey;
-    public static KeyMapping sortKey;
 
     private enum Phase { WALK, MINE, RETURN }
 
@@ -153,22 +134,13 @@ public class TestClient implements ClientModInitializer {
         KeyMapping.Category category =
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath("test", "main"));
 
-        toggleKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.test.toggle", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, category));
+        // Nur das Menue steht in den Minecraft-Steuerungen. Laufen/Stopp (G), Block waehlen (K),
+        // Alle Module aus/an (J) und alle Module bekommen ihre Tasten im 1912-Menue ("Tasten zuweisen").
         guiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.gui", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, category));
-
-        selectKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.test.select", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, category));
-        // ESP hat keine feste Taste mehr (J ist jetzt "Alle Module aus/an"); neuer Name, damit eine
-        // alte gespeicherte J-Belegung nicht doppelt greift. Belegbar im 1912-Menue oder in den Steuerungen.
-        espKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.test.esp_toggle", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, category));
-        panicKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.test.panic", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, category));
-        sortKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.test.sort", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, category));
         Esp.register();
+        KillAura.register();
+        InfoHud.register();
         Keybinds.register();
 
         TestConfig.load();
@@ -177,12 +149,14 @@ public class TestClient implements ClientModInitializer {
         RenderMods.register();
         MiscMods.register();
         ClientTickEvents.START_CLIENT_TICK.register(mc -> {
-            Movement2.startTick(mc);
-            Movement.startTick(mc);
-            PlayerMods.startTick(mc);
-            CameraMods.startTick(mc);
+            Safe.run("Bewegung", () -> Movement2.startTick(mc));
+            Safe.run("Bewegung", () -> Movement.startTick(mc));
+            Safe.run("Spieler", () -> PlayerMods.startTick(mc));
+            Safe.run("Freecam", () -> CameraMods.startTick(mc));
         });
         ClientTickEvents.END_CLIENT_TICK.register(TestClient::onTick);
+        // Free Look erst ganz zum Schluss: alle Module (auch das Laufen) haben die Laufrichtung gesetzt
+        ClientTickEvents.END_CLIENT_TICK.register(mc -> Safe.run("Freecam", () -> CameraMods.afterTick(mc)));
     }
 
     // ---------- AutoClicker ----------
@@ -203,6 +177,7 @@ public class TestClient implements ClientModInitializer {
         if (!(mc.hitResult instanceof EntityHitResult ehr) || ehr.getType() != HitResult.Type.ENTITY) return;
         Entity target = ehr.getEntity();
         if (!(target instanceof LivingEntity) || !target.isAlive()) return;
+        if (Friends.protect(target)) return; // Freunde nie angreifen
 
         float scale = mc.player.getAttackStrengthScale(0.0f);
         if (clickerFactor < 0) {
@@ -280,7 +255,7 @@ public class TestClient implements ClientModInitializer {
                 autoDrop = false;
                 if (!dropFailedWarned) {
                     dropFailedWarned = true;
-                    mc.player.sendSystemMessage(Component.literal(
+                    mc.player.sendSystemMessage(Lang.literal(
                             "1912: AutoDrop konnte nicht ausgef\u00fchrt werden und wurde ausgeschaltet"));
                 }
             }
@@ -302,7 +277,10 @@ public class TestClient implements ClientModInitializer {
         if (volume > MAX_AREA_VOLUME) {
             return "Zu gro\u00df (max. 50000 Bl\u00f6cke)";
         }
+        DebrisMiner.stop(mc, null);
         TestConfig.save();
+        Walker.reset();
+        walkTarget = null;
         blockMode = false;
         gotoMode = false;
         skipped.clear();
@@ -312,8 +290,6 @@ public class TestClient implements ClientModInitializer {
         noBlocksWarned = false;
         retried = false;
         setTarget(null);
-        lastX = mc.player.getX();
-        lastZ = mc.player.getZ();
         walking = false;
         phase = Phase.WALK;
         applied = true;
@@ -324,6 +300,7 @@ public class TestClient implements ClientModInitializer {
     /** Startet den Koordinaten-Modus. Gibt eine Fehlermeldung zurueck oder null bei Erfolg. */
     public static String startGoto(Minecraft mc) {
         if (mc.player == null || mc.level == null) return "Nicht im Spiel";
+        DebrisMiner.stop(mc, null);
         TestConfig.save();
         blockMode = false;
         gotoMode = true;
@@ -334,37 +311,55 @@ public class TestClient implements ClientModInitializer {
         noBlocksWarned = false;
         retried = false;
         setTarget(new BlockPos(gx, gy, gz));
-        lastX = mc.player.getX();
-        lastZ = mc.player.getZ();
         walking = false;
         phase = Phase.WALK;
         applied = true;
         areaActive = true;
+        Walker.start(gx, gy, gz);
         return null;
+    }
+
+    /** Taste "Stopp / Auto Walk" (Standard G): laufendes Gehen/Abbauen stoppen, sonst Auto Walk an/aus. */
+    static void stopOrWalk(Minecraft mc) {
+        if (DebrisMiner.isRunning()) {
+            DebrisMiner.stop(mc, "Debris Miner aus");
+            return;
+        }
+        if (areaActive) {
+            stopArea(mc, gotoMode ? "Gehen abgebrochen" : blockMode ? "Abbau gestoppt" : "Bereich abgebrochen");
+            return;
+        }
+        walking = !walking;
+        if (mc.player != null) {
+            mc.player.sendSystemMessage(Lang.literal("1912: Auto Walk " + Lang.t(walking ? "AN" : "AUS")));
+        }
     }
 
     /** Waehlt den Block, auf den man gerade schaut. */
     public static boolean selectLookedAt(Minecraft mc) {
         if (mc.player == null || mc.level == null) return false;
         if (!(mc.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
-            mc.player.sendSystemMessage(Component.literal("1912: Kein Block anvisiert"));
+            mc.player.sendSystemMessage(Lang.literal("1912: Kein Block anvisiert"));
             return false;
         }
         selectedBlock = mc.level.getBlockState(hit.getBlockPos()).getBlock();
         TestConfig.save();
-        mc.player.sendSystemMessage(Component.literal("1912: Block gew\u00e4hlt: ")
+        mc.player.sendSystemMessage(Lang.literal("1912: Block gew\u00e4hlt: ")
                 .append(selectedBlock.getName()));
         return true;
     }
 
     public static String selectedBlockName() {
-        return selectedBlock == null ? "keiner" : selectedBlock.getName().getString();
+        return selectedBlock == null ? Lang.t("keiner") : selectedBlock.getName().getString();
     }
 
     /** Startet den Block-Modus. Gibt eine Fehlermeldung zurueck oder null bei Erfolg. */
     public static String startBlock(Minecraft mc) {
         if (selectedBlock == null) return "Erst einen Block w\u00e4hlen";
         if (mc.player == null || mc.level == null) return "Nicht im Spiel";
+        DebrisMiner.stop(mc, null);
+        Walker.reset();
+        walkTarget = null;
         skipped.clear();
         hopeless.clear();
         badObstacles.clear();
@@ -379,11 +374,9 @@ public class TestClient implements ClientModInitializer {
         if (nearestOverall(mc.level, mc.player) == null) {
             blockMode = false;
             String msg = selectedBlockName() + " nicht in der N\u00e4he gefunden";
-            mc.player.sendSystemMessage(Component.literal("1912: " + msg));
+            mc.player.sendSystemMessage(Lang.literal("1912: " + msg));
             return msg;
         }
-        lastX = mc.player.getX();
-        lastZ = mc.player.getZ();
         phase = Phase.WALK;
         applied = true;
         areaActive = true;
@@ -409,6 +402,7 @@ public class TestClient implements ClientModInitializer {
     }
 
     public static void stopArea(Minecraft mc, String message) {
+        Walker.stop(mc);
         areaActive = false;
         blockMode = false;
         gotoMode = false;
@@ -416,41 +410,17 @@ public class TestClient implements ClientModInitializer {
         releaseAll(mc);
         applied = false;
         if (mc.player != null && message != null) {
-            mc.player.sendSystemMessage(Component.literal("1912: " + message));
+            mc.player.sendSystemMessage(Lang.literal("1912: " + Lang.t(message)));
         }
     }
 
     // ---------- Tick ----------
 
     private static void onTick(Minecraft mc) {
-        GuiScale.check(mc);
-        Keybinds.tick(mc);
-        while (toggleKey.consumeClick()) {
-            if (areaActive) {
-                stopArea(mc, gotoMode ? "Gehen abgebrochen" : blockMode ? "Abbau gestoppt" : "Bereich abgebrochen");
-            } else {
-                walking = !walking;
-                if (mc.player != null) {
-                    mc.player.sendSystemMessage(
-                            Component.literal("1912: " + (walking ? "AN" : "AUS")));
-                }
-            }
-        }
-        while (selectKey.consumeClick()) {
-            selectLookedAt(mc);
-        }
-        while (panicKey.consumeClick()) {
-            Keybinds.panic();
-        }
-        while (espKey.consumeClick()) {
-            Esp.enabled = !Esp.enabled;
-            Esp.rescan();
-            TestConfig.save();
-            if (mc.player != null) {
-                mc.player.sendSystemMessage(Component.literal("1912: ESP " + (Esp.enabled ? "AN" : "AUS")));
-            }
-        }
-        Esp.tick(mc);
+        Safe.run("Men\u00fc-Gr\u00f6\u00dfe", () -> GuiScale.check(mc));
+        Safe.run("Tasten", () -> Keybinds.tick(mc));
+        Safe.run("ESP", () -> Esp.tick(mc));
+        Safe.run("Freunde", () -> Friends.tick(mc));
         while (guiKey.consumeClick()) {
             mc.gui.setScreen(new TestScreen(mc.gui.screen()));
         }
@@ -458,6 +428,11 @@ public class TestClient implements ClientModInitializer {
         Entity player = mc.player;
         Level level = mc.level;
         if (player == null || level == null) {
+            DebrisMiner.reset();
+            BotGuard.reset();
+            KillAura.reset();
+            Safe.run("Misc", () -> MiscMods.tickOffline(mc));
+            Walker.reset();
             walking = false;
             areaActive = false;
             blockMode = false;
@@ -473,6 +448,7 @@ public class TestClient implements ClientModInitializer {
         }
         if (autoLogout && logoutArmed && health > 0.0f && health <= LOGOUT_HEALTH) {
             logoutArmed = false;
+            Walker.stop(mc);
             walking = false;
             areaActive = false;
             blockMode = false;
@@ -482,21 +458,32 @@ public class TestClient implements ClientModInitializer {
             releaseAll(mc);
             var connection = mc.getConnection();
             if (connection != null) {
+                MiscMods.holdReconnect = true; // nicht gleich wieder verbinden
                 connection.getConnection().disconnect(
-                        Component.literal("1912: Auto-Logout bei 2 Herzen"));
+                        Lang.literal("1912: Auto-Logout bei 2 Herzen"));
             }
             return;
         }
 
         runAutoDrop(mc);
         runAutoClicker(mc);
-        Movement.endTick(mc);
-        Movement2.endTick(mc);
-        PlayerMods.endTick(mc);
-        RenderMods.tick(mc);
-        MiscMods.tick(mc);
-        CameraMods.endTick(mc);
+        Safe.run("Bot-Verteidigung", () -> BotGuard.tick(mc));
+        Safe.run("Auto Totem/Armor", () -> Survival.tick(mc));
+        Safe.run("Info-Anzeige", () -> InfoHud.tick(mc));
+        Safe.run("Kill Aura", () -> KillAura.tick(mc));
+        Safe.run("Bewegung", () -> Movement.endTick(mc));
+        Safe.run("Bewegung", () -> Movement2.endTick(mc));
+        Safe.run("Spieler", () -> PlayerMods.endTick(mc));
+        Safe.run("Render", () -> RenderMods.tick(mc));
+        Safe.run("Misc", () -> MiscMods.tick(mc));
+        Safe.run("Inventar", () -> InvLayout.tick(mc));
+        Safe.run("Freecam", () -> CameraMods.endTick(mc));
 
+        Safe.run("Debris Miner", () -> DebrisMiner.tickCommands(mc));
+        if (DebrisMiner.isRunning()) {
+            Safe.run("Debris Miner", () -> DebrisMiner.tick(mc));
+            return;
+        }
         if (areaActive) {
             runArea(mc, level, player);
             return;
@@ -512,6 +499,10 @@ public class TestClient implements ClientModInitializer {
             return;
         }
         applied = true;
+        if (BotGuard.fighting()) {
+            releaseAll(mc); // die Bot-Verteidigung kaempft: kurz stehen bleiben
+            return;
+        }
 
         switch (phase) {
             case WALK -> {
@@ -553,67 +544,16 @@ public class TestClient implements ClientModInitializer {
     private static final double REACH_SQ = REACH * REACH;
     // Block-Mittelpunkt hoechstens so weit weg, damit irgendein Punkt des Blocks noch in Reichweite sein kann
     private static final double CULL_SQ = (REACH + 0.9) * (REACH + 0.9);
-    private static final double ARRIVE_DIST = 0.6;
     private static final int MAX_MINE_TICKS = 600;
-    private static final int MAX_DIG_TICKS = 300;
-    private static final int MAX_STUCK_TICKS = 40;
-    private static final int MAX_NO_PROGRESS_TICKS = 120;
-    private static final int MAX_WALK_TICKS = 2400;
 
     private static final int[][] DIRS = {
             {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
     private static final double[][] FACE_POINTS = {
             {0.5, 0.95, 0.5}, {0.5, 0.05, 0.5}, {0.95, 0.5, 0.5},
             {0.05, 0.5, 0.5}, {0.5, 0.5, 0.95}, {0.5, 0.5, 0.05}};
-
-    private static double eyeDist2(Entity p, BlockPos b) {
-        double dx = b.getX() + 0.5 - p.getX();
-        double dy = b.getY() + 0.5 - p.getEyeY();
-        double dz = b.getZ() + 0.5 - p.getZ();
-        return dx * dx + dy * dy + dz * dz;
-    }
-
     private static void setTarget(BlockPos pos) {
         areaTarget = pos;
-        walkTicks = 0;
-        stuckTicks = 0;
         mineTicks = 0;
-        noProgressTicks = 0;
-        bestDist = Double.MAX_VALUE;
-        digPos = null;
-        digTicks = 0;
-        pillarGoalY = NO_PILLAR;
-        pillarTicks = 0;
-        stuckPillars = 0;
-        pillarBase = null;
-        stallValid = false;
-        stallTicks = 0;
-        stepUpTicks = 0;
-    }
-
-    /** true, wenn sich der Spieler seit MAX_STALL_TICKS nicht mehr nennenswert bewegt und nichts abgebaut hat. */
-    private static boolean stalled(Entity p) {
-        if (!stallValid || p.distanceToSqr(stallX, stallY, stallZ) > 2.25) {
-            stallX = p.getX();
-            stallY = p.getY();
-            stallZ = p.getZ();
-            stallValid = true;
-            stallTicks = 0;
-            return false;
-        }
-        return ++stallTicks > MAX_STALL_TICKS;
-    }
-
-    /** Beendet das Graben; ein inzwischen abgebauter Block zaehlt als Fortschritt. */
-    private static void clearDig(Level level) {
-        if (digPos != null && !isMineable(level, digPos)) stallTicks = 0;
-        digPos = null;
-    }
-
-    /** Solider Block ueber dem Kopf (2 Bloecke ueber den Fuessen), sonst null. */
-    private static BlockPos ceilingBlock(Level level, Entity p) {
-        BlockPos c = p.blockPosition().above(2);
-        return solid(level, c) ? c : null;
     }
 
     private static void skipTarget(Minecraft mc) {
@@ -639,150 +579,41 @@ public class TestClient implements ClientModInitializer {
         return "Bereich fertig (" + left.size() + " Bl\u00f6cke nicht erreichbar)";
     }
 
+    /** Koordinaten-Modus: Wegsuche und Ablaufen uebernimmt {@link Walker} (wie Baritone). */
     private static void runGoto(Minecraft mc, Level level, Entity player) {
         applied = true;
-        if (mc.gui.screen() != null) {
-            releaseAll(mc);
+        if (mc.gui.screen() != null || mc.player == null || BotGuard.fighting()) {
+            releaseAll(mc); // Menue offen oder die Bot-Verteidigung kaempft: stehen bleiben
+            Walker.release(mc);
             return;
         }
-        double moved = Math.abs(player.getX() - lastX) + Math.abs(player.getZ() - lastZ);
-        lastX = player.getX();
-        lastZ = player.getZ();
-
-        double dx = gx + 0.5 - player.getX();
-        double dz = gz + 0.5 - player.getZ();
-        double horiz = Math.sqrt(dx * dx + dz * dz);
-        int footY = player.blockPosition().getY();
-
-        if (horiz < 1.2 && Math.abs(footY - gy) <= 1) {
-            stopArea(mc, "Ziel erreicht");
-            return;
+        String done;
+        try {
+            done = Walker.tick(mc, level, mc.player);
+        } catch (RuntimeException | LinkageError e) {
+            Safe.report("Gehen", e);
+            done = "Gehen abgebrochen (Fehler)";
         }
-        if (++walkTicks > MAX_GOTO_TICKS) {
-            stopArea(mc, "Ziel nicht erreichbar (Zeit abgelaufen)");
-            return;
-        }
-        if (stalled(player)) {
-            stopArea(mc, "Ziel nicht erreichbar (steckt fest)");
-            return;
-        }
-
-        // Gerade dabei, nach oben zu bauen
-        if (pillarGoalY != NO_PILLAR) {
-            if (!pillarStep(mc, level, player)) {
-                stopArea(mc, "Ziel nicht erreichbar (Hochbauen fehlgeschlagen)");
-            }
-            return;
-        }
-
-        // Direkt ueber/unter dem Ziel: senkrecht handeln
-        if (horiz < ARRIVE_DIST) {
-            // digBlock/pillarStep setzen den Zaehler zurueck; nur Leerlauf (z.B. auf Bedrock) zaehlt hoch
-            if (++noProgressTicks > MAX_GOTO_NO_PROGRESS) {
-                stopArea(mc, "Ziel nicht erreichbar (kein Fortschritt)");
-                return;
-            }
-            if (gy < footY) {
-                BlockPos under = player.blockPosition().below();
-                if (isMineable(level, under) && !badObstacles.contains(under.asLong())) {
-                    if (!safeToDigDown(level, under) || !digBlock(mc, player, under)) {
-                        stopArea(mc, "Ziel nicht erreichbar (nach unten graben nicht m\u00f6glich)");
-                    }
-                } else {
-                    releaseAll(mc);
-                }
-            } else if (findBuildSlot(mc) >= 0) {
-                pillarGoalY = gy;
-                pillarTicks = 0;
-            } else {
-                stopArea(mc, "Ziel liegt h\u00f6her, aber keine Baubl\u00f6cke in der Hotbar");
-            }
-            return;
-        }
-
-        // Kommt das Ziel naeher? Sonst aufgeben.
-        if (horiz < bestDist - 0.25) {
-            bestDist = horiz;
-            noProgressTicks = 0;
-            stuckPillars = 0;
-        } else if (++noProgressTicks > MAX_GOTO_NO_PROGRESS) {
-            stopArea(mc, "Ziel nicht erreichbar (kein Fortschritt)");
-            return;
-        }
-
-        float targetYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
-
-        BlockPos obstacle = autoMine ? findObstacle(level, player, targetYaw) : null;
-        boolean stepUp = false;
-        if (moved >= 0.02) stepUpTicks = 0;
-        if (obstacle != null && canStepUp(level, player, targetYaw)) {
-            BlockPos ceil = ceilingBlock(level, player);
-            if (ceil != null && isObstacle(level, ceil)) {
-                // Decke ueber uns: erst abbauen, sonst stoesst man beim Hochspringen mit dem Kopf an
-                digBlock(mc, player, ceil);
-                return;
-            }
-            if (ceil == null && stepUpTicks < MAX_STEPUP_TICKS) {
-                // Stufe von einem Block Hoehe: hochspringen. Klappt das nicht, wird die Stufe abgebaut.
-                if (moved < 0.02) stepUpTicks++;
-                obstacle = null;
-                stepUp = true;
-            }
-        }
-        if (obstacle != null) {
-            digBlock(mc, player, obstacle);
-            return;
-        }
-        clearDig(level);
-        mc.options.keyAttack.setDown(false);
-
-        // Luecke vor uns: erst nach unten schauen und den Block setzen
-        if (bridgeAhead(mc, level, player, targetYaw)) {
-            return;
-        }
-
-        if (!rotateWalk(player, targetYaw)) {
-            stopMove(mc);
-            return;
-        }
-
-        if (moved < 0.02) {
-            stuckTicks++;
-        } else {
-            stuckTicks = 0;
-        }
-        if (stuckTicks > MAX_STUCK_TICKS) {
-            if (stuckPillars < MAX_STUCK_PILLARS && gy >= footY - 1 && findBuildSlot(mc) >= 0) {
-                stuckPillars++;
-                pillarGoalY = footY + 2;
-                pillarTicks = 0;
-                stuckTicks = 0;
-                return;
-            }
-            stopArea(mc, "Ziel nicht erreichbar (h\u00e4ngt fest)");
-            return;
-        }
-        mc.options.keyUp.setDown(true);
-        mc.options.keyJump.setDown(stuckTicks > 8 || stepUp);
-        mc.options.keySprint.setDown(sprint && stuckTicks == 0);
+        if (done != null) stopArea(mc, done);
     }
 
+    /**
+     * Bereich abbauen / Bloecke suchen: was in Reichweite und sichtbar ist, wird abgebaut. Sonst laeuft
+     * der Spieler mit der Wegsuche ({@link Walker}, wie bei "Zu Koordinaten gehen") zum naechsten Block -
+     * springt, schwimmt, baut Bruecken und graebt sich nur durch, wo es noetig ist.
+     */
     private static void runArea(Minecraft mc, Level level, Entity player) {
         if (gotoMode) {
             runGoto(mc, level, player);
             return;
         }
         applied = true;
-        if (mc.gui.screen() != null) {
-            releaseAll(mc);
+        if (mc.gui.screen() != null || mc.player == null || BotGuard.fighting()) {
+            releaseAll(mc); // Menue offen oder die Bot-Verteidigung kaempft: stehen bleiben
+            Walker.release(mc);
             return;
         }
         if (blockMode) updateBounds(player);
-
-        // Bewegung seit dem letzten Tick (fuer die Haengen-Erkennung)
-        double moved = Math.abs(player.getX() - lastX) + Math.abs(player.getZ() - lastZ);
-        lastX = player.getX();
-        lastZ = player.getZ();
 
         if (areaTarget != null && !isWanted(level, areaTarget)) {
             setTarget(null);
@@ -798,10 +629,19 @@ public class TestClient implements ClientModInitializer {
             }
         }
 
+        // Mitten im Springen, Hochbauen oder Brueckenbauen nicht unterbrechen
+        if (point != null && Walker.isActive() && Walker.inCriticalMove(mc.player)) {
+            walkOn(mc, level);
+            return;
+        }
+
         // 2. Abbauen
         if (point != null) {
+            if (Walker.isActive()) {
+                Walker.stop(mc);
+                walkTarget = null;
+            }
             stopMove(mc);
-            digPos = null;
             boolean aimed = aimAt(player, point[0], point[1], point[2]);
             mc.options.keyAttack.setDown(aimed);
             mineTicks++;
@@ -812,6 +652,7 @@ public class TestClient implements ClientModInitializer {
             }
             return;
         }
+        mc.options.keyAttack.setDown(false);
 
         // 3. Nichts in Reichweite: naechsten Block im Bereich als Laufziel waehlen.
         if (areaTarget == null) {
@@ -829,132 +670,37 @@ public class TestClient implements ClientModInitializer {
             setTarget(t);
         }
 
-        // 4. Hinlaufen
-        walkTicks++;
-        if (walkTicks > MAX_WALK_TICKS || stalled(player)) {
-            skipTarget(mc);
-            return;
+        // 4. Hinlaufen mit der Wegsuche
+        if (!Walker.isActive() || !areaTarget.equals(walkTarget)) {
+            Walker.start(areaTarget.getX(), areaTarget.getY(), areaTarget.getZ(), true);
+            walkTarget = areaTarget;
         }
+        walkOn(mc, level);
+    }
 
-        // Gerade dabei, nach oben zu bauen
-        if (pillarGoalY != NO_PILLAR) {
-            if (!pillarStep(mc, level, player)) {
-                skipTarget(mc);
-            }
-            return;
+    /** Einen Tick mit dem Walker laufen; klappt es nicht (kein Weg, angekommen und nichts zu sehen): naechster Block. */
+    private static void walkOn(Minecraft mc, Level level) {
+        String done;
+        try {
+            done = Walker.tick(mc, level, mc.player);
+        } catch (RuntimeException | LinkageError e) {
+            Safe.report("Laufen", e);
+            done = "Fehler";
         }
-
-        // Kommt der Block ueberhaupt naeher? Sonst (Kreislaufen, Haengen) ueberspringen.
-        double dist = Math.sqrt(eyeDist2(player, areaTarget));
-        if (dist < bestDist - 0.25) {
-            bestDist = dist;
-            noProgressTicks = 0;
-        } else if (++noProgressTicks > MAX_NO_PROGRESS_TICKS) {
-            skipTarget(mc);
-            return;
+        if (done != null) {
+            Walker.stop(mc);
+            walkTarget = null;
+            // angekommen und der Block ist zu sehen: im naechsten Tick wird er abgebaut
+            boolean arrived = Walker.ARRIVED.equals(done) && areaTarget != null
+                    && visiblePoint(level, mc.player, areaTarget) != null;
+            if (!arrived) skipTarget(mc); // wird spaeter noch einmal versucht, wenn ringsum abgebaut ist
         }
-
-        double dx = areaTarget.getX() + 0.5 - player.getX();
-        double dz = areaTarget.getZ() + 0.5 - player.getZ();
-        double horiz = Math.sqrt(dx * dx + dz * dz);
-
-        // 4a. Direkt ueber/unter dem Ziel angekommen, aber noch nicht in Reichweite:
-        //     Nicht weiter drehen und laufen (das war das Im-Kreis-Drehen), sondern senkrecht handeln.
-        if (horiz < ARRIVE_DIST) {
-            if (areaTarget.getY() < player.blockPosition().getY()) {
-                // Ziel liegt tiefer: Block unter den Fuessen abbauen und nachrutschen
-                BlockPos under = player.blockPosition().below();
-                if (isMineable(level, under) && !badObstacles.contains(under.asLong())) {
-                    if (!safeToDigDown(level, under) || !digBlock(mc, player, under)) {
-                        skipTarget(mc);
-                    }
-                } else {
-                    // Luft unter den Fuessen: wir fallen gerade
-                    releaseAll(mc);
-                }
-            } else {
-                // Ziel liegt darueber: hochbauen, wenn Baubloecke da sind
-                if (areaTarget.getY() > player.blockPosition().getY() && findBuildSlot(mc) >= 0) {
-                    pillarGoalY = areaTarget.getY();
-                    pillarTicks = 0;
-                } else {
-                    skipTarget(mc);
-                }
-            }
-            return;
-        }
-
-        float targetYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
-
-        // 4b. Hindernisse auf dem Weg abbauen. Die Suche richtet sich nach der Laufrichtung
-        //     (nicht nach der aktuellen Blickrichtung), sonst arbeiten Zielen und Drehen gegeneinander.
-        BlockPos obstacle = findObstacle(level, player, targetYaw);
-        boolean stepUp = false;
-        if (moved >= 0.02) stepUpTicks = 0;
-        if (obstacle != null && canStepUp(level, player, targetYaw)) {
-            BlockPos ceil = ceilingBlock(level, player);
-            if (ceil != null && isObstacle(level, ceil)) {
-                // Decke ueber uns: erst abbauen, sonst stoesst man beim Hochspringen mit dem Kopf an
-                digBlock(mc, player, ceil);
-                return;
-            }
-            if (ceil == null && stepUpTicks < MAX_STEPUP_TICKS) {
-                // Stufe von einem Block Hoehe: hochspringen. Klappt das nicht, wird die Stufe abgebaut.
-                if (moved < 0.02) stepUpTicks++;
-                obstacle = null;
-                stepUp = true;
-            }
-        }
-        if (obstacle != null) {
-            digBlock(mc, player, obstacle);
-            return;
-        }
-        clearDig(level);
-        mc.options.keyAttack.setDown(false);
-
-        // Luecke vor uns: erst nach unten schauen und die Bruecke bauen
-        if (bridgeAhead(mc, level, player, targetYaw)) {
-            return;
-        }
-
-        // 4c. In Laufrichtung drehen (steht dabei still) und loslaufen
-        if (!rotateWalk(player, targetYaw)) {
-            stopMove(mc);
-            return;
-        }
-
-        if (moved < 0.02) {
-            stuckTicks++;
-        } else {
-            stuckTicks = 0;
-        }
-        if (stuckTicks > MAX_STUCK_TICKS) {
-            // Haengt an einer Wand: zwei Bloecke hochbauen und weiter
-            if (stuckPillars < MAX_STUCK_PILLARS
-                    && areaTarget.getY() >= player.blockPosition().getY() - 1
-                    && findBuildSlot(mc) >= 0) {
-                stuckPillars++;
-                pillarGoalY = player.blockPosition().getY() + 2;
-                pillarTicks = 0;
-                stuckTicks = 0;
-                return;
-            }
-            skipTarget(mc);
-            return;
-        }
-        mc.options.keyUp.setDown(true);
-        mc.options.keyJump.setDown(stuckTicks > 8 || stepUp);
-        mc.options.keySprint.setDown(false);
     }
 
     // ---------- Bauen (Bruecken und Saeulen) ----------
 
-    private static boolean solid(Level level, BlockPos pos) {
-        return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
-    }
-
     /** Nur guenstige Bloecke zum Bauen verwenden, keine wertvollen. */
-    private static boolean isBuildBlock(Block b) {
+    static boolean isBuildBlock(Block b) {
         return b == Blocks.COBBLESTONE || b == Blocks.DIRT || b == Blocks.NETHERRACK
                 || b == Blocks.COBBLED_DEEPSLATE || b == Blocks.STONE || b == Blocks.ANDESITE
                 || b == Blocks.DIORITE || b == Blocks.GRANITE || b == Blocks.TUFF
@@ -962,7 +708,7 @@ public class TestClient implements ClientModInitializer {
     }
 
     /** Hotbar-Slot mit einem Baublock oder -1. */
-    private static int findBuildSlot(Minecraft mc) {
+    static int findBuildSlot(Minecraft mc) {
         if (mc.player == null) return -1;
         var inv = mc.player.getInventory();
         for (int i = 0; i < 9; i++) {
@@ -975,13 +721,13 @@ public class TestClient implements ClientModInitializer {
     }
 
     /** Platziert einen Baublock an placePos, indem gegen 'against' geklickt wird. */
-    private static boolean placeBlock(Minecraft mc, BlockPos against, Direction face, Vec3 hitVec, BlockPos placePos) {
+    static boolean placeBlock(Minecraft mc, BlockPos against, Direction face, Vec3 hitVec, BlockPos placePos) {
         if (mc.player == null || mc.gameMode == null) return false;
         int slot = findBuildSlot(mc);
         if (slot < 0) {
             if (!noBlocksWarned) {
                 noBlocksWarned = true;
-                mc.player.sendSystemMessage(Component.literal(
+                mc.player.sendSystemMessage(Lang.literal(
                         "1912: Keine Baubl\u00f6cke (z.B. Bruchstein) in der Hotbar"));
             }
             return false;
@@ -997,126 +743,6 @@ public class TestClient implements ClientModInitializer {
         return true;
     }
 
-    /** Ein Block hohe Stufe vor uns, darueber frei: springen reicht. */
-    private static boolean canStepUp(Level level, Entity p, float yaw) {
-        if (!p.onGround()) return false;
-        double rad = Math.toRadians(yaw);
-        double x = p.getX() - Math.sin(rad) * 0.9;
-        double z = p.getZ() + Math.cos(rad) * 0.9;
-        return solid(level, BlockPos.containing(x, p.getY() + 0.1, z))
-                && !solid(level, BlockPos.containing(x, p.getY() + 1.1, z))
-                && !solid(level, BlockPos.containing(x, p.getY() + 2.1, z));
-    }
-
-    /** Tiefe Luecke direkt vor uns (und das Ziel nicht tiefer): Block davor platzieren. */
-    private static boolean bridgeAhead(Minecraft mc, Level level, Entity p, float yaw) {
-        if (!p.onGround() || areaTarget == null) return false;
-        if (areaTarget.getY() < p.blockPosition().getY() - 1) return false;
-        BlockPos below = p.blockPosition().below();
-        if (!solid(level, below)) return false;
-        Direction d = Direction.fromYRot(yaw);
-        BlockPos ahead = below.relative(d);
-        if (solid(level, ahead) || solid(level, ahead.below()) || solid(level, ahead.below(2))) {
-            return false;
-        }
-        stopMove(mc);
-        stuckTicks = 0;
-        noProgressTicks = 0;
-        Vec3 face = Vec3.atCenterOf(below).add(d.getStepX() * 0.5, 0.0, d.getStepZ() * 0.5);
-        // erst nach unten auf die Kante schauen, dann platzieren
-        if (!aimAt(p, face.x, face.y, face.z)) return true;
-        boolean ok = placeBlock(mc, below, d, face, ahead);
-        restoreLook = true; // danach langsam wieder nach oben schauen
-        return ok;
-    }
-
-    /** Ein Schritt beim Hochbauen: springen und im Sprung den Block darunter setzen. */
-    private static boolean pillarStep(Minecraft mc, Level level, Entity p) {
-        if (p.onGround() && p.blockPosition().getY() >= pillarGoalY) {
-            pillarGoalY = NO_PILLAR;
-            pillarBase = null;
-            mc.options.keyJump.setDown(false);
-            restoreLook = true; // fertig gebaut: Blick langsam wieder anheben
-            return true;
-        }
-        if (++pillarTicks > MAX_PILLAR_TICKS) return false;
-        stopMove(mc);
-        mc.options.keyAttack.setDown(false);
-        stuckTicks = 0;
-        noProgressTicks = 0;
-
-        if (p.onGround()) {
-            BlockPos ceiling = p.blockPosition().above(2);
-            if (isMineable(level, ceiling) && !placed.contains(ceiling.asLong())) {
-                // Decke im Weg: erst abbauen
-                return digBlock(mc, p, ceiling);
-            }
-            pillarBase = p.blockPosition().below();
-            if (!solid(level, pillarBase)) {
-                pillarBase = null;
-                return true;
-            }
-            // erst nach unten schauen, dann abspringen
-            Vec3 top = Vec3.atCenterOf(pillarBase).add(0.0, 0.5, 0.0);
-            if (!aimAt(p, top.x, top.y, top.z)) {
-                mc.options.keyJump.setDown(false);
-                return true;
-            }
-            mc.options.keyJump.setDown(true);
-            return true;
-        }
-
-        // in der Luft: Blick bleibt nach unten; sobald hoch genug, den Block auf den Untergrund setzen
-        if (pillarBase != null) {
-            Vec3 face = Vec3.atCenterOf(pillarBase).add(0.0, 0.5, 0.0);
-            boolean aimed = aimAt(p, face.x, face.y, face.z);
-            if (aimed && p.getY() >= pillarBase.getY() + 2.05) {
-                BlockPos placePos = pillarBase.above();
-                if (level.getBlockState(placePos).isAir()) {
-                    if (!placeBlock(mc, pillarBase, Direction.UP, face, placePos)) {
-                        return false;
-                    }
-                }
-                pillarBase = null;
-                mc.options.keyJump.setDown(false);
-            }
-        }
-        return true;
-    }
-
-    /** Baut einen Block auf dem Weg ab. Gibt false zurueck, wenn er sich nicht abbauen laesst. */
-    private static boolean digBlock(Minecraft mc, Entity player, BlockPos pos) {
-        stopMove(mc);
-        if (pos.equals(digPos)) {
-            digTicks++;
-        } else {
-            if (digPos != null && mc.level != null && !isMineable(mc.level, digPos)) stallTicks = 0;
-            digPos = pos;
-            digTicks = 0;
-        }
-        if (digTicks > MAX_DIG_TICKS) {
-            badObstacles.add(pos.asLong());
-            digPos = null;
-            mc.options.keyAttack.setDown(false);
-            return false;
-        }
-        mc.options.keyAttack.setDown(aimAt(player, pos));
-        stuckTicks = 0;
-        noProgressTicks = 0;
-        return true;
-    }
-
-    /** Nicht nach unten graben, wenn darunter Fluessigkeit ist oder man tiefer als 3 Bloecke faellt. */
-    private static boolean safeToDigDown(Level level, BlockPos under) {
-        for (int i = 1; i <= 3; i++) {
-            BlockPos p = under.below(i);
-            var bs = level.getBlockState(p);
-            if (!bs.getFluidState().isEmpty()) return false;
-            if (!bs.getCollisionShape(level, p).isEmpty()) return true;
-        }
-        return false;
-    }
-
     /** Naechster Block in Reichweite, den man wirklich sehen kann (setzt reachPoint). */
     private static BlockPos nearestReachable(Level level, Entity p) {
         reachPoint = null;
@@ -1129,12 +755,12 @@ public class TestClient implements ClientModInitializer {
                     BlockPos pos = new BlockPos(x, y, z);
                     if (hopeless.contains(pos.asLong())) continue;
                     if (!isWanted(level, pos)) continue;
-                    if (eyeDist2(p, pos) > CULL_SQ) continue;
+                    if (Look.eyeDist2(p, pos) > CULL_SQ) continue;
                     candidates.add(pos);
                 }
             }
         }
-        candidates.sort(Comparator.comparingDouble(pos -> eyeDist2(p, pos)));
+        candidates.sort(Comparator.comparingDouble(pos -> Look.eyeDist2(p, pos)));
         for (BlockPos pos : candidates) {
             double[] pt = visiblePoint(level, p, pos);
             if (pt != null) {
@@ -1155,8 +781,11 @@ public class TestClient implements ClientModInitializer {
                     BlockPos pos = new BlockPos(x, y, z);
                     long key = pos.asLong();
                     if (skipped.contains(key) || hopeless.contains(key)) continue;
+                    double score = Math.sqrt(Look.eyeDist2(p, pos));
+                    if (score >= bestScore) continue;
                     if (!isWanted(level, pos)) continue;
-                    double score = eyeDist2(p, pos);
+                    // freiliegende Bloecke bevorzugen: verschuettete sind erst nach den Nachbarn dran
+                    if (!exposed(level, pos)) score += 3.0;
                     if (score < bestScore) {
                         bestScore = score;
                         best = pos;
@@ -1167,12 +796,21 @@ public class TestClient implements ClientModInitializer {
         return best;
     }
 
+    /** Hat der Block mindestens eine freie Seite? */
+    private static boolean exposed(Level level, BlockPos b) {
+        for (int[] d : DIRS) {
+            BlockPos n = b.offset(d[0], d[1], d[2]);
+            if (level.getBlockState(n).getCollisionShape(level, n).isEmpty()) return true;
+        }
+        return false;
+    }
+
     /**
      * Sucht einen Punkt auf dem Block, der in Reichweite liegt und auf den man direkt sehen kann.
      * Es wird nicht nur die Mitte geprueft, sondern auch die freiliegenden Seitenflaechen -
      * so sind auch Bloecke erreichbar, die nur teilweise sichtbar sind.
      */
-    private static double[] visiblePoint(Level level, Entity p, BlockPos b) {
+    static double[] visiblePoint(Level level, Entity p, BlockPos b) {
         boolean[] open = new boolean[6];
         boolean any = false;
         for (int i = 0; i < 6; i++) {
@@ -1281,14 +919,6 @@ public class TestClient implements ClientModInitializer {
 
     private static boolean rotateTo(Entity p, float targetYaw, float targetPitch, float tolerance) {
         return rotateTo(p, targetYaw, targetPitch, tolerance, 12.0f, 8.0f, 0.3f);
-    }
-
-    /** Laufrichtung einstellen; nach dem Platzieren wird der Blick dabei langsam wieder angehoben. */
-    private static boolean rotateWalk(Entity p, float targetYaw) {
-        if (!restoreLook) return rotateTo(p, targetYaw, 10.0f, 15.0f);
-        boolean ok = rotateTo(p, targetYaw, 10.0f, 15.0f, 12.0f, 3.0f, 0.12f);
-        if (Math.abs(10.0f - p.getXRot()) < 1.5f) restoreLook = false;
-        return ok;
     }
 
     private static boolean rotateTo(Entity p, float targetYaw, float targetPitch, float tolerance,

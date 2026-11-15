@@ -1,5 +1,6 @@
 package de.test.mixin;
 
+import de.test.Safe;
 import de.test.PlayerMods;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -13,6 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GameRendererMixin {
     @Inject(method = "pick(F)V", at = @At("TAIL"), require = 0)
     private void test$afterPick(float partialTick, CallbackInfo ci) {
-        PlayerMods.afterPick(Minecraft.getInstance());
+        Safe.run("No Mining Trace", () -> PlayerMods.afterPick(Minecraft.getInstance()));
     }
 }

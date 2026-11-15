@@ -1,0 +1,973 @@
+# 1912 Client: English (Nummer aus keys.txt TAB Übersetzung). Fehlende Nummern bleiben unverändert.
+1	Mine Area
+2	STOP mining
+3	START mining
+4	Mines every block between two corners.
+5	Area
+6	Corner 1
+7	Corner 2
+8	Size: 
+9	 blocks (max. 50000)
+10	Display
+11	Highlight targets
+12	Area outline
+13	Outline style
+14	Area cancelled
+15	Players
+17	Durability: 
+18	Food: 
+19	  Saturation: 
+20	 more
+21	Key Overview
+22	All keys you assigned in the main menu with “Assign keys”. Hold = the module is only on while the key is held down.
+23	Keys
+24	No keys assigned yet. In the main menu click “Assign keys”, then click a module and press a key.
+25	Hold instead of toggle
+26	Remove keys
+27	Remove key of “
+28	”
+29	Select block
+30	Mine Block
+31	Pick block from list (
+32	Pick a block from the list of all blocks\nor take the one you are looking at.
+33	Use targeted block
+34	Look at a block first
+35	Search
+36	Radius (blocks)
+37	Height (blocks)
+38	Mining stopped
+39	§c1912: Could not create the camera
+40	§e1912: Freecam starts as soon as you are on the ground
+42	Attacks in time with the tool cooldown.
+43	General
+44	Only while holding
+45	Also attack earlier
+46	Randomness (%)
+47	Customize design
+48	This is how your menu looks. You see changes right away.
+49	Language / Sprache: 
+50	Modules
+51	Mode
+52	Default shows only the simple modules. Expert shows all of them.
+53	In-game display
+54	Show active modules
+55	List size
+57	Shows all modules that are currently on in the chosen corner.
+58	Colors
+59	Color scheme
+60	Preview
+61	Enabled module
+62	Custom colors
+63	Header color
+64	Accent color
+65	Hex code like 9A74E6. Leave empty = color from the color scheme.
+66	Size
+67	Menu size
+68	Column width
+69	Auto: as large as possible, but all columns fit side by side. Columns get wider on their own when a name needs more room.
+71	Show logo
+72	Logo size
+73	Effects
+74	Animations
+75	Fewer effects
+76	Animations off = everything appears instantly. Fewer effects = calmer background without particles, for weaker PCs.
+77	Reset everything to default
+80	 selected
+81	Shows targets through walls.\nFirst person only.
+82	Targets
+84	Items on the ground
+85	Blocks
+86	Appearance
+87	Outline
+88	Scan speed
+89	Wave
+90	Lines
+91	Name + distance
+92	Colors (empty = default)
+94	Range
+96	Block radius
+97	Select mobs (
+99	Select items (
+101	Select blocks (
+102	ESP: Blocks
+103	Empty mob or item selection = show all.
+104	Search
+105	Default
+106	Here
+107	Active
+108	Nothing found for “
+109	Go to Coordinates
+110	STOP walking
+111	Start walking
+112	Finds the best path to the target: walks straight stretches in one go,\njumps up steps and over gaps, swims and only mines\nwhen there is no other way.
+113	Target
+114	Coordinates
+115	Ready
+116	Path
+117	Mine blocks
+118	Place blocks
+119	Jump over gaps
+120	Sprint
+121	Max. fall height
+122	Show path
+123	Watch from the side (Free Look)
+124	Highlight target
+125	Walking cancelled
+126	Sword
+127	Pickaxe
+128	Axe
+129	Shovel
+130	Hoe
+131	Building blocks (cobblestone, dirt, stone)
+132	Any block
+133	Food
+134	Ender pearls
+135	Water bucket
+136	Lava bucket
+137	Golden apples
+138	Totem of Undying
+139	Shield
+140	Bow
+141	Crossbow
+142	Arrows
+143	Firework rockets
+144	Flint and steel
+145	Set up the layout first
+146	Main menu: Sort inventory, dots
+147	Inventory not sorted
+148	Close the chest/menu first
+149	Inventory is already sorted
+150	Inventory sorted
+151	 stacks moved
+152	not everything could be moved
+153	Sort Inventory
+154	Offhand
+156	Inventory 
+157	Set what should go in which slot. The key for\n“Sort Inventory” then arranges your inventory like this.\nFor tools it always takes the best one (e.g. diamond before iron).
+158	Layout
+159	Copy from my inventory
+160	Load suggestion (tools first)
+161	Clear all
+162	Sorting
+163	Merge equal stacks first
+164	Sort now
+165	Key: 
+166	. Change it in the main menu with “Assign keys”.
+167	No key yet: in the main menu click “Assign keys”, then “Sort Inventory” and press the key you want.
+168	Inventory
+170	Offhand
+171	any (not rearranged)
+172	   ·   Click to change
+173	Click a slot to set what should go there.
+174	What should go here? For tools it always takes the best one,\nfor food the most nourishing, otherwise the largest stack.
+175	Tools, blocks and food
+176	Items
+177	Other
+178	Other item: 
+179	Choose another item
+180	Leave empty (anything can go here)
+181	: Choose item
+182	All modules off / on
+183	Stop / Auto Walk
+184	Server Protection
+185	No module was on
+186	All modules off (
+187	Again
+188	: back on
+189	 module
+190	 modules
+191	 back on
+193	Space
+194	Backspace
+195	Insert
+196	Delete
+197	Right
+198	Left
+199	Down
+200	Up
+201	Page Up
+202	Page Down
+203	Home
+204	End
+205	Caps Lock
+206	Left Shift
+207	Right Shift
+208	Left Ctrl
+209	Right Ctrl
+217	Pause
+218	Print Screen
+219	Scroll Lock
+221	Key 
+222	Language / Sprache
+223	Language of the 1912 menu. “Automatic” uses the language set in Minecraft.
+224	Language
+225	Speed
+226	Haste
+227	Resistance
+228	Jump Boost
+229	Strength
+230	None
+232	Stronger primary effect
+233	§c1912: Book Bot - hold a book and quill first
+235	 pages written
+236	 and signed
+237	In the main menu
+238	Playing on 
+239	Playing multiplayer
+240	Playing singleplayer
+241	§e1912: Server Protection - on 
+242	 all modules were turned off.
+243	§a1912: Beacon set: 
+244	§e1912: Tool almost broken (
+245	§c1912: Totem used up!
+247	Limits outgoing packets to avoid “too many\npackets” kicks.
+248	Max. packets/tick
+250	Automatically reconnects to the last\nserver after a kick.
+251	Delay (s)
+253	Chooses beacon effects regardless of the pyramid size.\nOpen the beacon, put in a payment item (e.g. iron ingot) - done.
+254	Effects
+255	Primary effect
+256	Secondary effect
+257	Minecraft only gives the secondary effect with a full pyramid (4 levels).
+259	Improves the chat.
+260	Time in front
+261	Hide repeats
+262	Time window (s)
+264	Writes the book and quill in your hand\nand then turns itself off.
+265	Content
+266	Text per page
+267	Pages
+268	Signing
+269	Sign book
+270	Title
+272	Shows in Discord that you are playing.\nDiscord must be running on this PC.
+273	App ID
+274	Second line
+275	Show server address
+277	App ID: create an application at discord.com/developers/applications. Its name appears in Discord as the game. Then enter the Application ID here.
+279	Sorts your inventory by your own layout\n(sword, tools, blocks, pearls and more in fixed slots).
+280	Set up layout
+282	Automatically messages nearby players.\n%name% is replaced.
+284	Pause per player (s)
+286	Plays a song on note blocks near you.\nStand so that you can reach all of them (about 4 blocks).
+287	Song
+288	Speed (ticks per note)
+289	Repeat
+290	Tune
+291	Pause per click (ticks)
+292	Custom file: config/
+293	 - notes separated by spaces: c d e f g a h (h = B), c2 = higher octave, c# = semitone, - = rest, c+e+g = chord. Not in creative mode. There must be air above every note block.
+295	Reports important events in chat.
+296	Durability
+297	Warn at (%)
+298	Totem used up
+300	Blocks selected outgoing packets.\nCareful: can disconnect you from the server.
+301	Block
+302	Hitting (swing)
+303	Interact
+304	Block action
+305	Movement
+307	Reports a different client brand to the\nserver when connecting (e.g. vanilla).\nApplies from the next connection.
+308	Brand
+310	Mutes sounds sent by the server\n(mobs, portals, thunder, explosions and more).
+311	Sounds
+312	Parts of the name, separated by commas - e.g. ghast, portal, thunder, explode, villager.
+314	Sends a message repeatedly.\nStart with / for commands.
+315	Interval (s)
+316	Automatically turns off all modules when joining certain servers - so you don't accidentally have something on there that is forbidden.
+318	Addresses
+319	Parts of the address, separated by commas. Press J to get the modules back.
+321	Controls several of your own games together: one is the host,\nthe others connect as workers and join in.
+322	Connection
+323	Role
+324	Host address
+326	Other PCs too (LAN)
+327	Auto: the first game on this PC becomes the host, all others become workers.
+328	Host controls the workers
+329	Mirror modules
+330	Workers follow me
+331	Message
+332	Send message from all workers
+333	Bring all workers to me
+334	Stop all workers
+337	Walks straight ahead automatically and\nmines obstacles (key G).
+339	Mine obstacles
+341	Every floor feels slippery like ice.
+342	Slipperiness (%)
+344	Keeps the sneak key held down.
+345	Only while walking
+347	Walks faster in the pressed direction.
+348	Speed (blocks/s)
+349	Only on the ground
+350	Auto jump
+352	Climbs up walls when you\nwalk into them.
+353	Climb speed
+355	Sprints automatically while you walk.
+356	All directions
+358	Steps up higher ledges without jumping.\nOff while sneaking.
+360	Boosts the thrust of tridents\nwith Riptide.
+361	Strength (%)
+363	Jumps higher. Careful: fall damage,\nbest used with No Fall.
+364	Jump height (blocks)
+366	Walks on water. Sneak\nto dive.
+367	Lava too
+369	Jumps farther while walking.
+370	Distance (%)
+372	Prevents fall damage.\nDoes not work while flying with elytra.
+373	From fall height (blocks)
+375	Walk at normal speed while eating, drinking,\nblocking and drawing a bow.
+376	Eating / drinking
+377	Bow / crossbow
+378	Other
+379	Speed (%)
+381	Jumps automatically at the edge of a block.
+382	Lead time (ticks)
+383	Only while sprinting
+385	Drops off edges instantly\ninstead of sinking slowly.
+387	Sneaks automatically at edges\nso you don't fall off.
+388	Distance to edge (x0.1)
+389	Off while jumping
+391	Places blocks under your feet while walking.\nTakes blocks from the hotbar.
+392	Look down
+393	Blocks per tick
+395	Reduces knockback when you\nget hit. 0 % = no knockback.
+397	Vertical (%)
+398	Jump up
+399	Hover
+400	Creative flight
+401	1912: Blink does not work in this version (packet hook missing)
+403	Jump in mid-air too.
+404	Jumps (0 = unlimited)
+406	Pulls you into a 1x1 hole below you.
+407	Max. height
+408	Pull strength (%)
+410	Saves you when you fall into the void.
+412	Jumps automatically as soon as you are on the ground.
+414	Flies automatically with the elytra\nto the nearest player.
+416	Holds back your movement. When turned off\nyou jump to the new spot for others.
+417	Auto send (s, 0=off)
+418	Held back: 
+419	 packets
+421	Right-click with an empty hand teleports\nyou to the targeted block.
+423	Accelerates in the view direction\nwhile flying with elytra.
+424	Max. speed (blocks/s)
+425	Only with the forward key
+427	Free elytra control: movement keys,\njump = up, sneak = down.
+428	Up/down (blocks/s)
+430	Mounts and boats go faster\nand in the view direction.
+432	Climbs ladders and vines faster.
+434	Fly like in creative mode.\nJump = up, sneak = down.
+437	Walk and jump while a menu\n(e.g. inventory) is open. Not while typing.
+438	Sneak too
+440	Ode to Joy
+441	Scale
+442	Custom file
+443	§e1912: Notebot - example created: config/
+444	§c1912: Notebot - not in creative mode (left-click would break the blocks)
+445	§c1912: Notebot - the song contains no notes
+446	§c1912: Notebot - the song needs 
+447	 note blocks in reach, found: 
+448	§a1912: Notebot - tuning 
+449	 note blocks
+450	§c1912: Notebot - tuning takes too long (blocks protected?)
+451	§c1912: Notebot - a note block is suddenly missing
+452	§a1912: Notebot - playing “
+453	§a1912: Notebot - done
+454	Search all items
+455	Search all mobs
+456	Search all blocks
+457	Selected: 
+458	Nothing selected yet
+459	Swap
+461	Chestplate
+463	Ender pearl
+464	Firework
+465	XP bottle
+466	Me
+467	Off
+468	Fixed
+469	Snap 45°
+470	1912: Chest Swap - nothing found to swap
+471	1912: Could not create Fake Player
+473	Places blocks in mid-air when you\nright-click at nothing.
+474	Distance (blocks)
+476	Moves you regularly so the server\ndoesn't kick you for being AFK.
+477	Jump
+478	Swing
+479	Rotate
+481	Reduces hunger by reporting less\nmovement to the server.
+482	Hide sprinting
+483	Hide ground
+485	Automatically eats the best food\nfrom the hotbar.
+486	Eat at hunger ≤
+487	Allow golden apples
+489	Reels in the rod on a bite\nand casts it again.
+490	Recast after (ticks)
+492	Eats a golden apple when health\nis low (enchanted ones first).
+493	Health ≤ (2 = 1 heart)
+495	Puts damaged items with Mending into the\noffhand so XP repairs them.
+496	Only below durability (%)
+497	From the hotbar too
+499	Refills hotbar stacks from the inventory.
+500	Refill at (items)
+502	Automatically clicks “Respawn”\nafter death.
+503	Delay (ticks)
+505	Takes the fastest tool from the\nhotbar when mining.
+506	Switch back
+507	Spare almost broken tools
+509	Wait time between two mined\nblocks (normally 5 ticks).
+510	Wait time (ticks)
+512	Swaps elytra ↔ chestplate once\nand turns itself off again.
+514	Throws XP bottles from the hotbar\nat your feet.
+515	Interval (ticks)
+517	Creates a copy of you at your\nposition (only visible to you).\nChanges apply the next time it is turned on.
+519	Health
+520	Copy inventory
+522	Uses items and places blocks faster\n(normally 4 ticks pause).
+523	Pause (ticks)
+525	Opens chests and similar through walls\n(right-click without a block in hand).
+526	Range (blocks)
+528	Instantly mines a just-broken block again\nwhen it gets placed back.
+530	Place blocks directly on water or\nlava.
+532	Middle mouse button uses an item from\nthe hotbar without switching.
+535	Mine and attack while you eat\nor block with a shield.
+536	Allow
+537	Mining
+538	Attacking
+540	Replaces your name in chat.
+541	Replacement name
+543	Prevents right-clicking selected\nblocks and entities.
+544	No Interact: Blocks
+545	Select entities (
+546	No Interact: Entities
+548	Mines through entities standing\nin front of the block.
+549	Only with a tool
+551	The server can no longer change\nyour view direction.
+552	Keep
+553	Yaw (left/right)
+554	Pitch (up/down)
+556	Removes annoying effects from you.
+557	Blindness
+558	Darkness
+559	Nausea
+560	Levitation
+561	Slowness
+562	Mining Fatigue
+564	Menus and chat stay open in nether\nportals.
+566	Pauses potions while you stand still.\nOnly works on some servers.
+568	Longer reach (normally 4.5 / 3).\nServers often limit this.
+569	Entities
+571	Lock or snap the view direction.
+572	Yaw
+573	Yaw (°)
+574	Pitch
+575	Pitch (°)
+577	Mines faster. Above ~140 % many\nservers reject the mining.
+578	Profiles
+579	Saves all settings (modules, design, keys) under a name, e.g. PvP, Building or Farming. Loading replaces the current settings.
+580	New profile
+581	Save current settings
+582	Saved: “
+583	Load
+584	No profiles saved yet.
+585	Load “
+586	Loaded: “
+587	Delete
+588	Delete “
+589	Deleted: “
+590	2D box
+591	3D frame
+592	3D + scan line
+593	Night vision
+596	Colored
+597	Hidden
+600	 used a totem (
+604	Highlights selected blocks through walls.
+605	Style
+606	Color (RRGGBB)
+608	Highlights chests, barrels, furnaces etc.
+610	Shows safe 1x1 holes to stand in.
+612	Shows holes through which you would fall into the void.
+614	Highlights blocks around enemies (PvP).
+616	Highlights dug 1x2 tunnels.
+618	Lines from the screen center to targets.
+620	Names above players and mobs, through walls.
+621	Show health
+623	Shows the owner of animals and projectiles.
+624	Tamed animals
+625	Projectiles
+627	Frames items lying on the ground.
+630	Show saved places in the game.
+631	Light beam
+632	New name
+633	Saved: 
+634	Delete all
+636	Marks where players logged out.
+637	Show box
+638	Show distance
+639	Remembered: 
+641	Draws a line behind you.
+642	Length
+644	Dots along your path.
+646	Shows the trajectory of bows and throwables.
+647	Length (steps)
+648	Mark impact
+650	Marks dark blocks where mobs spawn.
+652	Shows mining progress on blocks\n(red = just started, green = almost gone).
+653	Show percent
+654	Other players too
+656	Makes everything bright.
+657	Gamma (%) [Gamma mode only]
+659	Changes the time of day (only for you).\nThe server often resets it.
+660	Time
+662	Camera in third-person view.
+663	Distance
+664	Through blocks
+666	Watches you at an angle from the side while you walk\nand build, e.g. with “Go to Coordinates”. With the mouse\nyou turn the camera around you, the walking direction stays.
+667	Camera
+668	3rd person (at an angle from the side)
+669	Side angle
+670	Follows the walking direction
+671	0° = right behind you, 90° = from the side. Set the distance in Camera Tweaks.
+673	Move the camera freely, your body stays put.\nMovement keys, jump = up, sneak = down,\nsprint = twice as fast.
+674	Block clicks
+675	Start only on the ground
+676	For the server you are just standing still: no movement is sent. Started in mid-air, your body would stay hanging there, which can look like flying.
+678	Hides annoying effects.
+679	Fire overlay
+680	Water overlay
+681	Pumpkin overlay
+682	Fog
+683	Hurt shake
+685	Changes the block selection outline.
+687	Moves and scales your hand (first person).
+688	Sideways
+689	Height
+690	Depth
+691	Size (%)
+693	Colors players and mobs as solid shapes -\nvisible through walls too. Colors as in ESP.
+694	Only behind walls
+695	Opacity (%)
+697	Shows ores through walls: glowing boxes in the ore's color.
+698	Ores
+699	Diamond
+700	Ancient Debris
+702	Emerald
+703	Iron
+705	Lapis Lazuli
+706	Copper
+707	Coal
+708	Nether Quartz
+710	Items on the ground lie flat instead of spinning and bobbing.
+712	Dark background while a menu is open.\n(Simplified, not a real blur.)
+713	Combines identical boss bars into one (with count).\nApplies to bars that appear after turning it on.
+714	Custom player list while holding Tab:\nall names with ping in milliseconds.
+716	Shows a fading ghost when\nsomeone uses up a totem.
+717	Duration (s)
+718	Chat message
+719	Own ones too
+721	Extra info in the item tooltip.
+722	Show
+723	Shulker contents
+724	Shulker rows
+725	Nutrition
+726	Your own markers at your position.
+727	Placed: 
+728	§c1912: Error in “
+729	“ caught. Details are in logs/latest.log.
+733	Only the host can do that
+734	Not in game
+735	Enter a message first
+736	Swarm: stopped
+737	1912: AutoDrop could not run and was turned off
+738	Too large (max. 50000 blocks)
+740	ON
+741	OFF
+742	1912: No block targeted
+743	1912: Block selected: 
+744	Select a block first
+745	 not found nearby
+746	1912: Auto logout at 2 hearts
+747	No 
+748	 nearby anymore
+749	No reachable 
+750	 nearby anymore (
+751	 unreachable)
+752	Area done
+753	Area done (
+754	 blocks unreachable)
+755	Walking
+756	Walking cancelled (error)
+757	Walking
+758	Error
+759	1912: No building blocks (e.g. cobblestone) in the hotbar
+760	Assign keys
+763	World
+766	Menu
+767	Change menu key
+768	Close
+769	Search modules
+770	No modules found for “
+771	Menu 
+772	Click: on/off
+773	Dots: settings
+774	Mouse wheel: scroll
+775	Keys: 
+776	Click: on/off
+777	All modules: Customize design, Expert mode
+778	Now press a key for 
+779	Backspace or Delete: remove key
+780	Now press a key
+781	Press a key
+782	Click a module, then press the key you want
+783	The keys work in game
+784	Click a module, then press a key
+785	Click a module
+786	Lilac
+787	Blue
+788	Green
+790	Red
+791	Gray
+792	Small
+793	Medium
+794	Large
+795	Narrow
+796	Wide
+797	Same as game
+798	Smaller
+799	Very small
+800	Expert
+801	Very large
+802	Top left
+803	Top right
+804	Bottom left
+805	Bottom right
+806	Target reached
+807	Planning the path
+808	 – 
+809	 blocks left
+810	Walking finished
+811	Target unreachable (no progress)
+812	Target unreachable (path keeps getting blocked)
+813	Waiting for chunks
+814	No path found (for higher targets put building blocks like cobblestone in the hotbar)
+815	No path to the target found
+816	Swimming
+817	Walking
+818	Jumping up
+819	Jumping
+820	Pillaring up
+821	Digging down
+822	Bridging
+823	Opening door
+824	Mining
+825	Automatic (like Minecraft)
+826	any
+827	on
+828	off
+829	all
+830	none
+831	none
+832	Status: Off
+833	No App ID entered
+834	The App ID consists of 17 to 20 digits only
+835	Discord not found (is Discord running on this PC?)
+836	Discord rejects the App ID
+837	Connected
+838	Connection to Discord failed
+839	Disconnected from Discord
+840	Host could not start
+841	Host: error while accepting
+842	Please enter a name first
+843	Saving failed
+844	Profile not found
+845	Loading failed
+846	 is already in use
+847	Host on port 
+848	 workers connected
+849	Worker: connecting to 
+850	Worker: connected to 
+851	 unreachable, retrying
+852	Back
+854	View direction
+855	North
+856	East
+857	South
+858	West
+859	Go around
+860	Seal off
+861	percent
+862	points
+863	Debris Miner off
+864	Debris Miner only works in the Nether
+865	Digging tunnel
+866	Going to target height
+867	Debris Miner started: direction 
+868	, height 
+869	Tunnel length: 
+872	Debris Miner stopped (error)
+873	Totem triggered
+874	Player nearby: 
+875	Low health
+876	Inventory full
+877	Inventory full – Debris Miner stopped
+878	Totem triggered – a spare totem is left, Debris Miner keeps running
+880	Retreat: 
+881	 sent (
+882	Target height unreachable – Debris Miner stopped
+883	Tunnel done: 
+884	 blocks, 
+886	Back to the tunnel axis
+887	Sealing lava
+888	Building floor
+889	Lava in the way – Debris Miner stopped
+890	Going back (lava)
+891	Lava all around – Debris Miner stopped
+892	Path blocked – Debris Miner stopped
+893	Going around lava
+894	Ancient Debris found at 
+895	Mining debris
+896	Debris unreachable
+897	Debris next to lava skipped
+898	Debris above lava or a hole skipped
+899	Debris could not be mined
+900	Digging toward debris
+901	Collecting
+902	Returning to the tunnel
+903	Way back to the tunnel not found – Debris Miner stopped
+904	Eating
+905	Took a new pickaxe from the inventory
+906	No pickaxe left
+907	No usable pickaxe left – Debris Miner stopped
+908	Pickaxe almost broken (
+909	 – switching
+910	 – no spare
+911	Throwing away stone
+912	Getting supplies
+913	Making room for the box
+914	No room for the box
+915	Box could not be placed
+916	Supplies taken: 
+917	 pickaxes, 
+918	 food
+919	Ender chest stays (no pickaxe with Silk Touch)
+920	STOP Debris Miner
+921	Start Debris Miner
+922	Digs a tunnel in the Nether at the set height and mines Ancient Debris\nas soon as it becomes visible at the tunnel - whole veins too. Then it continues\non the old tunnel axis. For servers with anti-xray: only the direct surroundings are checked.
+923	Mining
+924	Target height (Y)
+925	Tunnel pattern
+926	Direction
+927	Scan delay (ticks)
+928	Scan radius (blocks)
+929	Max. length (0 = unlimited)
+930	Only real ores (against anti-xray fakes)
+931	Throw away netherrack and stone
+932	Keep netherrack (stacks)
+933	Scan delay: how long it waits after each block until the server shows the neighbors. Scan radius: how far around the tunnel it looks (the server usually reveals 2 blocks). “Only real ores” counts only debris that touches air or lies close to a block that was just mined - disguised ores inside the stone are ignored. Stone is thrown behind it so it doesn't pick it up again.
+934	Collecting
+935	Collect dropped debris
+936	Search radius (blocks)
+937	Max. wait time (s)
+939	Lava protection
+940	Safety distance (blocks)
+941	Behavior
+942	It never mines blocks right next to lava. Go around: step aside, pass the lava and then return to the old tunnel axis. Seal off: cover visible lava and lava floors with netherrack and continue over it (lava behind stone is still avoided).
+943	Supplies
+944	Get supplies
+945	Pickaxes
+946	From shulker boxes
+947	From the ender chest
+948	Moves pickaxes and food from the inventory to the hotbar and eats when hungry. When nothing is left, it places a shulker box or ender chest in the tunnel, takes supplies out and mines it again (the ender chest only with a Silk Touch pickaxe).
+949	Tool protection
+950	Limit in
+951	Limit (%)
+952	Limit (points)
+953	Warning sound
+954	On-screen warning
+955	Stop when no pickaxe is left
+956	When a pickaxe reaches the limit, it warns you and switches to another one. Only pickaxes that can mine Ancient Debris count (diamond or netherite).
+957	Players nearby
+958	Disconnect (Auto-Log)
+959	Radius (0 = whole view distance)
+960	Friends (separated by commas)
+962	Disconnect after totem (Auto-Log)
+963	Delay (ticks, 0 = instant)
+964	Ignore while another totem is left
+965	Retreat (Auto-Home)
+966	Send retreat command
+967	Command
+968	On low health
+969	Health ≤ (hearts)
+970	On full inventory
+971	Without pickaxe
+972	When a player is nearby
+973	Sends the command (e.g. /home or /spawn) and stops the Debris Miner. “Players nearby” uses the radius and friends from above and only applies when “Disconnect” is off there.
+974	Show status on screen
+975	Highlight debris and the next section
+976	Digs a tunnel in the Nether at the set height and mines Ancient Debris as soon as it becomes visible at the tunnel - whole veins too. Then it continues on the old tunnel axis. For servers with anti-xray: only the direct surroundings are checked.
+977	Not started – player nearby: 
+978	Target height not reachable
+979	Path blocked
+980	Lava all around
+981	Way back not found
+982	Pickaxe at the limit – Debris Miner stopped
+983	Tunnel
+984	Go to the target height first
+985	Fill holes in the floor
+986	Return to the axis after detours
+987	Without “Go to the target height first” it digs at the height you are standing at. Without “Fill holes in the floor” it goes around holes. Junk is thrown behind it so it doesn't pick it up again.
+988	Mine the whole vein
+989	Dig to hidden debris
+990	Mine debris below the floor
+991	Mine debris above the ceiling
+992	Report finds in chat
+993	Sound on find
+994	Scan delay: how long it waits after each block until the server shows the neighbors. Scan radius: how far around the tunnel it looks (the server usually reveals 2 blocks). “Only real ores” counts only debris that touches air or lies close to a block that was just mined - disguised ores inside the stone are ignored. Without “Dig to hidden debris” it only mines what it can see from the tunnel.
+995	Fetch items lying up high
+996	Climb down into pits for items
+997	Walk back when there is no way around
+998	Move pickaxes to the hotbar
+999	Move food to the hotbar
+1000	Move building blocks to the hotbar
+1001	Eat when hungry
+1002	Don't eat golden apples
+1003	Mine the box again afterwards
+1004	Moves pickaxes and food from the inventory to the hotbar. When nothing is left, it places a shulker box or ender chest in the tunnel and takes supplies out (it only mines the ender chest again with a Silk Touch pickaxe). “Eat when hungry” also works without supplies.
+1005	Switch automatically
+1006	Warning in chat
+1007	When a pickaxe reaches the limit, it warns you and switches to another one. Without “Switch automatically” it keeps digging with it - or stops if “Stop” is on. Only pickaxes that can mine Ancient Debris count (diamond or netherite).
+1008	Don't start if someone is already there
+1009	After a totem
+1010	When it gets stuck
+1011	Sends the command (e.g. /home or /spawn) and stops the Debris Miner. “When a player is nearby” uses the radius and friends from above; “When a player is nearby” and “After a totem” only apply when disconnecting is off there. “When it gets stuck”: lava all around, path blocked or no way back.
+1012	Show path on detours
+1016	Quick pick
+1017	Pause between several commands (ticks)
+1018	The command is up to you, e.g. /home, /home farm, /spawn or /warp shop - the / at the start is optional. Separate several commands with ; (e.g. /spawn; /afk), it waits the pause in between (20 ticks = 1 second). Then the Debris Miner stops.
+1019	Command on low health
+1020	Command on full inventory
+1021	Command without pickaxe
+1022	Command when a player is nearby
+1023	Command after a totem
+1024	Command when it gets stuck
+1025	Every trigger can have its own command (e.g. /spawn on low health, /home storage on full inventory). Empty = the command from above. “When a player is nearby” uses the radius and friends from above; “When a player is nearby” and “After a totem” only apply when disconnecting is off there. “When it gets stuck”: lava all around, path blocked or no way back.
+1026	same as above: 
+1027	Also use the client's friend list
+1028	More friends (comma separated)
+1029	1912: Friend added: 
+1030	1912: Friend removed: 
+1031	1912: Friend online: 
+1032	1912: Friend offline: 
+1033	1912: Friend in sight: 
+1034	Friends
+1035	Friends are not attacked and are shown in their own color everywhere. Middle-clicking a player adds or removes them.
+1036	Friend list
+1037	Player name
+1038	e.g. Notch
+1039	Add
+1040	Remove
+1041	No friends yet. Enter a name above, pick a nearby player below or click a player with the mouse wheel.
+1042	Bright names are online right now, gray ones are not.
+1043	No other player is nearby right now.
+1044	Friend color
+1045	ESP in friend color
+1046	Tracers in friend color
+1047	Chams in friend color
+1048	Nametags in friend color
+1049	Better Tab: friends on top and colored
+1050	Empty friend color = mint green.
+1051	Protection
+1052	Don't attack (Auto Clicker, Multitask)
+1053	Also block your own hits
+1054	Auto Wasp doesn't fly to friends
+1055	City Esp skips friends
+1056	With “Also block your own hits” you can't hit friends by hand either. Message Aura and Debris Miner have their own settings for this.
+1057	Controls
+1058	Middle-click a player: add or remove
+1059	Middle-click range
+1060	Report when a friend goes online or offline
+1061	Report when a friend comes into sight
+1062	All
+1063	Only friends
+1064	No friends
+1065	Who to message
+1066	Don't attack (Kill Aura, Auto Clicker, Multitask)
+1067	Closest
+1068	Lowest health
+1069	Smallest angle
+1070	Stay on target
+1071	Switch on every hit
+1072	Server only
+1073	Turn head
+1074	Kill Aura
+1075	Attacks creatures in range automatically. It never attacks friends from the friend list, players in creative or spectator mode, villagers or golems.
+1076	Hostile mobs
+1077	Animals
+1078	Neutral mobs only when they attack
+1079	Skip tamed and named animals
+1080	Through walls
+1081	Field of view (°)
+1082	Attack first
+1083	Neutral mobs are zombified piglins, endermen and piglins - attack one and often all of them come. Normal is 3 blocks, more only works with Reach and is detected on many servers. Field of view 360° = all around.
+1084	Timing
+1085	Wait for the cooldown
+1086	Hit from cooldown (%)
+1087	Hits per second (min)
+1088	Hits per second (max)
+1089	Critical hits (in the air only while falling)
+1090	Pause while eating and using items
+1091	Only while holding the attack key
+1092	With cooldown it hits as soon as the hit is fully charged (full damage). Without cooldown the hits per second apply - for servers without cooldown.
+1093	Weapon
+1094	Only with a weapon in hand
+1095	Take the best weapon from the hotbar
+1096	Swing arm visibly
+1097	Weapons are swords, axes, spears, maces and tridents. Swords are chosen before axes.
+1098	View
+1099	Turn speed (°/tick)
+1100	“Server only” sends the direction to the target along, your camera stays still. “Turn head” turns your view visibly and only hits once the target is under the crosshair. While Debris Miner or mining bots are running, it only turns for the server.
+1101	Target info below the crosshair
+1102	Color
+1103	Aiming
+1104	Defense
+1105	Fight off mobs
+1106	Bot defense settings
+1107	1912: Bot fights back: 
+1108	Bot Defense
+1109	While a bot walks or mines on its own, it fights off monsters in range. Animals and neutral mobs only when they are attacking you. While it fights, the bot stops and then carries on with its tool.
+1110	Bots
+1111	Monsters
+1112	Animals and neutral mobs when they attack
+1113	Hit creepers right away
+1114	Bot defense never attacks players, and never tamed animals. Zombified piglins, endermen and piglins count as neutral. Creepers are hit first and without full cooldown so they fly back before they explode.
+1115	Combat
+1116	Take the best weapon, then back to the tool
+1117	Give up target after (s)
+1118	A target that doesn't die in this time (e.g. because the hits don't land) is left alone for 30 seconds.
+1119	Fighting off a mob
+1120	Info HUD
+1123	Overworld
+1128	Time
+1129	Armor
+1131	A small box on screen with the most important values. Every line can be turned off separately.
+1132	Position
+1133	Corner
+1134	Lines
+1135	Nether/Overworld coordinates
+1136	Server TPS
+1137	In-game time
+1138	Armor (durability)
+1139	TPS shows how fast the server runs (20 = normal, less = server is lagging). Nether coordinates: in the Nether you see where you come out in the Overworld, and the other way around.
+1140	§c1912: Auto Totem - no totems left!
+1142	Always keeps a Totem of Undying in your offhand. After a totem is used up, the next one follows right away.
+1143	Always in the offhand
+1144	Otherwise from health ≤ (2 = 1 heart)
+1145	Also take from the hotbar
+1146	Report when no totems are left
+1147	Without “Always in the offhand” your offhand item (e.g. shield) stays until your health drops below the limit. It doesn't swap in chests and other menus.
+1149	Automatically puts on the best armor from your inventory.
+1150	Keep a worn elytra
+1151	Prefer enchanted pieces
+1152	Order: netherite, diamond, iron (and turtle shell), chainmail, copper, gold, leather. With the same material the enchanted piece wins, then the less worn one. Pumpkins and heads on your head stay where they are.
+1154	While the Debris Miner is running, it fights off monsters in range. Animals and neutral mobs only when they are attacking you. While it fights, the bot stops and then carries on with its tool.

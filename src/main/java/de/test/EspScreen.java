@@ -47,13 +47,13 @@ public class EspScreen extends Form {
             Esp.rescan();
         }, 24);
 
-        wideButton("Mobs wählen (" + count(Esp.mobTypes.size(), "alle") + ")", false,
+        wideButton("Mobs wählen (" + count(Esp.mobTypes.size(), Lang.t("alle")) + ")", false,
                 () -> this.minecraft.gui.setScreen(new PickerScreen(this, "ESP: Mobs",
                         PickerScreen.Kind.ENTITY, PickerScreen.ofSet(Esp.mobTypes), null, null)));
-        wideButton("Items wählen (" + count(Esp.itemTypes.size(), "alle") + ")", false,
+        wideButton("Items wählen (" + count(Esp.itemTypes.size(), Lang.t("alle")) + ")", false,
                 () -> this.minecraft.gui.setScreen(new PickerScreen(this, "ESP: Items",
                         PickerScreen.Kind.ITEM, PickerScreen.ofSet(Esp.itemTypes), null, null)));
-        wideButton("Blöcke wählen (" + count(Esp.blockTypes.size(), "keine") + ")", false,
+        wideButton("Blöcke wählen (" + count(Esp.blockTypes.size(), Lang.t("keine")) + ")", false,
                 () -> this.minecraft.gui.setScreen(new PickerScreen(this, "ESP: Blöcke",
                         PickerScreen.Kind.BLOCK, PickerScreen.ofSet(Esp.blockTypes), null, null)));
         note("Leere Mob- oder Item-Auswahl = alle anzeigen.");

@@ -296,8 +296,8 @@ public class PickerScreen extends Screen {
         footY = py + footRel + 7;
 
         if (searchBox == null) {
-            searchBox = new EditBox(this.font, 0, 0, inner, 20, Component.literal("Suchen"));
-            searchBox.setHint(Component.literal(kind == Kind.ITEM ? "Alle Items durchsuchen"
+            searchBox = new EditBox(this.font, 0, 0, inner, 20, Lang.literal("Suchen"));
+            searchBox.setHint(Lang.literal(kind == Kind.ITEM ? "Alle Items durchsuchen"
                     : kind == Kind.ENTITY ? "Alle Mobs durchsuchen" : "Alle Bl\u00f6cke durchsuchen"));
             searchBox.setMaxLength(40);
             searchBox.setValue(search);
@@ -354,7 +354,7 @@ public class PickerScreen extends Screen {
 
         activeBtn = null;
         if (active != null) {
-            int activeW = 16 + 6 + this.font.width("Aktiv") + 4;
+            int activeW = 16 + 6 + this.font.width(Lang.t("Aktiv")) + 4;
             activeBtn = addWidget(Button.builder(Component.empty(), b -> {
                 setActive.accept(!active.getAsBoolean());
                 TestConfig.save();
