@@ -8,7 +8,6 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
@@ -155,7 +154,7 @@ public final class BotGuard {
 
     private static boolean ready(LocalPlayer p, LivingEntity t) {
         if (!waitCooldown) return ticks % 2 == 0; // 10 Schlaege pro Sekunde
-        float need = creeperFirst && t.getType() == EntityType.CREEPER ? 0.5f : 0.95f;
+        float need = creeperFirst && Combat.isCreeper(t) ? 0.5f : 0.95f;
         return p.getAttackStrengthScale(0.5f) >= need;
     }
 
@@ -172,7 +171,7 @@ public final class BotGuard {
             if (d > r) continue;
             if (!throughWalls && !p.hasLineOfSight(le)) continue;
             // Creeper zuerst, sonst der naechste; am alten Ziel bleiben, solange es da ist
-            double score = d - (le == target ? 1.0 : 0.0) - (le.getType() == EntityType.CREEPER ? 2.0 : 0.0);
+            double score = d - (le == target ? 1.0 : 0.0) - (Combat.isCreeper(le) ? 2.0 : 0.0);
             if (score < bestScore) {
                 bestScore = score;
                 best = le;
@@ -185,9 +184,8 @@ public final class BotGuard {
         if (le == p || le instanceof Player || !le.isAlive() || le.getHealth() <= 0) return false;
         Long until = ignored.get(le.getId());
         if (until != null && until > ticks) return false;
-        EntityType<?> type = le.getType();
-        boolean neutral = type == EntityType.ZOMBIFIED_PIGLIN || type == EntityType.ENDERMAN || type == EntityType.PIGLIN;
-        if (type.getCategory() == MobCategory.MONSTER && !neutral) return hostile;
+        boolean neutral = Combat.isNeutralMonster(le);
+        if (le.getType().getCategory() == MobCategory.MONSTER && !neutral) return hostile;
         // Tiere, neutrale Monster, Golems: nur, wenn sie gerade angreifen - und zwar dich
         if (!aggressive || !(le instanceof Mob m) || !m.isAggressive()) return false;
         if (le instanceof TamableAnimal ta && ta.isTame()) return false;

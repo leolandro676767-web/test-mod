@@ -5,6 +5,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
@@ -92,6 +93,26 @@ final class Combat {
         if (conn != null) {
             conn.send(new ServerboundMovePlayerPacket.Rot(rot[0], rot[1], p.onGround(), p.horizontalCollision));
         }
+    }
+
+    // ---------- Wesen ----------
+
+    /**
+     * Name des Wesenstyps ohne "minecraft:" (z.B. "creeper"). Ueber das Register, weil es die einzelnen
+     * Konstanten wie EntityType.CREEPER in Minecraft 26.2 nicht mehr gibt.
+     */
+    static String typeId(Entity e) {
+        return BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath();
+    }
+
+    /** Zombie-Piglins, Endermen und Piglins: greifen erst an, wenn man sie reizt (und dann oft in Gruppen). */
+    static boolean isNeutralMonster(Entity e) {
+        String id = typeId(e);
+        return id.equals("zombified_piglin") || id.equals("enderman") || id.equals("piglin");
+    }
+
+    static boolean isCreeper(Entity e) {
+        return typeId(e).equals("creeper");
     }
 
     // ---------- Waffen ----------

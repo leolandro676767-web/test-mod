@@ -15,7 +15,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
@@ -209,8 +208,7 @@ public final class KillAura {
 
     /** Monster, die erst angreifen, wenn man sie reizt (und dann oft in Gruppen). */
     private static boolean isNeutral(LivingEntity le) {
-        EntityType<?> t = le.getType();
-        return t == EntityType.ZOMBIFIED_PIGLIN || t == EntityType.ENDERMAN || t == EntityType.PIGLIN;
+        return Combat.isNeutralMonster(le);
     }
 
     /** Winkel zwischen Blickrichtung und Ziel (Grad). */
