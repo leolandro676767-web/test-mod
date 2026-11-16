@@ -986,3 +986,15 @@
 1151	Préférer les pièces enchantées
 1152	Ordre : netherite, diamant, fer (et carapace de tortue), mailles, cuivre, or, cuir. À matériau égal, la pièce enchantée gagne, puis la moins usée. Les citrouilles et têtes sur la tête restent où elles sont.
 1154	Pendant que le Debris Miner tourne, il repousse les monstres à portée. Les animaux et les mobs neutres seulement s'ils t'attaquent. Pendant le combat, le bot s'arrête puis reprend avec son outil.
+1156	, le long de la bordure de chunk
+1157	Jette un coup d'œil autour
+1158	Va à la bordure de chunk
+1159	Creuser le long d'une bordure de chunk
+1160	Avec la bordure de chunk, il creuse le long de la bordure de chunk la plus proche dès le départ (8 blocs au plus) : avant de descendre à la hauteur cible, il se décale d'abord jusqu'à la bordure et creuse droit vers le bas à cet endroit ; un tunnel 2x2 se trouve exactement des deux côtés. Après un détour, il revient toujours sur la bordure.
+1161	Bouger comme un humain
+1162	Regarder autour de temps en temps
+1163	Tourne plus doucement et pas toujours à la même vitesse, avec un léger tremblement comme une main sur la souris. En marchant, le regard dérive de quelques degrés, et après chaque bloc il attend un temps un peu différent. Il ne s'accroupit plus qu'au bord, et alors un moment d'affilée, plus pendant des ticks isolés ; pour aller au centre d'un bloc, il fait de petits pas au lieu d'avancer accroupi.
+1164	« Regarder autour de temps en temps » (seulement avec « Bouger comme un humain ») : toutes les 45 secondes à 2 minutes, il s'arrête un instant dans le tunnel, regarde sur le côté puis continue – seulement s'il n'y a pas de lave à proximité.
+1165	Sprinte à travers la netherrack
+1166	Sprinter à travers la netherrack
+1167	« Sprinter à travers la netherrack » : si ton outil casse la netherrack instantanément (p. ex. Efficacité V), il maintient le bouton de la souris et traverse en sprintant, le regard fixé à 19° vers le bas. Entre 18° et 20°, le viseur touche d'abord le bloc des pieds plus loin devant, puis celui de la tête, mais jamais le sol. Seulement pour le tunnel 1x2 ; avant la lave, les débris, le gravier ou une roche plus dure, il revient au bloc par bloc.

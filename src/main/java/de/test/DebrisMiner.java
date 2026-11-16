@@ -29,6 +29,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -85,6 +86,10 @@ public final class DebrisMiner {
     public static boolean descendFirst = true;  // erst auf die Ziel-Hoehe gehen (sonst: Tunnel auf der Start-Hoehe)
     public static boolean fillFloor = true;     // Loecher im Boden zubauen (sonst ausweichen)
     public static boolean returnAxis = true;    // nach Umwegen zurueck auf die urspruengliche Achse
+    public static boolean chunkBorder = true;   // an einer Chunk-Grenze entlang graben
+    public static boolean humanize = true;      // menschlich bewegen (weicher drehen, nicht ducken beim Gehen)
+    public static boolean lookAround = true;    // ab und zu kurz stehen bleiben und umschauen (nur menschlich)
+    public static boolean sprintMine = true;    // Sofort-Abbau (z.B. Effizienz V): Taste halten und durchsprinten
     public static boolean chatFound = true;     // Fund im Chat melden
     public static boolean foundSound = false;   // Ton bei Fund
 
@@ -195,6 +200,8 @@ public final class DebrisMiner {
     private static int axisX;                         // ein Punkt auf der urspruenglichen Tunnelachse
     private static int axisZ;
     private static int sinceSide;                     // Schritte geradeaus seit dem letzten Ausweichen
+    private static double lastMoveX = Double.NaN;     // fuer das Tempo beim Ausrollen
+    private static double lastMoveZ;
     private static int bestAlong;                     // weitester Fortschritt entlang der Hauptrichtung
     private static int noAdvance;                     // Schritte ohne neuen Fortschritt (im Kreis?)
     private static int lastSide;                      // 1 = links, -1 = rechts, 0 = noch keiner
@@ -269,6 +276,7 @@ public final class DebrisMiner {
     private static boolean kSneak;
     private static boolean kAttack;
     private static boolean kUse;
+    private static boolean kSprint;
     private static boolean walkerTicked;
 
     // =====================================================================================
@@ -325,10 +333,28 @@ public final class DebrisMiner {
         BlockPos feet = feet(p);
         axisX = feet.getX();
         axisZ = feet.getZ();
+        if (chunkBorder) {
+            // senkrecht zur Laufrichtung auf die naechste Chunk-Grenze (hoechstens 8 Bloecke daneben);
+            // ein 2x2-Tunnel liegt genau auf beiden Seiten der Grenze
+            boolean alongX = mainX != 0;
+            int c = alongX ? feet.getZ() : feet.getX();
+            int b = Math.round(c / 16.0f) * 16; // die Grenze liegt zwischen b-1 und b
+            int right = alongX ? mainX : -mainZ; // so liegt die zweite Spalte des 2x2-Tunnels
+            int axis = pattern == 2 ? (right > 0 ? b - 1 : b) : (c >= b ? b : b - 1);
+            if (alongX) {
+                axisZ = axis;
+            } else {
+                axisX = axis;
+            }
+        }
         tunnelY = descendFirst ? targetY : feet.getY();
         phase = feet.getY() == tunnelY ? Phase.TUNNEL : Phase.DESCEND;
+        borderFirst = chunkBorder && phase == Phase.DESCEND;
+        borderFails = 0;
         action = phase == Phase.TUNNEL ? "Gräbt Tunnel" : "Geht auf Ziel-Höhe";
-        say(mc, "Debris Miner gestartet: Richtung " + Lang.t(compass(mainX, mainZ)) + ", Höhe " + tunnelY);
+        if (chunkBorder) sinceSide = 1000; // gleich zuerst seitlich auf die Grenze
+        say(mc, "Debris Miner gestartet: Richtung " + Lang.t(compass(mainX, mainZ)) + ", Höhe " + tunnelY
+                + (chunkBorder ? Lang.t(", an der Chunk-Grenze") : ""));
         return null;
     }
 
@@ -336,9 +362,11 @@ public final class DebrisMiner {
     static void stop(Minecraft mc, String message) {
         if (!running) return;
         running = false;
+        Look.human = false;
         Walker.toolOk = st -> true;
         if (Walker.isActive() && !TestClient.areaActive) Walker.stop(mc);
         clearKeys();
+        Look.releaseSneak();
         applyKeys(mc);
         digging = false;
         LocalPlayer p = mc.player;
@@ -356,6 +384,11 @@ public final class DebrisMiner {
     }
 
     private static void clearState() {
+        sprintRun = false;
+        sprintCooldown = 0;
+        sprintWatch.clear();
+        glanceTicks = 0;
+        glanceTimer = 600 + Look.rng().nextInt(1200);
         targets.clear();
         ignored.clear();
         mined.clear();
@@ -411,6 +444,7 @@ public final class DebrisMiner {
     /** Ein Tick (vom TestClient, solange der Debris Miner laeuft). */
     static void tick(Minecraft mc) {
         if (!running) return;
+        Look.human = humanize; // gilt auch fuer den Walker, solange der Debris Miner ihn steuert
         LocalPlayer p = mc.player;
         Level level = mc.level;
         if (p == null || level == null) {
@@ -452,11 +486,60 @@ public final class DebrisMiner {
         }
     }
 
+    // ---------- menschlich: ab und zu umschauen ----------
+
+    private static int glanceTimer = 600 + (int) (Math.random() * 1200);
+    private static int glanceTicks;
+    private static float glanceYaw;
+    private static float glancePitch;
+    private static float glanceBackYaw;
+    private static float glanceBackPitch;
+
+    /**
+     * Alle 45 bis 120 Sekunden bleibt er im Tunnel kurz stehen und schaut sich um (wie ein Spieler, der
+     * nach Geraeuschen oder Lava schaut), dann schaut er zurueck und macht weiter. Nur, wenn es sicher ist.
+     * true = schaut gerade (der Rest des Ticks entfaellt).
+     */
+    private static boolean glance(Minecraft mc, Level level, LocalPlayer p) {
+        if (!humanize || !lookAround) return false;
+        if (glanceTicks > 0) {
+            glanceTicks--;
+            action = "Schaut sich kurz um";
+            clearKeys();
+            if (glanceTicks > 12) {
+                Look.turn(p, glanceYaw, glancePitch, 9.0f, 6.0f, 0.0f);
+            } else {
+                Look.turn(p, glanceBackYaw, glanceBackPitch, 12.0f, 8.0f, 0.0f); // zurueck in die Laufrichtung
+            }
+            return true; // Tasten setzt tick() danach (alle los)
+        }
+        if (--glanceTimer > 0) return false;
+        // nur mitten im Tunnel, auf festem Boden, ohne Gefahr und ohne angefangenen Block
+        boolean calm = phase == Phase.TUNNEL && !sprintRun && p.onGround() && digPos == null && !Walker.isActive() && wait == 0
+                && sideLeft == 0 && !BotGuard.fighting()
+                && lavaAhead(level, feet(p), curX, curZ, Math.max(2, lavaDistance), true) == 0;
+        if (!calm) {
+            glanceTimer = 40; // gleich nochmal versuchen
+            return false;
+        }
+        var rng = Look.rng();
+        glanceTimer = 900 + rng.nextInt(1500);
+        glanceTicks = 28 + rng.nextInt(26);
+        glanceBackYaw = p.getYRot();
+        glanceBackPitch = p.getXRot();
+        float side = (rng.nextBoolean() ? 1 : -1) * (35 + rng.nextInt(70));
+        glanceYaw = p.getYRot() + side;
+        glancePitch = -8 + rng.nextInt(30); // mal etwas hoch, mal zum Boden
+        digging = false;
+        return true;
+    }
+
     /** Menue oder Chat offen: alles loslassen und warten. */
     private static void pause(Minecraft mc) {
         if (paused) return;
         paused = true;
         clearKeys();
+        Look.releaseSneak();
         applyKeys(mc);
         digging = false;
         if (Walker.isActive()) Walker.release(mc);
@@ -468,6 +551,7 @@ public final class DebrisMiner {
         if (dropCooldown > 0) dropCooldown--;
         if (placeCooldown > 0) placeCooldown--;
         toolAlerts(mc, p);
+        if (glance(mc, level, p)) return;
         switch (phase) {
             case DESCEND -> descend(mc, level, p);
             case TUNNEL -> tunnel(mc, level, p);
@@ -647,9 +731,13 @@ public final class DebrisMiner {
     // Tunnel
     // =====================================================================================
 
+    private static boolean borderFirst;   // Abstieg mit Chunk-Grenze: erst seitlich auf die Grenze, dann hinunter
+    private static int borderFails;
+
     private static void descend(Minecraft mc, Level level, LocalPlayer p) {
         action = "Geht auf Ziel-Höhe";
         BlockPos feet = feet(p);
+        if (borderFirst && descendToBorder(mc, level, p, feet)) return;
         if (p.onGround() && Math.abs(feet.getY() - tunnelY) <= (walkerFails > 0 ? 1 : 0)) {
             stopWalker(mc);
             phase = Phase.TUNNEL;
@@ -661,7 +749,13 @@ public final class DebrisMiner {
                 giveUp(mc, "Ziel-Höhe nicht erreichbar – Debris Miner angehalten", "Ziel-Höhe nicht erreichbar");
                 return;
             }
-            startWalkExact(new BlockPos(feet.getX(), tunnelY, feet.getZ()));
+            // mit Chunk-Grenze schon beim Abstieg seitlich auf die Grenze (dann liegt alles auf ihr)
+            // (klappt das zweimal nicht, geht er einfach gerade hinunter und wechselt spaeter auf die Grenze)
+            boolean alongX = mainX != 0;
+            boolean border = chunkBorder && walkerFails < 2;
+            int gx = border && !alongX ? axisX : feet.getX();
+            int gz = border && alongX ? axisZ : feet.getZ();
+            startWalkExact(new BlockPos(gx, tunnelY, gz));
         }
         String r = tickWalker(mc, level, p);
         if (r != null) {
@@ -670,8 +764,37 @@ public final class DebrisMiner {
         }
     }
 
+    /**
+     * Mit Chunk-Grenze: vor dem Abstieg auf der Start-Hoehe seitlich auf die Grenze gehen, damit er auf ihr
+     * senkrecht hinuntergraebt (wie ein Spieler, der sich erst an die Grenze stellt). true = ist noch dabei.
+     * Klappt das nicht (z.B. Abgrund daneben), geht er schraeg hinunter wie sonst.
+     */
+    private static boolean descendToBorder(Minecraft mc, Level level, LocalPlayer p, BlockPos feet) {
+        boolean alongX = mainX != 0;
+        int col = alongX ? feet.getZ() : feet.getX();
+        int want = alongX ? axisZ : axisX;
+        if (col == want && p.onGround() || borderFails >= 2 || Math.abs(col - want) > 9) {
+            borderFirst = false;
+            if (walkGoal != null) stopWalker(mc);
+            walkGoal = null;
+            return false;
+        }
+        action = "Geht zur Chunk-Grenze";
+        if (walkGoal == null || !Walker.isActive()) {
+            startWalkExact(new BlockPos(alongX ? feet.getX() : axisX, feet.getY(), alongX ? axisZ : feet.getZ()));
+        }
+        String r = tickWalker(mc, level, p);
+        if (r != null) {
+            walkGoal = null;
+            BlockPos now = feet(p);
+            if ((alongX ? now.getZ() : now.getX()) != want) borderFails++;
+        }
+        return true;
+    }
+
     private static void tunnel(Minecraft mc, Level level, LocalPlayer p) {
         BlockPos feet = feet(p);
+        if (sprintCooldown > 0) sprintCooldown--;
         // Schritt geschafft, sobald er im naechsten Feld steht (nicht erst in der Mitte: sonst laeuft er
         // durch und zaehlt nie einen Schritt)
         if (stepTarget != null) {
@@ -696,7 +819,7 @@ public final class DebrisMiner {
         if (digPos != null && !solid(level, digPos)) {
             remember(digPos);
             digPos = null;
-            wait = scanDelay;
+            wait = scanDelay + (humanize ? Look.rng().nextInt(4) : 0); // menschlich: nicht immer gleich schnell
         }
         if (wait > 0) {
             wait--;
@@ -732,8 +855,9 @@ public final class DebrisMiner {
             return;
         }
 
-        // 3. Gestein wegwerfen (nach hinten, damit er es nicht gleich wieder aufsammelt)
-        if (throwJunk(p)) return;
+        // 3. Gestein wegwerfen (nach hinten, damit er es nicht gleich wieder aufsammelt) - beim Durchsprinten
+        //    erst, wenn das Inventar fast voll ist (sonst muesste er alle paar Sekunden anhalten)
+        if (!(sprintRun && freeSlots(p) > 3) && throwJunk(p)) return;
 
         // 4. Laenge erreicht?
         if (maxLength > 0 && bestAlong >= maxLength) { // so weit in der Hauptrichtung vorangekommen
@@ -751,7 +875,8 @@ public final class DebrisMiner {
         }
 
         // 5b. Nach einem Umweg (wenn das Hindernis hinter ihm liegt) zurueck auf die urspruengliche Achse
-        if (returnAxis && sideLeft == 0 && curX == mainX && curZ == mainZ && sinceSide >= lavaDistance + 2) {
+        if ((returnAxis || chunkBorder) && sideLeft == 0 && curX == mainX && curZ == mainZ
+                && sinceSide >= lavaDistance + 2) {
             int off = (feet.getX() - axisX) * mainZ - (feet.getZ() - axisZ) * mainX; // > 0: links der Achse
             if (off != 0) {
                 int sx = off > 0 ? -mainZ : mainZ;
@@ -798,6 +923,7 @@ public final class DebrisMiner {
             }
         }
         if (todo != null) {
+            sprintRun = false; // der Strahl war nicht schnell genug: diesen Block normal abbauen
             if (!mine(mc, level, p, todo, -1)) {
                 hazard(mc, level, p, feet, false); // laesst sich nicht abbauen
             }
@@ -818,7 +944,7 @@ public final class DebrisMiner {
                 return;
             }
             action = isLava(level, floor) ? "Baut Lava zu" : "Baut Boden";
-            kSneak = true; // an der Kante nie herunterfallen
+            // er steht still in seinem Block - Ducken braucht es nur, wenn er an die Kante muss (unten)
             if (placeInto(mc, level, p, floor)) {
                 placeFails = 0;
                 wait = 2;
@@ -837,7 +963,9 @@ public final class DebrisMiner {
             return;
         }
 
-        // 9. Einen Schritt weiter
+        // 9. Netherrack durchsprinten (Sofort-Abbau) - sonst einen Schritt weiter
+        if (sprintMine && sprintTick(level, p, feet)) return;
+        sprintRun = false;
         stepTarget = next;
         moveTo(p, next, Look.yawOf(curX, curZ));
         if (stuckTicks > 80) {
@@ -845,6 +973,202 @@ public final class DebrisMiner {
             stepTarget = null;
             hazard(mc, level, p, feet, false);
         }
+    }
+
+    // ---------- Durchsprinten (Sofort-Abbau) ----------
+
+    private static final int SPRINT_LOOK = 6;      // so viele Felder voraus muss alles passen (Reichweite + Bremsweg)
+    private static boolean sprintRun;
+    private static int sprintCooldown;
+    private static int sprintStill;
+    private static boolean sprintPushed;
+    private static double sprintLastX;
+    private static double sprintLastZ;
+    private static BlockPos sprintFeet;
+    private static final List<BlockPos> sprintWatch = new ArrayList<>();
+
+    /**
+     * Netherrack durchsprinten: Baut das Werkzeug die Tunnelbloecke sofort ab (z.B. Effizienz V), haelt er
+     * wie ein Spieler die Angriffstaste gedrueckt, schaut mit festem Winkel schraeg nach unten und sprintet.
+     * Minecraft baut dann jeden Tick den Block unter dem Fadenkreuz ab: zuerst den Fussblock weiter vorne,
+     * beim Naeherkommen den Kopfblock. Durchgerechnet (Strahl wie in Minecraft, Sprint-Physik): bei Reichweite
+     * 4,5 klappt es mit 18 bis 20 Grad nach unten; flacher bleibt der Fussblock stehen, steiler trifft der
+     * Strahl den Boden. Nur im 1x2-Tunnel und nur, wenn die naechsten Felder sicher sind.
+     * true = sprintet (der Rest des Ticks entfaellt).
+     */
+    private static boolean sprintTick(Level level, LocalPlayer p, BlockPos feet) {
+        double eyeH = p.getEyeY() - p.getY();
+        double reach = p.blockInteractionRange();
+        float pitch = sprintPitch(eyeH, reach);
+        if (!canSprint(level, p, feet, pitch)) return false;
+        if (!sprintRun) {
+            // Einstieg: die erste feste Wand muss etwas weg sein, sonst erreicht der flache Strahl den
+            // Fussblock direkt davor nicht (er wuerde dagegen laufen)
+            if (wallDistance(level, p, feet) < 1.15) return false;
+            sprintRun = true;
+            sprintFeet = feet;
+            sprintStill = 0;
+            sprintPushed = false;
+            sprintWatch.clear();
+        }
+        stepTarget = null;
+
+        // abgebaute Bloecke merken (Anti-Xray: daneben ist echt) und Schritte zaehlen wie beim normalen Graben
+        for (BlockPos b : sprintWatch) {
+            if (!solid(level, b)) remember(b);
+        }
+        sprintWatch.clear();
+        for (int k = 1; k <= SPRINT_LOOK; k++) {
+            for (BlockPos c : section(feet.offset(curX * k, 0, curZ * k), curX, curZ)) {
+                if (solid(level, c)) sprintWatch.add(c);
+            }
+        }
+        if (!feet.equals(sprintFeet)) {
+            sprintFeet = feet;
+            tunnelLength++;
+            sinceSide++;
+            stuckTicks = 0;
+            sealTries = 0;
+            placeFails = 0;
+            int along = (feet.getX() - axisX) * mainX + (feet.getZ() - axisZ) * mainZ;
+            if (along > bestAlong) {
+                bestAlong = along;
+                noAdvance = 0;
+                backtracks = 0;
+            }
+        }
+
+        // kommt nicht voran (Block bricht doch nicht sofort o.ae.): normal weitergraben
+        double moved = Math.abs(p.getX() - sprintLastX) + Math.abs(p.getZ() - sprintLastZ);
+        sprintLastX = p.getX();
+        sprintLastZ = p.getZ();
+        if (sprintPushed && moved < 0.02) {
+            if (++sprintStill > 8) {
+                sprintRun = false;
+                sprintCooldown = 60;
+                return false;
+            }
+        } else {
+            sprintStill = 0;
+        }
+
+        action = "Sprintet durch Netherrack";
+        // Blick: fester Winkel nach unten; seitlich auf einen Punkt der Tunnelmitte 4 Bloecke voraus (so bleibt
+        // er in der Mitte, ohne A/D zu tippen, und der Strahl trifft nie die Seitenwand)
+        double tx = curX != 0 ? p.getX() + curX * 4.0 : feet.getX() + 0.5;
+        double tz = curZ != 0 ? p.getZ() + curZ * 4.0 : feet.getZ() + 0.5;
+        float yaw = Look.yawOf(tx - p.getX(), tz - p.getZ());
+        Look.turn(p, yaw, pitch, 30.0f, 25.0f, 0.0f);
+        float ey = Math.abs(wrapDeg(yaw - p.getYRot()));
+        float ep = Math.abs(pitch - p.getXRot());
+        if (ey > 3.0f || ep > 1.2f) {
+            sprintPushed = false; // erst fertig drehen, sonst koennte der Strahl den Boden treffen
+            return true;
+        }
+        kFwd = true;
+        kSprint = true;
+        sprintPushed = true;
+        kAttack = sprintSafeHit(level, p, feet, reach);
+        digging = kAttack;
+        return true;
+    }
+
+    /** Fester Blickwinkel nach unten (Grad); NaN = geht nicht. */
+    private static float sprintPitch(double eyeH, double reach) {
+        if (reach <= 0.0 || eyeH <= 1.2) return Float.NaN;
+        // steiler als das erreicht der Strahl den Boden (Bodenoberkante liegt eyeH unter dem Auge)
+        double floorLimit = Math.toDegrees(Math.asin(Math.min(1.0, eyeH / reach)));
+        float pitch = (float) Math.min(19.0, floorLimit - 1.8);
+        return pitch < 14.0f ? Float.NaN : pitch; // sehr grosse Reichweite: zu flach, lieber normal graben
+    }
+
+    /** Laesst sich ab hier durchsprinten? */
+    private static boolean canSprint(Level level, LocalPlayer p, BlockPos feet, float pitch) {
+        if (pattern != 0 || Float.isNaN(pitch) || sprintCooldown > 0) return false;
+        if (curX != mainX || curZ != mainZ || sideLeft != 0) return false;
+        if (!p.onGround() || p.isInWater() || Math.abs(p.getY() - tunnelY) > 0.01) return false;
+        if (maxLength > 0 && bestAlong + SPRINT_LOOK >= maxLength) return false; // das letzte Stueck normal
+        double off = curX != 0 ? p.getZ() - (feet.getZ() + 0.5) : p.getX() - (feet.getX() + 0.5);
+        if (Math.abs(off) > 0.22) return false;
+        if (!fullBlock(level, feet.below())) return false;
+        // Werkzeug wie beim normalen Graben (fuer den ersten festen Block)
+        boolean toolSet = false;
+        for (int k = 1; k <= SPRINT_LOOK; k++) {
+            BlockPos base = feet.offset(curX * k, 0, curZ * k);
+            for (BlockPos c : section(base, curX, curZ)) {
+                if (!level.getFluidState(c).isEmpty()) return false;
+                if (passable(level, c)) continue;
+                BlockState bs = level.getBlockState(c);
+                if (bs.is(Blocks.ANCIENT_DEBRIS)) return false;
+                if (!toolSet) {
+                    toolSet = true;
+                    int slot = bestTool(p, bs, bs.getDestroySpeed(level, c));
+                    if (slot >= 0) p.getInventory().setSelectedSlot(slot);
+                }
+                if (bs.getDestroyProgress(p, level, c) < 1.0f) return false; // bricht nicht sofort
+                if (!safeToBreak(level, c)) return false;
+            }
+            // Kies o.ae. ueber dem Kopfblock wuerde in den Tunnel fallen; der Boden muss ein voller Block sein
+            if (level.getBlockState(base.above(2)).getBlock() instanceof FallingBlock) return false;
+            if (!fullBlock(level, base.below()) || isLava(level, base.below())) return false;
+        }
+        return lavaAhead(level, feet, curX, curZ, SPRINT_LOOK + 1, true) == 0;
+    }
+
+    /** Abstand vom Spieler (Auge) bis zur ersten festen Tunnelwand voraus; gross, wenn frei. */
+    private static double wallDistance(Level level, LocalPlayer p, BlockPos feet) {
+        for (int k = 1; k <= SPRINT_LOOK; k++) {
+            BlockPos base = feet.offset(curX * k, 0, curZ * k);
+            for (BlockPos c : section(base, curX, curZ)) {
+                if (!solid(level, c)) continue;
+                double pos = curX != 0 ? p.getX() : p.getZ();
+                int dir = curX != 0 ? curX : curZ;
+                int b = curX != 0 ? base.getX() : base.getZ();
+                double face = dir > 0 ? b : b + 1;
+                return (face - pos) * dir;
+            }
+        }
+        return 99.0;
+    }
+
+    /**
+     * Darf die Taste gedrueckt bleiben? Nur, wenn das Fadenkreuz auf einem Tunnelblock voraus liegt (oder auf
+     * nichts) - nie auf Boden, Decke oder Seitenwand.
+     */
+    private static boolean sprintSafeHit(Level level, LocalPlayer p, BlockPos feet, double reach) {
+        Vec3 eye = p.getEyePosition();
+        Vec3 end = eye.add(p.getLookAngle().scale(reach));
+        BlockHitResult r = level.clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, p));
+        if (r == null || r.getType() != HitResult.Type.BLOCK) return true;
+        BlockPos h = r.getBlockPos();
+        int dx = h.getX() - feet.getX();
+        int dz = h.getZ() - feet.getZ();
+        int along = dx * curX + dz * curZ;
+        int side = dx * curZ - dz * curX;
+        if (side != 0 || along < 1 || along > SPRINT_LOOK) return false;
+        if (h.getY() != tunnelY && h.getY() != tunnelY + 1) return false;
+        BlockState bs = level.getBlockState(h);
+        return !bs.is(Blocks.ANCIENT_DEBRIS) && bs.getDestroyProgress(p, level, h) >= 1.0f && safeToBreak(level, h);
+    }
+
+    private static boolean fullBlock(Level level, BlockPos pos) {
+        return level.getBlockState(pos).isCollisionShapeFullBlock(level, pos);
+    }
+
+    private static float wrapDeg(float d) {
+        d %= 360.0f;
+        if (d >= 180.0f) d -= 360.0f;
+        if (d < -180.0f) d += 360.0f;
+        return d;
+    }
+
+    /** Freie Plaetze im Inventar (ohne Ruestung und zweite Hand). */
+    private static int freeSlots(LocalPlayer p) {
+        int n = 0;
+        for (int i = 0; i < 36; i++) {
+            if (p.getInventory().getItem(i).isEmpty()) n++;
+        }
+        return n;
     }
 
     private static void stepDone() {
@@ -1422,6 +1746,15 @@ public final class DebrisMiner {
         int up = feet.getY() - resume.getY();
         boolean adjacent = (up == 0 || up == 1)
                 && Math.abs(feet.getX() - resume.getX()) + Math.abs(feet.getZ() - resume.getZ()) <= 1;
+        // einen Block hoeher direkt daneben, aber ueber dem Tunnel ist die Decke (er steht z.B. auf einem
+        // gesetzten Block im Tunnel): den Block unter sich abbauen und hinunterfallen, statt gegen die Decke zu laufen
+        BlockPos under = feet.below();
+        if (adjacent && up == 1 && open(level, resume) && solid(level, resume.above(2)) && p.onGround()
+                && under.getY() == resume.getY() && solid(level, under) && safeToBreak(level, under)) {
+            stopWalker(mc);
+            if (!mine(mc, level, p, under, -1)) stuckTicks = 60; // geht nicht: Wegsuche
+            return;
+        }
         if (adjacent && open(level, resume) && stuckTicks < 60) {
             stopWalker(mc); // das letzte Stueck direkt
             moveTo(p, resume, Look.yawOf(resume.getX() - feet.getX(), resume.getZ() - feet.getZ()));
@@ -1698,12 +2031,16 @@ public final class DebrisMiner {
             if (inv.getItem(i).is(Items.NETHERRACK)) netherrack++;
         }
         int sel = inv.getSelectedSlot();
+        // wie ein Spieler: nur volle Stapel wegwerfen (nicht alle paar Bloecke ein paar Stueck), ausser das
+        // Inventar wird knapp
+        boolean tight = freeSlots(p) < 3;
         for (int i = 35; i >= 0; i--) {
             ItemStack st = inv.getItem(i);
             if (!isJunk(st) || i == sel) continue;
             if (st.is(Items.NETHERRACK)) {
                 if (netherrack <= keepNetherrack) continue;
             }
+            if (!tight && st.getCount() < st.getMaxStackSize()) continue;
             return i;
         }
         return -1;
@@ -1727,6 +2064,14 @@ public final class DebrisMiner {
                 dropCooldown = 8;
                 if (isJunk(p.getInventory().getItem(slot))) {
                     PlayerMods.click(p, slot < 9 ? 36 + slot : slot, 1, "THROW");
+                }
+                // noch mehr Gestein (z.B. nach dem Durchsprinten)? Gleich hinterher werfen, statt sich fuer
+                // jeden Stapel neu umzudrehen
+                int more = junkSlot(p);
+                if (more >= 0 && more != slot) {
+                    dropSlot = more;
+                    dropCooldown = 0;
+                    aimedTicks = -(2 + Look.rng().nextInt(4));
                 }
             }
         } else {
@@ -2039,6 +2384,7 @@ public final class DebrisMiner {
             Look.aim(p, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 4.0f);
             return true;
         }
+        if (digTicks > 1) Look.holdSteady(); // waehrend des Abbaus die Maus ruhig halten
         boolean aimed = Look.aim(p, pt[0], pt[1], pt[2], 4.0f);
         boolean onTarget = false;
         HitResult hr = mc.hitResult;
@@ -2143,13 +2489,39 @@ public final class DebrisMiner {
     private static boolean moveTo(LocalPlayer p, BlockPos t, float yaw) {
         double dx = t.getX() + 0.5 - p.getX();
         double dz = t.getZ() + 0.5 - p.getZ();
-        if (feet(p).equals(t) && Math.abs(dx) < 0.2 && Math.abs(dz) < 0.2) {
+        double tolMove = humanize ? 0.3 : 0.2; // ohne Ducken nicht ganz so genau in der Mitte
+        if (feet(p).equals(t) && Math.abs(dx) < tolMove && Math.abs(dz) < tolMove) {
             stuckTicks = 0;
+            lastMoveX = Double.NaN;
             return true;
         }
-        Look.turn(p, yaw, 25.0f, 30.0f, 10.0f, 0.0f);
-        push(p, dx, dz, 0.04);
-        kSneak = Math.sqrt(dx * dx + dz * dz) < 0.6;
+        float[] w = Look.wander(); // menschlich: der Blick wandert ein paar Grad hin und her
+        Look.turn(p, yaw + w[0], 25.0f + w[1], 30.0f, 10.0f, 0.0f);
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        double speed = Double.isNaN(lastMoveX) ? 0 : Math.hypot(p.getX() - lastMoveX, p.getZ() - lastMoveZ);
+        lastMoveX = p.getX();
+        lastMoveZ = p.getZ();
+        if (humanize) {
+            // wie ein Spieler: kurz vor der Mitte loslassen und ausrollen lassen (statt sich zu ducken).
+            // Steht er noch nicht auf dem Feld (z.B. einen Block hoeher auf der Kante), weiter schieben,
+            // bis er hinunterfaellt - sonst bliebe er mit der Ferse auf der Kante stehen.
+            BlockPos f = feet(p);
+            boolean above = f.getX() == t.getX() && f.getZ() == t.getZ() && f.getY() > t.getY();
+            if (!above && dist < 0.3 + speed * 1.3) {
+                kFwd = false;
+                kBack = false;
+                kLeft = false;
+                kRight = false;
+            } else {
+                // kleine seitliche Abweichungen laesst ein Spieler einfach stehen, statt staendig A/D zu tippen
+                push(p, dx, dz, above ? 0.02 : 0.04, above ? 0.02 : 0.17);
+            }
+            kSneak = false;
+            if (above) Look.releaseSneak();
+        } else {
+            push(p, dx, dz, 0.04);
+            kSneak = dist < 0.6; // geduckt genau auf die Mitte
+        }
         stuckTicks++;
         return false;
     }
@@ -2228,13 +2600,18 @@ public final class DebrisMiner {
     }
     /** Blick weich drehen. true = innerhalb der Toleranz. */    /** In Weltrichtung (vx, vz) gehen, egal wohin er schaut: W/A/S/D passend zum Blick. */
     private static void push(LocalPlayer p, double vx, double vz, double dead) {
+        push(p, vx, vz, dead, dead);
+    }
+
+    /** Wie push, aber mit eigener Toleranz fuer seitlich (A/D). */
+    private static void push(LocalPlayer p, double vx, double vz, double dead, double sideDead) {
         double yaw = Math.toRadians(p.getYRot());
         double fwd = -vx * Math.sin(yaw) + vz * Math.cos(yaw);
         double left = vx * Math.cos(yaw) + vz * Math.sin(yaw);
         kFwd = fwd > dead;
         kBack = fwd < -dead;
-        kLeft = left > dead;
-        kRight = left < -dead;
+        kLeft = left > sideDead;
+        kRight = left < -sideDead;
     }
 
     /** Chat-Meldung mit "1912 Client"-Absender (text auf Deutsch, wird uebersetzt). */
@@ -2250,6 +2627,7 @@ public final class DebrisMiner {
         kSneak = false;
         kAttack = false;
         kUse = false;
+        kSprint = false;
     }
 
     private static void applyKeys(Minecraft mc) {
@@ -2259,8 +2637,8 @@ public final class DebrisMiner {
         Look.setKey(o.keyLeft, kLeft);
         Look.setKey(o.keyRight, kRight);
         Look.setKey(o.keyJump, false);
-        Look.setKey(o.keySprint, false);
-        Look.setKey(o.keyShift, kSneak);
+        Look.setKey(o.keySprint, kSprint);
+        Look.setSneak(o.keyShift, kSneak);
         Look.setKey(o.keyAttack, kAttack);
         Look.setKey(o.keyUse, kUse);
     }

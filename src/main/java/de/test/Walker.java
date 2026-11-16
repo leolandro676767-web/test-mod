@@ -207,6 +207,7 @@ public final class Walker {
     /** Alle Tasten loslassen, die der Walker benutzt. */
     static void release(Minecraft mc) {
         clearKeys();
+        Look.releaseSneak(); // sofort aufstehen, nicht erst nach der Ducken-Pause
         applyKeys(mc);
         digging = false;
     }
@@ -252,6 +253,7 @@ public final class Walker {
         } finally {
             if (result != null) {
                 clearKeys();
+                Look.releaseSneak();
                 digging = false;
             }
             applyKeys(mc);
@@ -597,7 +599,10 @@ public final class Walker {
         }
         switch (s.move) {
             case ASCEND -> ascend(level, p, s);
-            case PARKOUR -> parkour(p, s);
+            case PARKOUR -> {
+                Look.releaseSneak(); // geduckt springt er zu kurz
+                parkour(p, s);
+            }
             default -> walk(level, p, m, s); // WALK, DIAGONAL, DESCEND, FALL
         }
     }
@@ -630,6 +635,7 @@ public final class Walker {
         // Danach eine Kurve, eine Kante oder eine Aktion? Dann genau am Punkt anhalten.
         boolean precise = needsStop(m, lookahead >= 0 ? lookahead : index, dx / len, dz / len);
         boolean falling = s.move == Move.FALL || s.move == Move.DESCEND;
+        if (falling) Look.releaseSneak(); // geduckt kaeme er nicht ueber die Kante
         drive(p, tx, tz, precise || falling, !falling && !p.isInWater());
         if (falling && !p.onGround()) {
             // ueber der Landestelle nicht weiter nach vorne druecken
@@ -696,7 +702,7 @@ public final class Walker {
     private static void pillar(Minecraft mc, Level level, LocalPlayer p, Step s) {
         action = "Baut hoch";
         stillTicks = 0;
-        kSneak = true;
+        kSneak = !Look.human; // senkrecht hochbauen geht auch ungeduckt (beim Springen bleibt er ueber dem Block)
         if (p.isSprinting()) p.setSprinting(false);
         BlockPos placePos = new BlockPos(s.fx, s.fy, s.fz);
         BlockPos base = placePos.below();
@@ -720,6 +726,7 @@ public final class Walker {
         double hx = s.fx + 0.5;
         double hy = s.fy;
         double hz = s.fz + 0.5;
+        Look.holdSteady();
         boolean aimed = Look.turn(p, p.getYRot(), 90.0f, 30.0f, 30.0f, 6.0f); // senkrecht nach unten
         if (p.onGround()) {
             kJump = aimed;
@@ -870,6 +877,7 @@ public final class Walker {
         double ax = pt != null ? pt[0] : pos.getX() + 0.5;
         double ay = pt != null ? pt[1] : pos.getY() + 0.5;
         double az = pt != null ? pt[2] : pos.getZ() + 0.5;
+        if (digTicks > 1) Look.holdSteady(); // beim Abbauen die Maus ruhig halten
         boolean aimed = Look.aim(p, ax, ay, az, 4.0f);
         boolean onTarget = false;
         HitResult hr = mc.hitResult;
@@ -938,11 +946,24 @@ public final class Walker {
         if (!kSprint && precise && dist < 2.0 && p.isSprinting()) p.setSprinting(false);
     }
 
-    /** Langsam (geduckt) in die Mitte eines Blocks schieben, ohne sich umzudrehen. true = ist dort. */
+    private static int centerTap;
+
+    /**
+     * Langsam in die Mitte eines Blocks schieben, ohne sich umzudrehen. true = ist dort.
+     * Menschlich: kurze Tipper auf die Tasten statt geduckt zu schleichen (das sah nach Bot aus).
+     */
     private static boolean center(LocalPlayer p, double cx, double cz, double tol) {
         double dx = cx - p.getX();
         double dz = cz - p.getZ();
-        if (Math.abs(dx) <= tol && Math.abs(dz) <= tol) return true;
+        if (Math.abs(dx) <= tol && Math.abs(dz) <= tol) {
+            centerTap = 0;
+            return true;
+        }
+        if (Look.human) {
+            // 1 Tick druecken, 2 Ticks ausrollen lassen: kleine, gleichmaessige Schritte
+            if (centerTap++ % 3 == 0) push(p, dx, dz, 0.05);
+            return false;
+        }
         kSneak = true;
         push(p, dx, dz, 0.05);
         return false;
@@ -1066,7 +1087,7 @@ public final class Walker {
         Look.setKey(o.keyRight, kRight);
         Look.setKey(o.keyJump, kJump);
         Look.setKey(o.keySprint, kSprint);
-        Look.setKey(o.keyShift, kSneak);
+        Look.setSneak(o.keyShift, kSneak);
         Look.setKey(o.keyAttack, kAttack);
     }
 

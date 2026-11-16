@@ -990,3 +990,15 @@
 1151	Preferir piezas encantadas
 1152	Orden: netherita, diamante, hierro (y caparazón de tortuga), cota de malla, cobre, oro, cuero. Con el mismo material gana la pieza encantada y luego la menos gastada. Las calabazas y cabezas en la cabeza se quedan donde están.
 1154	Mientras el Debris Miner funciona, se defiende de los monstruos en alcance. Animales y mobs neutrales solo si te están atacando. Mientras lucha, el bot se detiene y después sigue con su herramienta.
+1156	, en el borde del chunk
+1157	Echa un vistazo alrededor
+1158	Yendo al borde del chunk
+1159	Cavar a lo largo de un borde de chunk
+1160	Con borde de chunk cava a lo largo del borde de chunk más cercano desde el principio (como mucho a 8 bloques): antes de bajar a la altura objetivo se mueve de lado hasta el borde y cava recto hacia abajo allí; un túnel de 2x2 queda justo a ambos lados. Tras los desvíos siempre vuelve al borde.
+1161	Moverse como una persona
+1162	Mirar alrededor de vez en cuando
+1163	Gira de forma más suave y no siempre a la misma velocidad, con un ligero temblor como una mano en el ratón. Al caminar, la vista se desvía unos grados y después de cada bloque espera un tiempo distinto. Solo se agacha en los bordes y entonces durante un rato seguido, ya no durante ticks sueltos; para llegar al centro de un bloque da toques cortos en vez de ir agachado.
+1164	«Mirar alrededor de vez en cuando» (solo con «Moverse como una persona»): cada 45 segundos a 2 minutos se detiene un momento en el túnel, mira a un lado y luego sigue, solo si no hay lava cerca.
+1165	Corriendo a través del netherrack
+1166	Atravesar el netherrack corriendo
+1167	«Atravesar el netherrack corriendo»: si tu herramienta rompe el netherrack al instante (p. ej. Eficiencia V), mantiene pulsado el botón del ratón y atraviesa corriendo, mirando fijo 19° hacia abajo. Entre 18° y 20° la mira toca primero el bloque de los pies más adelante y luego el de la cabeza, pero nunca el suelo. Solo con el túnel de 1x2; antes de lava, escombros, grava o roca más dura vuelve a ir bloque a bloque.

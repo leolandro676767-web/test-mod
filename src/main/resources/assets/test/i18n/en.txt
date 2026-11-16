@@ -971,3 +971,15 @@
 1151	Prefer enchanted pieces
 1152	Order: netherite, diamond, iron (and turtle shell), chainmail, copper, gold, leather. With the same material the enchanted piece wins, then the less worn one. Pumpkins and heads on your head stay where they are.
 1154	While the Debris Miner is running, it fights off monsters in range. Animals and neutral mobs only when they are attacking you. While it fights, the bot stops and then carries on with its tool.
+1156	, along the chunk border
+1157	Taking a quick look around
+1158	Going to the chunk border
+1159	Dig along a chunk border
+1160	With chunk border it digs along the nearest chunk border right from the start (at most 8 blocks away): before going down to the target height it first steps sideways onto the border and digs straight down there; a 2x2 tunnel lies exactly on both sides. After detours it always comes back to the border.
+1161	Move like a human
+1162	Look around now and then
+1163	Turns more smoothly and not always at the same speed, with a slight jitter like a hand on the mouse. While walking the view drifts a few degrees, and after each block it waits a slightly different time. It only crouches at edges and then for a while at a time, no longer for single ticks; to get to the middle of a block it uses short taps instead of sneaking.
+1164	“Look around now and then” (only with “Move like a human”): every 45 seconds to 2 minutes it briefly stops in the tunnel, looks to the side and then carries on – only when there is no lava nearby.
+1165	Sprinting through netherrack
+1166	Sprint through netherrack
+1167	“Sprint through netherrack”: if your tool breaks netherrack instantly (e.g. Efficiency V), it holds the mouse button and sprints through, looking at a fixed 19° downwards. At 18° to 20° the crosshair first hits the foot block further ahead while running and then the head block, but never the floor. Only for the 1x2 tunnel; before lava, debris, gravel or harder rock it goes back to block by block.

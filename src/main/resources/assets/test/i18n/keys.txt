@@ -1155,3 +1155,15 @@
 1153	Auto Totem/Armor
 1154	Während der Debris Miner läuft, wehrt er Monster in Reichweite ab. Tiere und neutrale Mobs nur, wenn sie dich gerade angreifen. Solange er kämpft, hält der Bot an und macht danach mit seinem Werkzeug weiter.
 1155	1912 Debris Miner
+1156	, an der Chunk-Grenze
+1157	Schaut sich kurz um
+1158	Geht zur Chunk-Grenze
+1159	An einer Chunk-Grenze entlang graben
+1160	Mit Chunk-Grenze gräbt er von Anfang an an der nächsten Chunk-Grenze entlang (höchstens 8 Blöcke daneben): Vor dem Abstieg auf die Ziel-Höhe geht er erst seitlich auf die Grenze und gräbt dort senkrecht hinunter; ein 2x2-Tunnel liegt genau auf beiden Seiten. Nach Umwegen kommt er immer auf die Grenze zurück.
+1161	Menschlich bewegen
+1162	Ab und zu umschauen
+1163	Dreht sich weicher und nicht immer gleich schnell, mit einem leichten Zittern wie an der Maus. Beim Gehen wandert der Blick ein paar Grad, und nach jedem Block wartet er unterschiedlich lange. Ducken nur noch an Kanten und dann eine Weile am Stück, nicht mehr für einzelne Ticks; in die Blockmitte tippt er mit kurzen Schritten statt zu schleichen.
+1164	„Ab und zu umschauen“ (nur mit „Menschlich bewegen“): Alle 45 Sekunden bis 2 Minuten bleibt er im Tunnel kurz stehen, schaut zur Seite und macht dann weiter – nur, wenn keine Lava in der Nähe ist.
+1165	Sprintet durch Netherrack
+1166	Netherrack durchsprinten
+1167	„Netherrack durchsprinten“: Baut dein Werkzeug Netherrack sofort ab (z.B. Effizienz V), hält er die Maustaste gedrückt und sprintet durch, mit festem Blick 19° nach unten. Bei 18° bis 20° trifft das Fadenkreuz beim Laufen erst den Fußblock weiter vorne und dann den Kopfblock, aber nie den Boden. Nur beim 1x2-Tunnel; vor Lava, Debris, Kies oder härterem Gestein gräbt er wieder Block für Block.

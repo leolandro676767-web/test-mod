@@ -32,6 +32,8 @@ public class DebrisScreen extends Form {
         number("Max. Länge (0 = unbegrenzt)", () -> DebrisMiner.maxLength,
                 v -> DebrisMiner.maxLength = Math.max(0, v), 0);
         toggle("Löcher im Boden zubauen", () -> DebrisMiner.fillFloor, v -> DebrisMiner.fillFloor = v, true);
+        toggle("An einer Chunk-Grenze entlang graben", () -> DebrisMiner.chunkBorder,
+                v -> DebrisMiner.chunkBorder = v, true);
         toggle("Nach Umwegen zurück auf die Achse", () -> DebrisMiner.returnAxis, v -> DebrisMiner.returnAxis = v,
                 true);
         toggle("Netherrack und Gestein wegwerfen", () -> DebrisMiner.dropJunk, v -> DebrisMiner.dropJunk = v, true);
@@ -40,6 +42,27 @@ public class DebrisScreen extends Form {
         note("Ohne „Erst auf die Ziel-Höhe gehen“ gräbt er auf der Höhe, auf der du gerade stehst. Ohne "
                 + "„Löcher im Boden zubauen“ weicht er Löchern aus. Weggeworfen wird nach hinten, damit er es nicht "
                 + "wieder aufsammelt.");
+
+        note("Mit Chunk-Grenze gräbt er von Anfang an an der nächsten Chunk-Grenze entlang (höchstens 8 Blöcke "
+                + "daneben): Vor dem Abstieg auf die Ziel-Höhe geht er erst seitlich auf die Grenze und gräbt dort "
+                + "senkrecht hinunter; ein 2x2-Tunnel liegt genau auf beiden Seiten. Nach Umwegen kommt er immer auf die Grenze zurück.");
+
+        section("Bewegung");
+        toggle("Menschlich bewegen", () -> DebrisMiner.humanize, v -> DebrisMiner.humanize = v, true);
+        toggle("Ab und zu umschauen", () -> DebrisMiner.lookAround, v -> DebrisMiner.lookAround = v, true);
+        toggle("Netherrack durchsprinten", () -> DebrisMiner.sprintMine, v -> DebrisMiner.sprintMine = v, true);
+        note("Dreht sich weicher und nicht immer gleich schnell, mit einem leichten Zittern wie an der Maus. Beim "
+                + "Gehen wandert der Blick ein paar Grad, und nach jedem Block wartet er unterschiedlich lange. "
+                + "Ducken nur noch an Kanten und dann eine Weile am Stück, nicht mehr für einzelne Ticks; in die "
+                + "Blockmitte tippt er mit kurzen Schritten statt zu schleichen.");
+        note("„Ab und zu umschauen“ (nur mit „Menschlich bewegen“): Alle 45 Sekunden bis 2 Minuten bleibt er im "
+                + "Tunnel kurz stehen, schaut zur Seite und macht dann weiter – nur, wenn keine Lava in der Nähe "
+                + "ist.");
+        note("„Netherrack durchsprinten“: Baut dein Werkzeug Netherrack sofort ab (z.B. Effizienz V), hält er die "
+                + "Maustaste gedrückt und sprintet durch, mit festem Blick 19° nach unten. Bei 18° bis 20° trifft "
+                + "das Fadenkreuz beim Laufen erst den Fußblock weiter vorne und dann den Kopfblock, aber nie den "
+                + "Boden. Nur beim 1x2-Tunnel; vor Lava, Debris, Kies oder härterem Gestein gräbt er wieder Block "
+                + "für Block.");
 
         section("Abbau");
         slider("Scan-Verzögerung (Ticks)", 0, 20, () -> DebrisMiner.scanDelay, v -> DebrisMiner.scanDelay = v, 3);
