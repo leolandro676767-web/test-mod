@@ -17,6 +17,7 @@ public class BotGuardScreen extends Form {
 
         section("Bots");
         toggle("Debris Miner", () -> BotGuard.forDebris, v -> BotGuard.forDebris = v, true);
+        toggle("Tunnel Miner", () -> BotGuard.forTunnel, v -> BotGuard.forTunnel = v, true);
         toggle("Bereich abbauen", () -> BotGuard.forArea, v -> BotGuard.forArea = v, true);
         toggle("Block abbauen", () -> BotGuard.forBlock, v -> BotGuard.forBlock = v, true);
         toggle("Zu Koordinaten gehen", () -> BotGuard.forGoto, v -> BotGuard.forGoto = v, true);

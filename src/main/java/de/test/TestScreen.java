@@ -346,14 +346,27 @@ public class TestScreen extends Screen {
         world.entries.add(open("Koordinaten", () -> new GotoScreen(this)));
         world.entries.add(new Entry(Keybinds.STOP_NAME, null, () -> TestClient.stopOrWalk(Minecraft.getInstance())));
         world.entries.add(new Entry(Keybinds.SELECT_NAME, null, () -> TestClient.selectLookedAt(Minecraft.getInstance())));
-        world.entries.add(toggle("Auto-Logout", () -> TestClient.autoLogout,
-                () -> TestClient.autoLogout = !TestClient.autoLogout));
+        world.entries.add(module("Auto-Logout", () -> TestClient.autoLogout,
+                () -> TestClient.autoLogout = !TestClient.autoLogout, () -> new Form(Component.literal("Auto-Logout"), this) {
+                    @Override
+                    protected void build() {
+                        description("Trennt die Verbindung, sobald dein Leben auf die eingestellten Herzen fällt – "
+                                + "immer, nicht nur, wenn ein Bot läuft.");
+                        slider("Bei Herzen (oder weniger)", 1, 10, () -> TestClient.logoutHearts,
+                                v -> TestClient.logoutHearts = v, 2);
+                        note("Tunnel Miner und Debris Miner haben zusätzlich eigene Auto-Log-Einstellungen: Spieler "
+                                + "in der Nähe, nach einem Totem und eigene Herzen.");
+                        footer(() -> TestClient.autoLogout, v -> TestClient.autoLogout = v);
+                    }
+                }));
         world.entries.add(module("ESP", () -> Esp.enabled, () -> {
             Esp.enabled = !Esp.enabled;
             Esp.rescan();
         }, () -> new EspScreen(this)));
         world.entries.add(module("Debris Miner", DebrisMiner::isRunning, DebrisMiner::toggle,
                 () -> new DebrisScreen(this)));
+        world.entries.add(module("Tunnel Miner", TunnelMiner::isRunning, TunnelMiner::toggle,
+                () -> new TunnelScreen(this)));
         world.entries.add(module("Bot-Verteidigung", () -> BotGuard.enabled,
                 () -> BotGuard.enabled = !BotGuard.enabled, () -> new BotGuardScreen(this)));
 

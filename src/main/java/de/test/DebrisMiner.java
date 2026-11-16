@@ -313,6 +313,7 @@ public final class DebrisMiner {
             Player other = nearbyPlayer(mc, p);
             if (other != null) return Lang.t("Nicht gestartet – Spieler in der Nähe: ") + other.getName().getString();
         }
+        TunnelMiner.stop(mc, null);
         if (TestClient.areaActive) TestClient.stopArea(mc, null);
         TestClient.walking = false;
         clearState();

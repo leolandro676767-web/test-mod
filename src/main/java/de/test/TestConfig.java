@@ -39,6 +39,7 @@ public final class TestConfig {
         TestClient.sprintJump = bool(p, "sprintJump", TestClient.sprintJump);
         TestClient.autoMine = bool(p, "autoMine", TestClient.autoMine);
         TestClient.autoLogout = bool(p, "autoLogout", TestClient.autoLogout);
+        TestClient.logoutHearts = Math.max(1, Math.min(10, num(p, "logoutHearts", TestClient.logoutHearts)));
         TestClient.autoDrop = bool(p, "autoDrop", TestClient.autoDrop);
         TestClient.autoClicker = bool(p, "autoClicker", TestClient.autoClicker);
         TestClient.clickerRandom = Math.max(0, Math.min(100, num(p, "clickerRandom", TestClient.clickerRandom)));
@@ -146,6 +147,7 @@ public final class TestConfig {
         readIds(p.getProperty("rm.blockEspBlocks"), BuiltInRegistries.BLOCK, RenderMods.blockEspBlocks);
         loadStatics(p, MiscMods.class, "mm.");
         loadStatics(p, DebrisMiner.class, "dm.");
+        loadStatics(p, TunnelMiner.class, "tm.");
         loadStatics(p, Friends.class, "fr.");
         loadStatics(p, KillAura.class, "ka.");
         loadStatics(p, BotGuard.class, "bg.");
@@ -211,6 +213,7 @@ public final class TestConfig {
         p.setProperty("sprintJump", Boolean.toString(TestClient.sprintJump));
         p.setProperty("autoMine", Boolean.toString(TestClient.autoMine));
         p.setProperty("autoLogout", Boolean.toString(TestClient.autoLogout));
+        p.setProperty("logoutHearts", Integer.toString(TestClient.logoutHearts));
         p.setProperty("autoDrop", Boolean.toString(TestClient.autoDrop));
         p.setProperty("autoClicker", Boolean.toString(TestClient.autoClicker));
         p.setProperty("clickerRandom", Integer.toString(TestClient.clickerRandom));
@@ -322,6 +325,7 @@ public final class TestConfig {
         p.setProperty("rm.blockEspBlocks", writeIds(RenderMods.blockEspBlocks, BuiltInRegistries.BLOCK));
         saveStatics(p, MiscMods.class, "mm.");
         saveStatics(p, DebrisMiner.class, "dm.");
+        saveStatics(p, TunnelMiner.class, "tm.");
         saveStatics(p, Friends.class, "fr.");
         saveStatics(p, KillAura.class, "ka.");
         saveStatics(p, BotGuard.class, "bg.");

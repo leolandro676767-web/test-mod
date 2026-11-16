@@ -546,6 +546,7 @@ public final class RenderMods {
     /** Vom LivingEntityMixin: jemand hat ein Totem verbraucht (Ereignis 35). */
     public static void onTotemPop(LivingEntity e) {
         DebrisMiner.onTotemPop(e); // Auto-Log nach Totem
+        TunnelMiner.onTotemPop(e);
         if (!popChams) return;
         Minecraft mc = Minecraft.getInstance();
         if (e == mc.player && !popSelf) return;
@@ -722,6 +723,7 @@ public final class RenderMods {
             drawMining(g);
             if (TestClient.areaActive) Walker.render(g); // geplanter Weg (Koordinaten, Bereich, Bloecke suchen)
             if (DebrisMiner.isRunning()) DebrisMiner.render(g); // gefundenes Debris, naechster Tunnelabschnitt
+            if (TunnelMiner.isRunning()) TunnelMiner.render(g); // naechster Tunnelabschnitt
         } finally {
             Ui.alpha = old;
         }

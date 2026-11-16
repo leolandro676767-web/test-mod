@@ -30,6 +30,7 @@ public final class BotGuard {
 
     // fuer welche Bots
     public static boolean forDebris = true;
+    public static boolean forTunnel = true;
     public static boolean forArea = true;
     public static boolean forBlock = true;
     public static boolean forGoto = true;
@@ -78,6 +79,7 @@ public final class BotGuard {
     /** Laeuft gerade ein Bot, fuer den die Verteidigung eingeschaltet ist? */
     static boolean botWantsDefense() {
         if (DebrisMiner.isRunning()) return forDebris;
+        if (TunnelMiner.isRunning()) return forTunnel;
         if (TestClient.areaActive) {
             if (TestClient.gotoMode) return forGoto;
             return TestClient.blockMode ? forBlock : forArea;

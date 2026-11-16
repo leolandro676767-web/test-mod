@@ -214,7 +214,7 @@ public final class Walker {
 
     /** Fuer den Mixin: Angriffstaste gilt als gedrueckt, solange der Walker einen Block abbaut. */
     public static boolean forceAttack() {
-        return active && digging || DebrisMiner.forceAttack();
+        return active && digging || DebrisMiner.forceAttack() || TunnelMiner.forceAttack();
     }
 
     static boolean isActive() {

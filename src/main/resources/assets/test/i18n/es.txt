@@ -1002,3 +1002,67 @@
 1165	Corriendo a través del netherrack
 1166	Atravesar el netherrack corriendo
 1167	«Atravesar el netherrack corriendo»: si tu herramienta rompe el netherrack al instante (p. ej. Eficiencia V), mantiene pulsado el botón del ratón y atraviesa corriendo, mirando fijo 19° hacia abajo. Entre 18° y 20° la mira toca primero el bloque de los pies más adelante y luego el de la cabeza, pero nunca el suelo. Solo con el túnel de 1x2; antes de lava, escombros, grava o roca más dura vuelve a ir bloque a bloque.
+1168	Tunnel Miner
+1169	Tunnel Miner desactivado
+1170	Auto-Logout con 
+1171	 corazones
+1172	Se desconecta en cuanto tu vida baja a los corazones ajustados – siempre, no solo cuando hay un bot activo.
+1173	Con corazones (o menos)
+1174	Tunnel Miner y Debris Miner tienen además sus propios ajustes de Auto-Log: jugadores cerca, tras un tótem y sus propios corazones.
+1175	3x3 (pico 3x3)
+1176	Ángulo de vista fijo
+1177	Bloque a bloque
+1178	Valiosos
+1179	Esquivar
+1180	Detenerse
+1181	Ponte primero sobre suelo firme
+1182	Ten el pico 3x3 en la mano
+1183	Tunnel Miner iniciado: dirección 
+1184	Longitud: 
+1185	Minerales: 
+1186	Tunnel Miner detenido (error)
+1187	Poca vida: 
+1188	1912: Tunnel Miner – 
+1189	No avanza – Tunnel Miner detenido
+1190	Inventario lleno – Tunnel Miner detenido
+1191	Lava o agua delante
+1192	Esquivando
+1193	Agujero en el suelo
+1194	Rellenando el suelo
+1195	No hay bloques para rellenar – Tunnel Miner detenido
+1196	El bloque no se puede picar
+1197	 – Tunnel Miner detenido
+1198	 – esquiva hacia un lado
+1199	 – no hay forma de rodearlo, Tunnel Miner detenido
+1200	Picando mineral
+1201	No se encontró el camino de vuelta al túnel – Tunnel Miner detenido
+1202	El pico 3x3 ya no está en la barra rápida – Tunnel Miner detenido
+1203	Pico 3x3 casi roto – Tunnel Miner detenido
+1204	No queda ningún pico utilizable – Tunnel Miner detenido
+1205	DETENER Tunnel Miner
+1206	Iniciar Tunnel Miner
+1207	Cava recto hacia delante, a la altura en la que estás – pensado para el Overworld (strip mining), pero funciona en todas partes. Mantiene pulsado el botón del ratón y conserva un ángulo de vista fijo en vez de mirar cada bloque por separado.
+1208	«Ángulo de vista fijo»: mantiene pulsado el botón y no mueve el ratón hacia cada bloque. En el túnel de 1x2 mira 19° hacia abajo: la mira toca primero el bloque de la cabeza, luego a través del hueco el de los pies y los de los pies más adelante – pero nunca el suelo. Avanza en cuanto hay sitio delante. «Bloque a bloque» mira cada bloque por separado (más lento).
+1209	3x3: picar los restos uno a uno
+1210	«3x3 (pico 3x3)»: ten el pico 3x3 en la mano al iniciar. Mira en horizontal al bloque central de cada sección, y el pico se lleva los ocho de alrededor. Lo que no se lleve (p. ej. minerales) lo pica uno a uno con un segundo pico normal de la barra rápida – sin él, esos restos se quedan (salvo que estorben).
+1211	Con lava o agua
+1212	Volver a la línea tras esquivar
+1213	Detecta lava y agua antes de abrir el bloque de al lado. «Esquivar»: unos bloques hacia un lado y sigue en paralelo; después vuelve a la línea anterior en cuanto es seguro.
+1214	Gira de forma más suave, con un ligero temblor como una mano en el ratón; al picar mantiene el ratón quieto, y no siempre se detiene exactamente a la misma distancia de la pared.
+1215	Llevarse minerales de paredes y techo
+1216	Qué minerales
+1217	Solo minerales que se ven desde el túnel (sin rayos X). «Valiosos»: diamante, esmeralda, oro, hierro, lapislázuli, redstone. Los minerales del suelo se quedan, para que no haya agujero. Con el pico 3x3 usa preferiblemente un pico normal para los minerales.
+1218	Tirar la piedra
+1219	Conservar bloques de construcción (stacks)
+1220	Comer automáticamente
+1221	Comer con hambre
+1222	Solo se tiran stacks completos, hacia atrás. Guarda algunos bloques de construcción (p. ej. roca) para rellenar agujeros. Si el inventario está lleno, se detiene.
+1223	Herramienta
+1224	Proteger el pico
+1225	Límite (% durabilidad)
+1226	Auto-Log
+1227	Desconectar con un jugador cerca
+1228	Desconectar con poca vida
+1229	Desconectar tras un tótem
+1230	Se aplica mientras el Tunnel Miner está activo. Después, Auto Reconnect no se vuelve a conectar solo. Aparte de esto, en el menú bajo «Mundo» está el Auto-Logout general (siempre activo, corazones propios).
+1231	Resaltar la siguiente sección

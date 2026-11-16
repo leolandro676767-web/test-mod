@@ -998,3 +998,67 @@
 1165	Sprinte à travers la netherrack
 1166	Sprinter à travers la netherrack
 1167	« Sprinter à travers la netherrack » : si ton outil casse la netherrack instantanément (p. ex. Efficacité V), il maintient le bouton de la souris et traverse en sprintant, le regard fixé à 19° vers le bas. Entre 18° et 20°, le viseur touche d'abord le bloc des pieds plus loin devant, puis celui de la tête, mais jamais le sol. Seulement pour le tunnel 1x2 ; avant la lave, les débris, le gravier ou une roche plus dure, il revient au bloc par bloc.
+1168	Tunnel Miner
+1169	Tunnel Miner désactivé
+1170	Auto-Logout à 
+1171	 cœurs
+1172	Se déconnecte dès que ta vie tombe au nombre de cœurs réglé – toujours, pas seulement quand un bot tourne.
+1173	À cœurs (ou moins)
+1174	Tunnel Miner et Debris Miner ont en plus leurs propres réglages d'Auto-Log : joueurs à proximité, après un totem et leurs propres cœurs.
+1175	3x3 (pioche 3x3)
+1176	Angle de vue fixe
+1177	Bloc par bloc
+1178	Précieux
+1179	Contourner
+1180	S'arrêter
+1181	Mets-toi d'abord sur un sol ferme
+1182	Prends la pioche 3x3 en main
+1183	Tunnel Miner démarré : direction 
+1184	Longueur : 
+1185	Minerais : 
+1186	Tunnel Miner arrêté (erreur)
+1187	Peu de vie : 
+1188	1912 : Tunnel Miner – 
+1189	N'avance plus – Tunnel Miner arrêté
+1190	Inventaire plein – Tunnel Miner arrêté
+1191	Lave ou eau devant
+1192	Contourne
+1193	Trou dans le sol
+1194	Bouche le sol
+1195	Pas de blocs pour boucher – Tunnel Miner arrêté
+1196	Le bloc ne peut pas être miné
+1197	 – Tunnel Miner arrêté
+1198	 – contourne sur le côté
+1199	 – aucun moyen de contourner, Tunnel Miner arrêté
+1200	Mine un minerai
+1201	Chemin de retour vers le tunnel introuvable – Tunnel Miner arrêté
+1202	La pioche 3x3 n'est plus dans la barre d'accès rapide – Tunnel Miner arrêté
+1203	Pioche 3x3 presque cassée – Tunnel Miner arrêté
+1204	Plus aucune pioche utilisable – Tunnel Miner arrêté
+1205	ARRÊTER Tunnel Miner
+1206	Démarrer Tunnel Miner
+1207	Creuse tout droit, à la hauteur où tu te trouves – pensé pour l'Overworld (strip mining), mais fonctionne partout. Il maintient le bouton de la souris et garde un angle de vue fixe au lieu de regarder chaque bloc séparément.
+1208	« Angle de vue fixe » : il maintient le bouton et ne déplace pas la souris vers chaque bloc. Dans le tunnel 1x2, il regarde à 19° vers le bas : le viseur touche d'abord le bloc de la tête, puis à travers le trou le bloc des pieds et ceux plus loin devant – mais jamais le sol. Il avance dès qu'il y a de la place devant. « Bloc par bloc » regarde chaque bloc séparément (plus lent).
+1209	3x3 : miner les restes un par un
+1210	« 3x3 (pioche 3x3) » : prends la pioche 3x3 en main au démarrage. Il regarde à l'horizontale le bloc central de chaque section, et la pioche emporte les huit autour. Ce qu'elle n'emporte pas (p. ex. minerais), il le mine un par un avec une deuxième pioche normale de la barre d'accès rapide – sans elle, ces restes restent (sauf s'ils gênent).
+1211	En cas de lave ou d'eau
+1212	Revenir sur la ligne après le contournement
+1213	Il détecte la lave et l'eau avant d'ouvrir le bloc d'à côté. « Contourner » : quelques blocs sur le côté et continue en parallèle ; ensuite retour sur l'ancienne ligne dès que c'est sûr.
+1214	Tourne plus doucement, avec un léger tremblement comme une main sur la souris ; en minant il garde la souris immobile, et il ne s'arrête pas toujours exactement à la même distance du mur.
+1215	Prendre les minerais des murs et du plafond
+1216	Quels minerais
+1217	Seulement les minerais visibles depuis le tunnel (pas de rayons X). « Précieux » : diamant, émeraude, or, fer, lapis, redstone. Les minerais du sol restent en place pour qu'il n'y ait pas de trou. Avec la pioche 3x3, il prend plutôt une pioche normale pour les minerais.
+1218	Jeter la roche
+1219	Garder des blocs de construction (piles)
+1220	Manger automatiquement
+1221	Manger à la faim
+1222	Seules les piles pleines sont jetées, derrière lui. Il garde quelques blocs de construction (p. ex. pierre taillée) pour boucher les trous. Quand l'inventaire est plein, il s'arrête.
+1223	Outil
+1224	Préserver la pioche
+1225	Limite (% de durabilité)
+1226	Auto-Log
+1227	Se déconnecter si un joueur est à proximité
+1228	Se déconnecter si peu de vie
+1229	Se déconnecter après un totem
+1230	S'applique tant que le Tunnel Miner tourne. Ensuite, Auto Reconnect ne se reconnecte pas tout seul. Indépendamment de cela, le menu sous « Monde » contient l'Auto-Logout général (toujours actif, ses propres cœurs).
+1231	Mettre en évidence la section suivante

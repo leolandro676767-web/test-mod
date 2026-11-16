@@ -42,6 +42,7 @@ public class TestClient implements ClientModInitializer {
     public static boolean sprintJump = false;
     public static boolean autoMine = true;
     public static boolean autoLogout = true;
+    public static int logoutHearts = 2;          // Auto-Logout bei so vielen Herzen (oder weniger)
 
     // AutoClicker: schlaegt im Takt des Tool-Cooldowns, mit zufaelligem Abstand
     public static boolean autoClicker = false;
@@ -114,7 +115,6 @@ public class TestClient implements ClientModInitializer {
     // Hindernisse auf dem Weg, die sich nicht abbauen lassen
     private static final Set<Long> badObstacles = new HashSet<>();
 
-    private static final float LOGOUT_HEALTH = 4.0f;
     // Verhindert Logout-Schleife: erst wieder aktiv, wenn die Gesundheit
     // nach einem Auto-Logout ueber der Schwelle war.
     private static boolean logoutArmed = true;
@@ -278,6 +278,7 @@ public class TestClient implements ClientModInitializer {
             return "Zu gro\u00df (max. 50000 Bl\u00f6cke)";
         }
         DebrisMiner.stop(mc, null);
+        TunnelMiner.stop(mc, null);
         TestConfig.save();
         Walker.reset();
         walkTarget = null;
@@ -301,6 +302,7 @@ public class TestClient implements ClientModInitializer {
     public static String startGoto(Minecraft mc) {
         if (mc.player == null || mc.level == null) return "Nicht im Spiel";
         DebrisMiner.stop(mc, null);
+        TunnelMiner.stop(mc, null);
         TestConfig.save();
         blockMode = false;
         gotoMode = true;
@@ -323,6 +325,10 @@ public class TestClient implements ClientModInitializer {
     static void stopOrWalk(Minecraft mc) {
         if (DebrisMiner.isRunning()) {
             DebrisMiner.stop(mc, "Debris Miner aus");
+            return;
+        }
+        if (TunnelMiner.isRunning()) {
+            TunnelMiner.stop(mc, "Tunnel Miner aus");
             return;
         }
         if (areaActive) {
@@ -358,6 +364,7 @@ public class TestClient implements ClientModInitializer {
         if (selectedBlock == null) return "Erst einen Block w\u00e4hlen";
         if (mc.player == null || mc.level == null) return "Nicht im Spiel";
         DebrisMiner.stop(mc, null);
+        TunnelMiner.stop(mc, null);
         Walker.reset();
         walkTarget = null;
         skipped.clear();
@@ -429,6 +436,7 @@ public class TestClient implements ClientModInitializer {
         Level level = mc.level;
         if (player == null || level == null) {
             DebrisMiner.reset();
+            TunnelMiner.reset();
             BotGuard.reset();
             KillAura.reset();
             Safe.run("Misc", () -> MiscMods.tickOffline(mc));
@@ -443,10 +451,14 @@ public class TestClient implements ClientModInitializer {
         }
 
         float health = mc.player.getHealth();
-        if (health > LOGOUT_HEALTH) {
+        float logoutHealth = Math.max(1, Math.min(10, logoutHearts)) * 2.0f;
+        if (health > logoutHealth) {
             logoutArmed = true;
         }
-        if (autoLogout && logoutArmed && health > 0.0f && health <= LOGOUT_HEALTH) {
+        if (autoLogout && logoutArmed && health > 0.0f && health <= logoutHealth) {
+            TunnelMiner.stop(mc, null);
+            DebrisMiner.stop(mc, null);
+        TunnelMiner.stop(mc, null);
             logoutArmed = false;
             Walker.stop(mc);
             walking = false;
@@ -460,7 +472,8 @@ public class TestClient implements ClientModInitializer {
             if (connection != null) {
                 MiscMods.holdReconnect = true; // nicht gleich wieder verbinden
                 connection.getConnection().disconnect(
-                        Lang.literal("1912: Auto-Logout bei 2 Herzen"));
+                        Lang.literal("1912: " + Lang.t("Auto-Logout bei ") + Math.max(1, Math.min(10, logoutHearts))
+                                + Lang.t(" Herzen")));
             }
             return;
         }
@@ -482,6 +495,10 @@ public class TestClient implements ClientModInitializer {
         Safe.run("Debris Miner", () -> DebrisMiner.tickCommands(mc));
         if (DebrisMiner.isRunning()) {
             Safe.run("Debris Miner", () -> DebrisMiner.tick(mc));
+            return;
+        }
+        if (TunnelMiner.isRunning()) {
+            Safe.run("Tunnel Miner", () -> TunnelMiner.tick(mc));
             return;
         }
         if (areaActive) {

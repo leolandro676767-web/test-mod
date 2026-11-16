@@ -983,3 +983,67 @@
 1165	Sprinting through netherrack
 1166	Sprint through netherrack
 1167	“Sprint through netherrack”: if your tool breaks netherrack instantly (e.g. Efficiency V), it holds the mouse button and sprints through, looking at a fixed 19° downwards. At 18° to 20° the crosshair first hits the foot block further ahead while running and then the head block, but never the floor. Only for the 1x2 tunnel; before lava, debris, gravel or harder rock it goes back to block by block.
+1168	Tunnel Miner
+1169	Tunnel Miner off
+1170	Auto-Logout at 
+1171	 hearts
+1172	Disconnects as soon as your health drops to the set number of hearts – always, not only while a bot is running.
+1173	At hearts (or fewer)
+1174	Tunnel Miner and Debris Miner also have their own Auto-Log settings: players nearby, after a totem and their own hearts.
+1175	3x3 (3x3 pickaxe)
+1176	Fixed view angle
+1177	Block by block
+1178	Valuable
+1179	Go around
+1180	Stop
+1181	Stand on solid ground first
+1182	Hold the 3x3 pickaxe in your hand
+1183	Tunnel Miner started: direction 
+1184	Length: 
+1185	Ores: 
+1186	Tunnel Miner stopped (error)
+1187	Low health: 
+1188	1912: Tunnel Miner – 
+1189	Can't get any further – Tunnel Miner stopped
+1190	Inventory full – Tunnel Miner stopped
+1191	Lava or water ahead
+1192	Going around
+1193	Hole in the floor
+1194	Filling the floor
+1195	No building blocks to fill with – Tunnel Miner stopped
+1196	Block can't be mined
+1197	 – Tunnel Miner stopped
+1198	 – going around to the side
+1199	 – no way around, Tunnel Miner stopped
+1200	Mining ore
+1201	No way back to the tunnel found – Tunnel Miner stopped
+1202	3x3 pickaxe no longer in the hotbar – Tunnel Miner stopped
+1203	3x3 pickaxe almost broken – Tunnel Miner stopped
+1204	No usable pickaxe left – Tunnel Miner stopped
+1205	STOP Tunnel Miner
+1206	Start Tunnel Miner
+1207	Simply digs straight ahead, at the height you are standing at – meant for the Overworld (strip mining), but works everywhere. It holds the mouse button and keeps a fixed view angle instead of looking at every block separately.
+1208	“Fixed view angle”: it holds the button and doesn't move the mouse to every block. In the 1x2 tunnel it looks 19° downwards: the crosshair first hits the head block, then through the hole the foot block and the foot blocks further ahead – but never the floor. It moves up as soon as there is room in front. “Block by block” looks at every block separately (slower).
+1209	3x3: mine leftovers one by one
+1210	“3x3 (3x3 pickaxe)”: hold the 3x3 pickaxe in your hand when starting. It looks straight at the middle block of each section, and the pickaxe takes the eight around it with it. Whatever it doesn't take (e.g. ores) it mines one by one with a second, normal pickaxe from the hotbar – without one, such leftovers stay (unless they are in the way).
+1211	On lava or water
+1212	Back onto the line after going around
+1213	It detects lava and water before it opens the block next to them. “Go around”: a few blocks to the side and onwards in parallel; then back onto the old line as soon as it is safe.
+1214	Turns more smoothly, with a slight jitter like a hand on the mouse; while mining it keeps the mouse still, and it doesn't always stop exactly the same distance from the wall.
+1215	Take ores from walls and ceiling
+1216	Which ores
+1217	Only ores you can see from the tunnel (no X-ray). “Valuable”: diamond, emerald, gold, iron, lapis, redstone. Ores in the floor are left alone so no hole appears. With the 3x3 pickaxe it prefers a normal pickaxe for ores.
+1218	Throw away rock
+1219	Keep building blocks (stacks)
+1220	Eat automatically
+1221	Eat at hunger
+1222	Only full stacks are thrown away, behind it. It keeps a few building blocks (e.g. cobblestone) to fill holes. When the inventory is full, it stops.
+1223	Tool
+1224	Protect the pickaxe
+1225	Limit (% durability)
+1226	Auto-Log
+1227	Disconnect when a player is nearby
+1228	Disconnect on low health
+1229	Disconnect after a totem
+1230	Applies while the Tunnel Miner is running. Afterwards Auto Reconnect doesn't reconnect by itself. Independently of this, the menu under “World” has the general Auto-Logout (always active, its own hearts).
+1231	Highlight the next section

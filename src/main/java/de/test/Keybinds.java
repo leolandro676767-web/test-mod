@@ -318,6 +318,7 @@ public final class Keybinds {
     private static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         drawActiveList(g, Minecraft.getInstance());
         Safe.run("Debris Miner", () -> DebrisMiner.renderHud(g, Minecraft.getInstance()));
+        Safe.run("Tunnel Miner", () -> TunnelMiner.renderHud(g, Minecraft.getInstance()));
         if (toastText == null) return;
         long age = System.currentTimeMillis() - toastAt;
         if (age > 1600) {
