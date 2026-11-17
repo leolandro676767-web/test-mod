@@ -1047,3 +1047,7 @@
 1229	Disconnect after a totem
 1230	Applies while the Tunnel Miner is running. Afterwards Auto Reconnect doesn't reconnect by itself. Independently of this, the menu under “World” has the general Auto-Logout (always active, its own hearts).
 1231	Highlight the next section
+1232	Range (chunks)
+1233	Range in chunks (0 = whole view distance)
+1234	Block range (chunks)
+1235	Middle-click range (chunks)

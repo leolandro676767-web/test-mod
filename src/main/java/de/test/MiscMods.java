@@ -55,7 +55,7 @@ public final class MiscMods {
     public static boolean inventoryTweaks = false;
 
     public static boolean messageAura = false;
-    public static int messageAuraRange = 8;
+    public static int messageAuraChunks = 6;        // Reichweite in Chunks
     public static int messageAuraDelay = 60;        // Sekunden pro Spieler
     public static String messageAuraText = "Hi %name%!";
     public static int messageAuraWho = 0;            // 0 = alle, 1 = nur Freunde, 2 = keine Freunde
@@ -376,7 +376,7 @@ public final class MiscMods {
     private static void runMessageAura(Minecraft mc) {
         for (var other : mc.level.players()) {
             if (other == mc.player) continue;
-            if (other.distanceTo(mc.player) > messageAuraRange) continue;
+            if (other.distanceTo(mc.player) > messageAuraChunks * 16) continue;
             if (messageAuraWho == 1 && !Friends.is(other)) continue;
             if (messageAuraWho == 2 && Friends.is(other)) continue;
             String name = other.getName().getString();
@@ -455,7 +455,7 @@ public final class MiscMods {
                 f.description("Schreibt Spielern in der Nähe automatisch.\n%name% wird ersetzt.");
                 f.section("Allgemein");
                 f.text("Text", () -> messageAuraText, v -> messageAuraText = v, "Hi %name%!");
-                f.slider("Reichweite", 2, 32, () -> messageAuraRange, v -> messageAuraRange = v, 8);
+                f.slider("Reichweite (Chunks)", 1, 32, () -> messageAuraChunks, v -> messageAuraChunks = v, 6);
                 f.slider("Pause je Spieler (s)", 5, 300, () -> messageAuraDelay, v -> messageAuraDelay = v, 60);
                 f.choice("Wen anschreiben", MESSAGE_AURA_WHO, () -> messageAuraWho, v -> messageAuraWho = v, 0);
                 f.footer(() -> messageAura, v -> messageAura = v);

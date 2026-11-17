@@ -138,8 +138,8 @@ public class DebrisScreen extends Form {
 
         section("Spieler in der Nähe");
         toggle("Verbindung trennen (Auto-Log)", () -> DebrisMiner.playerLog, v -> DebrisMiner.playerLog = v, true);
-        slider("Radius (0 = ganze Sichtweite)", 0, 128, () -> DebrisMiner.playerRadius,
-                v -> DebrisMiner.playerRadius = v, 0);
+        slider("Reichweite in Chunks (0 = ganze Sichtweite)", 0, 32, () -> DebrisMiner.playerChunks,
+                v -> DebrisMiner.playerChunks = v, 6);
         toggle("Freundesliste des Clients mitbenutzen", () -> DebrisMiner.useFriends,
                 v -> DebrisMiner.useFriends = v, true);
         text("Weitere Freunde (mit Komma getrennt)", () -> DebrisMiner.whitelist, v -> DebrisMiner.whitelist = v, "",

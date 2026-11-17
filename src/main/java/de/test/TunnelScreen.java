@@ -76,8 +76,8 @@ public class TunnelScreen extends Form {
 
         section("Auto-Log");
         toggle("Bei Spieler in der Nähe trennen", () -> TunnelMiner.playerLog, v -> TunnelMiner.playerLog = v, true);
-        slider("Radius (0 = ganze Sichtweite)", 0, 128, () -> TunnelMiner.playerRadius,
-                v -> TunnelMiner.playerRadius = v, 0);
+        slider("Reichweite in Chunks (0 = ganze Sichtweite)", 0, 32, () -> TunnelMiner.playerChunks,
+                v -> TunnelMiner.playerChunks = v, 6);
         toggle("Freundesliste des Clients mitbenutzen", () -> TunnelMiner.useFriends,
                 v -> TunnelMiner.useFriends = v, true);
         text("Weitere Freunde (mit Komma getrennt)", () -> TunnelMiner.whitelist, v -> TunnelMiner.whitelist = v, "",

@@ -47,7 +47,7 @@ public final class Friends {
 
     // Bedienung und Meldungen
     public static boolean middleClick = true;      // Mittelklick auf einen Spieler: Freund an/aus
-    public static int middleClickRange = 64;
+    public static int middleClickChunks = 6;       // Reichweite in Chunks
     public static boolean notifyOnline = true;     // Freund kommt online / geht offline
     public static boolean notifyNear = false;      // Freund kommt in Sichtweite
 
@@ -200,7 +200,7 @@ public final class Friends {
         boolean pressed = down && !pickWasDown;
         pickWasDown = down;
         if (!pressed || !enabled || !middleClick || mc.gui.screen() != null) return false;
-        Player target = lookedAt(mc, p, Math.max(4, middleClickRange));
+        Player target = lookedAt(mc, p, Math.max(1, middleClickChunks) * 16);
         if (target == null) return false;
         String name = target.getGameProfile().name();
         boolean now = toggle(name);

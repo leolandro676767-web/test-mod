@@ -1231,3 +1231,7 @@
 1229	Nach einem Totem trennen
 1230	Gilt, solange der Tunnel Miner läuft. Danach verbindet Auto Reconnect nicht von selbst neu. Unabhängig davon gibt es im Menü unter „Welt“ das allgemeine Auto-Logout (immer aktiv, eigene Herzen).
 1231	Nächsten Abschnitt hervorheben
+1232	Reichweite (Chunks)
+1233	Reichweite in Chunks (0 = ganze Sichtweite)
+1234	Block-Reichweite (Chunks)
+1235	Mittelklick-Reichweite (Chunks)

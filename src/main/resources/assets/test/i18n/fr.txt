@@ -1062,3 +1062,7 @@
 1229	Se déconnecter après un totem
 1230	S'applique tant que le Tunnel Miner tourne. Ensuite, Auto Reconnect ne se reconnecte pas tout seul. Indépendamment de cela, le menu sous « Monde » contient l'Auto-Logout général (toujours actif, ses propres cœurs).
 1231	Mettre en évidence la section suivante
+1232	Portée (chunks)
+1233	Portée en chunks (0 = toute la distance de vue)
+1234	Portée des blocs (chunks)
+1235	Portée du clic molette (chunks)

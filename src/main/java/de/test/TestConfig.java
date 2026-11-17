@@ -45,7 +45,7 @@ public final class TestConfig {
         TestClient.clickerRandom = Math.max(0, Math.min(100, num(p, "clickerRandom", TestClient.clickerRandom)));
         TestClient.clickerHold = bool(p, "clickerHold", TestClient.clickerHold);
         TestClient.clickerEarly = bool(p, "clickerEarly", TestClient.clickerEarly);
-        TestClient.searchRadius = Math.max(4, Math.min(40, num(p, "searchRadius", TestClient.searchRadius)));
+        TestClient.searchChunks = Math.max(1, Math.min(12, num(p, "searchChunks", TestClient.searchChunks)));
         TestClient.searchHeight = Math.max(2, Math.min(20, num(p, "searchHeight", TestClient.searchHeight)));
         Theme.scheme = num(p, "themeScheme", Theme.scheme);
         Theme.headHex = num(p, "themeHead", Theme.headHex);
@@ -98,7 +98,7 @@ public final class TestConfig {
         Movement2.anchorHeight = Math.max(1, Math.min(20, num(p, "anchorHeight", Movement2.anchorHeight)));
         Movement2.anchorPull = Math.max(10, Math.min(100, num(p, "anchorPull", Movement2.anchorPull)));
         Movement2.antiVoidMode = Math.max(0, Math.min(1, num(p, "antiVoidMode", Movement2.antiVoidMode)));
-        Movement2.waspRange = Math.max(8, Math.min(256, num(p, "waspRange", Movement2.waspRange)));
+        Movement2.waspChunks = Math.max(1, Math.min(32, num(p, "waspChunks", Movement2.waspChunks)));
         Movement2.waspSpeed = Math.max(5, Math.min(80, num(p, "waspSpeed", Movement2.waspSpeed)));
         Movement2.blinkAuto = Math.max(0, Math.min(30, num(p, "blinkAuto", Movement2.blinkAuto)));
         Movement2.clickTpRange = Math.max(1, Math.min(8, num(p, "clickTpRange", Movement2.clickTpRange)));
@@ -168,8 +168,8 @@ public final class TestConfig {
         Esp.box = bool(p, "espBox", Esp.box);
         Esp.tracers = bool(p, "espTracers", Esp.tracers);
         Esp.labels = bool(p, "espLabels", Esp.labels);
-        Esp.radius = Math.max(8, Math.min(256, num(p, "espRadius", Esp.radius)));
-        Esp.blockRadius = Math.max(4, Math.min(48, num(p, "espBlockRadius", Esp.blockRadius)));
+        Esp.rangeChunks = Math.max(1, Math.min(32, num(p, "espRangeChunks", Esp.rangeChunks)));
+        Esp.blockChunks = Math.max(1, Math.min(12, num(p, "espBlockChunks", Esp.blockChunks)));
         readIds(p.getProperty("espMobTypes"), BuiltInRegistries.ENTITY_TYPE, Esp.mobTypes);
         readIds(p.getProperty("espItemTypes"), BuiltInRegistries.ITEM, Esp.itemTypes);
         readIds(p.getProperty("espBlockTypes"), BuiltInRegistries.BLOCK, Esp.blockTypes);
@@ -219,7 +219,7 @@ public final class TestConfig {
         p.setProperty("clickerRandom", Integer.toString(TestClient.clickerRandom));
         p.setProperty("clickerHold", Boolean.toString(TestClient.clickerHold));
         p.setProperty("clickerEarly", Boolean.toString(TestClient.clickerEarly));
-        p.setProperty("searchRadius", Integer.toString(TestClient.searchRadius));
+        p.setProperty("searchChunks", Integer.toString(TestClient.searchChunks));
         p.setProperty("searchHeight", Integer.toString(TestClient.searchHeight));
         p.setProperty("themeScheme", Integer.toString(Theme.scheme));
         p.setProperty("themeHead", Integer.toString(Theme.headHex));
@@ -276,7 +276,7 @@ public final class TestConfig {
         p.setProperty("anchorHeight", Integer.toString(Movement2.anchorHeight));
         p.setProperty("anchorPull", Integer.toString(Movement2.anchorPull));
         p.setProperty("antiVoidMode", Integer.toString(Movement2.antiVoidMode));
-        p.setProperty("waspRange", Integer.toString(Movement2.waspRange));
+        p.setProperty("waspChunks", Integer.toString(Movement2.waspChunks));
         p.setProperty("waspSpeed", Integer.toString(Movement2.waspSpeed));
         p.setProperty("blinkAuto", Integer.toString(Movement2.blinkAuto));
         p.setProperty("clickTpRange", Integer.toString(Movement2.clickTpRange));
@@ -346,8 +346,8 @@ public final class TestConfig {
         p.setProperty("espBox", Boolean.toString(Esp.box));
         p.setProperty("espTracers", Boolean.toString(Esp.tracers));
         p.setProperty("espLabels", Boolean.toString(Esp.labels));
-        p.setProperty("espRadius", Integer.toString(Esp.radius));
-        p.setProperty("espBlockRadius", Integer.toString(Esp.blockRadius));
+        p.setProperty("espRangeChunks", Integer.toString(Esp.rangeChunks));
+        p.setProperty("espBlockChunks", Integer.toString(Esp.blockChunks));
         p.setProperty("espMobTypes", writeIds(Esp.mobTypes, BuiltInRegistries.ENTITY_TYPE));
         p.setProperty("espItemTypes", writeIds(Esp.itemTypes, BuiltInRegistries.ITEM));
         p.setProperty("espBlockTypes", writeIds(Esp.blockTypes, BuiltInRegistries.BLOCK));

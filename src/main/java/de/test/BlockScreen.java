@@ -34,7 +34,7 @@ public class BlockScreen extends Form {
             }
         });
         section("Suche");
-        slider("Radius (Bl\u00f6cke)", 4, 40, () -> TestClient.searchRadius, v -> TestClient.searchRadius = v, 24);
+        slider("Reichweite (Chunks)", 1, 12, () -> TestClient.searchChunks, v -> TestClient.searchChunks = v, 6);
         slider("H\u00f6he (Bl\u00f6cke)", 2, 20, () -> TestClient.searchHeight, v -> TestClient.searchHeight = v, 12);
         start = wideButton(startLabel(), true, this::startOrStop);
         section("Anzeige");

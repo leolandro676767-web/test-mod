@@ -48,7 +48,7 @@ public final class Movement2 {
     public static boolean autoJumpMoving = true;
 
     public static boolean autoWasp = false;
-    public static int waspRange = 64;
+    public static int waspChunks = 6;           // Reichweite in Chunks
     public static int waspSpeed = 30;           // Bloecke pro Sekunde
 
     public static boolean blink = false;
@@ -317,7 +317,7 @@ public final class Movement2 {
     /** Fliegt mit der Elytra zum naechsten Spieler. */
     private static void runAutoWasp(Minecraft mc, LocalPlayer p) {
         Player target = null;
-        double best = (double) waspRange * waspRange;
+        double best = (double) waspChunks * 16 * waspChunks * 16;
         for (Player other : mc.level.players()) {
             if (other == p || !other.isAlive() || other.isSpectator()) continue;
             if (Friends.noChase(other)) continue; // nicht zu Freunden fliegen
@@ -439,7 +439,7 @@ public final class Movement2 {
         return new ModuleScreen(parent, "Auto Wasp", f -> {
             f.description("Fliegt mit der Elytra automatisch\nzum nächsten Spieler.");
             f.section("Allgemein");
-            f.slider("Reichweite", 8, 256, () -> waspRange, v -> waspRange = v, 64);
+            f.slider("Reichweite (Chunks)", 1, 32, () -> waspChunks, v -> waspChunks = v, 6);
             f.slider("Tempo (Blöcke/s)", 5, 80, () -> waspSpeed, v -> waspSpeed = v, 30);
             f.footer(() -> autoWasp, v -> autoWasp = v);
         });

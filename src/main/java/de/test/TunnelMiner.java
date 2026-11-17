@@ -74,7 +74,7 @@ public final class TunnelMiner {
 
     // --- Auto-Log ---
     public static boolean playerLog = true;     // bei Spieler in der Naehe trennen
-    public static int playerRadius = 0;         // 0 = ganze Sichtweite
+    public static int playerChunks = 6;         // in Chunks, 0 = ganze Sichtweite
     public static boolean useFriends = true;    // Freundesliste des Clients mitbenutzen
     public static String whitelist = "";        // weitere Freunde, mit Komma getrennt
     public static boolean playerCheckStart = true;
@@ -390,7 +390,7 @@ public final class TunnelMiner {
             if (o == self || o.getId() < 0 || PlayerMods.isFake(o) || !o.isAlive()) continue;
             if (friends.contains(o.getName().getString().toLowerCase(Locale.ROOT))) continue;
             if (useFriends && Friends.is(o)) continue;
-            if (playerRadius > 0 && o.distanceTo(self) > playerRadius) continue;
+            if (playerChunks > 0 && o.distanceTo(self) > playerChunks * 16) continue;
             return o;
         }
         return null;

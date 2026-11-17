@@ -84,7 +84,7 @@ public class TestClient implements ClientModInitializer {
     // Block-Modus: einen Blocktyp waehlen, in der Naehe suchen, hinlaufen und abbauen
     public static boolean blockMode = false;
     public static Block selectedBlock = null;
-    public static int searchRadius = 24;  // Block-Modus: Suchradius horizontal
+    public static int searchChunks = 6;   // Block-Modus: Suchradius waagerecht (in Chunks)
     public static int searchHeight = 12;  // Block-Modus: Suchradius vertikal
     public static int ax1 = 0, ay1 = 0, az1 = 0, ax2 = 0, ay2 = 0, az2 = 0;
     private static final long MAX_AREA_VOLUME = 50000L;
@@ -393,6 +393,7 @@ public class TestClient implements ClientModInitializer {
     /** Suchbereich folgt dem Spieler. */
     private static void updateBounds(Entity p) {
         BlockPos c = p.blockPosition();
+        int searchRadius = searchChunks * 16;
         minX = c.getX() - searchRadius;
         maxX = c.getX() + searchRadius;
         minY = c.getY() - searchHeight;
@@ -788,24 +789,41 @@ public class TestClient implements ClientModInitializer {
         return null;
     }
 
-    /** Naechster abbaubarer Block im ganzen Bereich (zum Hinlaufen). */
+    /**
+     * Naechster abbaubarer Block im ganzen Bereich (zum Hinlaufen). Gesucht wird in Ringen von innen nach
+     * aussen; sobald ein Ring weiter weg ist als der beste Fund, ist Schluss - so bleibt das auch bei einem
+     * Radius von mehreren Chunks schnell.
+     */
     private static BlockPos nearestOverall(Level level, Entity p) {
         BlockPos best = null;
         double bestScore = Double.MAX_VALUE;
-        for (int y = minY; y <= maxY; y++) {
-            for (int x = minX; x <= maxX; x++) {
-                for (int z = minZ; z <= maxZ; z++) {
-                    BlockPos pos = new BlockPos(x, y, z);
-                    long key = pos.asLong();
-                    if (skipped.contains(key) || hopeless.contains(key)) continue;
-                    double score = Math.sqrt(Look.eyeDist2(p, pos));
-                    if (score >= bestScore) continue;
-                    if (!isWanted(level, pos)) continue;
-                    // freiliegende Bloecke bevorzugen: verschuettete sind erst nach den Nachbarn dran
-                    if (!exposed(level, pos)) score += 3.0;
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = pos;
+        BlockPos c = p.blockPosition();
+        int cx = Math.max(minX, Math.min(maxX, c.getX()));
+        int cz = Math.max(minZ, Math.min(maxZ, c.getZ()));
+        int off = Math.max(Math.abs(c.getX() - cx), Math.abs(c.getZ() - cz)); // Spieler ausserhalb des Bereichs
+        int maxD = Math.max(Math.max(cx - minX, maxX - cx), Math.max(cz - minZ, maxZ - cz));
+        for (int d = 0; d <= maxD; d++) {
+            // alles in diesem Ring ist mindestens (d - off - 0,5) Bloecke weit weg
+            if (best != null && d - off - 0.5 > bestScore) break;
+            for (int x = cx - d; x <= cx + d; x++) {
+                if (x < minX || x > maxX) continue;
+                boolean edge = x == cx - d || x == cx + d;
+                int step = edge ? 1 : Math.max(1, 2 * d);
+                for (int z = cz - d; z <= cz + d; z += step) {
+                    if (z < minZ || z > maxZ) continue;
+                    for (int y = minY; y <= maxY; y++) {
+                        BlockPos pos = new BlockPos(x, y, z);
+                        double score = Math.sqrt(Look.eyeDist2(p, pos));
+                        if (score >= bestScore) continue;
+                        long key = pos.asLong();
+                        if (skipped.contains(key) || hopeless.contains(key)) continue;
+                        if (!isWanted(level, pos)) continue;
+                        // freiliegende Bloecke bevorzugen: verschuettete sind erst nach den Nachbarn dran
+                        if (!exposed(level, pos)) score += 3.0;
+                        if (score < bestScore) {
+                            bestScore = score;
+                            best = pos;
+                        }
                     }
                 }
             }

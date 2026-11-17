@@ -70,7 +70,8 @@ public class FriendsScreen extends Form {
         section("Bedienung");
         toggle("Mittelklick auf Spieler: hinzufügen oder entfernen", () -> Friends.middleClick,
                 v -> Friends.middleClick = v, true);
-        slider("Mittelklick-Reichweite", 4, 128, () -> Friends.middleClickRange, v -> Friends.middleClickRange = v, 64);
+        slider("Mittelklick-Reichweite (Chunks)", 1, 16, () -> Friends.middleClickChunks,
+                v -> Friends.middleClickChunks = v, 6);
         toggle("Melden, wenn ein Freund online oder offline geht", () -> Friends.notifyOnline,
                 v -> Friends.notifyOnline = v, true);
         toggle("Melden, wenn ein Freund in Sichtweite kommt", () -> Friends.notifyNear,

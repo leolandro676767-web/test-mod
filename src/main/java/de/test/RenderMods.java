@@ -58,41 +58,41 @@ public final class RenderMods {
     public static boolean miningShowArea = true;
 
     public static boolean blockEsp = false;
-    public static int blockEspRadius = 32;
+    public static int blockEspChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
     public static final Set<Block> blockEspBlocks = new LinkedHashSet<>();
 
     public static boolean storageEsp = false;
-    public static int storageEspRadius = 48;
+    public static int storageEspChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean holeEsp = false;
-    public static int holeEspRadius = 16;
+    public static int holeEspChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean voidEsp = false;
-    public static int voidEspRadius = 10;
+    public static int voidEspChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean cityEsp = false;
-    public static int cityEspRange = 6;
+    public static int cityEspChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean tunnelEsp = false;
-    public static int tunnelEspRadius = 16;
+    public static int tunnelEspChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean tracers = false;
     public static boolean tracersPlayers = true;
     public static boolean tracersMobs = false;
     public static boolean tracersItems = false;
-    public static int tracersRange = 96;
+    public static int tracersChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean nametags = false;
     public static boolean nametagsHealth = true;
-    public static int nametagsRange = 64;
+    public static int nametagsChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean entityOwner = false;
     public static boolean ownerAnimals = true;
     public static boolean ownerProjectiles = true;
-    public static int ownerRange = 32;
+    public static int ownerChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean itemHighlight = false;
-    public static int itemHighlightRange = 48;
+    public static int itemHighlightChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean marker = false;
     public static String markerList = "";           // "name,x,y,z;..."
@@ -116,7 +116,7 @@ public final class RenderMods {
     public static boolean trajLanding = true;
 
     public static boolean lightOverlay = false;
-    public static int lightOverlayRadius = 12;
+    public static int lightOverlayChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
 
     public static boolean breakIndicators = false;
     public static boolean breakPercent = true;
@@ -172,10 +172,10 @@ public final class RenderMods {
     public static boolean chamsPlayers = true;
     public static boolean chamsMobs = true;
     public static boolean chamsHiddenOnly = false; // nur faerben, wenn das Wesen verdeckt ist
-    public static int chamsRange = 64;
+    public static int chamsChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
     public static int chamsAlpha = 45;             // Deckkraft in Prozent
     public static boolean wallHack = false;
-    public static int wallHackRadius = 24;
+    public static int wallHackChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
     public static boolean wallDiamond = true;
     public static boolean wallDebris = true;
     public static boolean wallGold = true;
@@ -437,41 +437,50 @@ public final class RenderMods {
     private static final BlockScan SCAN_LIGHT = new BlockScan(MAX_DRAW);
     private static final BlockScan SCAN_TUNNELS = new BlockScan(MAX_DRAW);
     private static final BlockScan SCAN_ORES = new BlockScan(MAX_DRAW);
+    private static final BlockScan SCAN_VOID = new BlockScan(MAX_DRAW);
 
     /** Jeden Tick: ein Stueck der grossen Suchen. */
     private static void stepScans(Minecraft mc, Player self) {
         Level level = mc.level;
         BlockPos c = self.blockPosition();
         if (blockEsp && !blockEspBlocks.isEmpty()) {
-            SCAN_ESP.stepSphere(c, blockEspRadius, SCAN_INTERVAL,
+            SCAN_ESP.stepSphere(c, (blockEspChunks * 16), SCAN_INTERVAL,
                     pos -> blockEspBlocks.contains(level.getBlockState(pos).getBlock()), espBlocks);
         } else {
             SCAN_ESP.clear(espBlocks);
         }
         if (storageEsp) {
             // erst den (billigen) Blocktyp pruefen, dann erst nach dem Block-Entity fragen
-            SCAN_STORAGE.stepBox(c, storageEspRadius, 8, 8, SCAN_INTERVAL,
+            SCAN_STORAGE.stepBox(c, (storageEspChunks * 16), 8, 8, SCAN_INTERVAL,
                     pos -> isStorage(level.getBlockState(pos)) && level.getBlockEntity(pos) != null, storages);
         } else {
             SCAN_STORAGE.clear(storages);
         }
         if (holeEsp) {
-            SCAN_HOLES.stepBox(c, holeEspRadius, holeEspRadius, 4, SCAN_INTERVAL, pos -> isHole(level, pos), holes);
+            SCAN_HOLES.stepBox(c, holeEspChunks * 16, Math.min(24, holeEspChunks * 16), 4, SCAN_INTERVAL, pos -> isHole(level, pos), holes);
         } else {
             SCAN_HOLES.clear(holes);
         }
         if (lightOverlay) {
-            SCAN_LIGHT.stepBox(c, lightOverlayRadius, 3, 5, SCAN_INTERVAL, pos -> isDark(level, pos), lights);
+            SCAN_LIGHT.stepBox(c, (lightOverlayChunks * 16), 3, 5, SCAN_INTERVAL, pos -> isDark(level, pos), lights);
         } else {
             SCAN_LIGHT.clear(lights);
         }
         if (tunnelEsp) {
-            SCAN_TUNNELS.stepBox(c, tunnelEspRadius, 8, 8, SCAN_INTERVAL, pos -> isTunnel(level, pos), tunnels);
+            SCAN_TUNNELS.stepBox(c, (tunnelEspChunks * 16), 8, 8, SCAN_INTERVAL, pos -> isTunnel(level, pos), tunnels);
         } else {
             SCAN_TUNNELS.clear(tunnels);
         }
+        if (voidEsp && !level.dimensionType().hasCeiling()) {
+            // Loecher im Grundgestein: unterste 6 Schichten ohne festen Block (verteilt, auch bei grossem Radius)
+            int minY = level.getMinY();
+            SCAN_VOID.stepBox(new BlockPos(c.getX(), minY, c.getZ()), voidEspChunks * 16, 0, 0, SCAN_INTERVAL,
+                    pos -> voidColumn(level, pos), voids);
+        } else {
+            SCAN_VOID.clear(voids);
+        }
         if (wallHack) {
-            SCAN_ORES.stepSphere(c, wallHackRadius, SCAN_INTERVAL,
+            SCAN_ORES.stepSphere(c, (wallHackChunks * 16), SCAN_INTERVAL,
                     pos -> oreColor(level.getBlockState(pos).getBlock()) != 0, ores);
         } else {
             SCAN_ORES.clear(ores);
@@ -480,11 +489,9 @@ public final class RenderMods {
 
     /** Alle SCAN_INTERVAL Ticks: die kleinen Suchen. */
     private static void runScans(Minecraft mc, Player self) {
-        voids.clear();
         miningBlocks.clear();
         Level level = mc.level;
         BlockPos c = self.blockPosition();
-        if (voidEsp && level.dimensionType().hasCeiling() == false) scanVoid(level, c);
         if (miningHighlight && TestClient.blockMode && TestClient.selectedBlock != null) scanMining(level);
     }
 
@@ -506,24 +513,14 @@ public final class RenderMods {
         return solid(level, p.north()) && solid(level, p.south()) && solid(level, p.east()) && solid(level, p.west());
     }
 
-    private static void scanVoid(Level level, BlockPos c) {
-        int r = voidEspRadius;
-        int minY = level.getMinY();
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dz = -r; dz <= r; dz++) {
-                boolean anySolid = false;
-                for (int y = minY; y < minY + 6; y++) {
-                    if (solid(level, new BlockPos(c.getX() + dx, y, c.getZ() + dz))) {
-                        anySolid = true;
-                        break;
-                    }
-                }
-                if (!anySolid) {
-                    voids.add(new BlockPos(c.getX() + dx, minY, c.getZ() + dz));
-                    if (voids.size() >= MAX_DRAW) return;
-                }
-            }
+    /** Void Esp: in den untersten 6 Schichten dieser Saeule ist kein fester Block. */
+    private static boolean voidColumn(Level level, BlockPos bottom) {
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        for (int y = 0; y < 6; y++) {
+            m.set(bottom.getX(), bottom.getY() + y, bottom.getZ());
+            if (solid(level, m)) return false;
         }
+        return true;
     }
 
     /** Light Overlay: auf diesem Luftblock koennte ein Monster spawnen (Boden fest, 2 Bloecke frei, kein Blocklicht). */
@@ -734,13 +731,13 @@ public final class RenderMods {
         Player self = mc.player;
         int a = Math.max(5, Math.min(100, chamsAlpha)) * 255 / 100;
         int drawn = 0;
-        for (Entity e : mc.level.getEntities(self, self.getBoundingBox().inflate(chamsRange))) {
+        for (Entity e : mc.level.getEntities(self, self.getBoundingBox().inflate((chamsChunks * 16)))) {
             if (drawn >= MAX_DRAW) break;
             if (!(e instanceof LivingEntity le) || !e.isAlive()) continue;
             boolean player = e instanceof Player;
             if (player ? !chamsPlayers : !chamsMobs) continue;
             AABB bb = Render3D.smoothBox(e);
-            if (self.getEyePosition().distanceTo(bb.getCenter()) > chamsRange) continue;
+            if (self.getEyePosition().distanceTo(bb.getCenter()) > (chamsChunks * 16)) continue;
             if (chamsHiddenOnly && self.hasLineOfSight(le)) continue;
             int c = (player ? Friends.chamsColor(e, Esp.playerColor()) : Esp.mobColor()) & 0xFFFFFF;
             // oben kraeftig, nach unten weich auslaufend
@@ -776,7 +773,7 @@ public final class RenderMods {
         boolean anyEnt = tracers || nametags || entityOwner || itemHighlight || cityEsp;
         if (!anyEnt) return;
         Player self = mc.player;
-        double range = Math.max(Math.max(Math.max(tracersRange, nametagsRange), itemHighlightRange), ownerRange);
+        double range = Math.max(Math.max(Math.max((tracersChunks * 16), (nametagsChunks * 16)), (itemHighlightChunks * 16)), (ownerChunks * 16));
         AABB area = self.getBoundingBox().inflate(range);
         int drawn = 0;
         for (Entity e : mc.level.getEntities(self, area)) {
@@ -788,24 +785,24 @@ public final class RenderMods {
 
             if (e instanceof Player pl) {
                 if (cityEsp) drawCity(g, mc, pl);
-                if (tracers && tracersPlayers && dist <= tracersRange) {
+                if (tracers && tracersPlayers && dist <= (tracersChunks * 16)) {
                     Render3D.tracer(g, center, tracer(Friends.tracerColor(pl, C_PLAYER)));
                 }
-                if (nametags && dist <= nametagsRange) drawNametag(g, mc, pl, bb);
+                if (nametags && dist <= (nametagsChunks * 16)) drawNametag(g, mc, pl, bb);
             } else if (e instanceof ItemEntity ie) {
-                if (itemHighlight && dist <= itemHighlightRange) {
+                if (itemHighlight && dist <= (itemHighlightChunks * 16)) {
                     Render3D.outline(g, bb.inflate(0.1), C_ITEM, false);
                     int n = ie.getItem().getCount();
                     Render3D.label(g, mc, bb.getCenter().add(0, 0.4, 0),
                             ie.getItem().getHoverName().getString() + (n > 1 ? " x" + n : ""), C_ITEM, -10);
                 }
-                if (tracers && tracersItems && dist <= tracersRange) Render3D.tracer(g, center, tracer(C_ITEM));
+                if (tracers && tracersItems && dist <= (tracersChunks * 16)) Render3D.tracer(g, center, tracer(C_ITEM));
             } else if (e instanceof LivingEntity) {
-                if (tracers && tracersMobs && dist <= tracersRange) Render3D.tracer(g, center, tracer(C_MOB));
-                if (nametags && dist <= nametagsRange) drawNametag(g, mc, (LivingEntity) e, bb);
+                if (tracers && tracersMobs && dist <= (tracersChunks * 16)) Render3D.tracer(g, center, tracer(C_MOB));
+                if (nametags && dist <= (nametagsChunks * 16)) drawNametag(g, mc, (LivingEntity) e, bb);
             }
 
-            if (entityOwner && dist <= ownerRange) drawOwner(g, mc, e, bb);
+            if (entityOwner && dist <= (ownerChunks * 16)) drawOwner(g, mc, e, bb);
             drawn++;
         }
     }
@@ -836,7 +833,7 @@ public final class RenderMods {
     /** City Esp: Bloecke rund um einen Gegner hervorheben (Surround-Bypass-Hilfe). */
     private static void drawCity(GuiGraphicsExtractor g, Minecraft mc, Player enemy) {
         if (enemy == mc.player || Friends.skipCity(enemy)) return;
-        if (enemy.distanceTo(mc.player) > cityEspRange * 2) return;
+        if (enemy.distanceTo(mc.player) > cityEspChunks * 16) return;
         BlockPos base = enemy.blockPosition();
         for (BlockPos p : new BlockPos[] {base.below(), base.north(), base.south(), base.east(), base.west()}) {
             if (solid(mc.level, p) && mc.level.getBlockState(p).getBlock() != Blocks.BEDROCK) {

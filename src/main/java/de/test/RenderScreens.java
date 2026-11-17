@@ -22,10 +22,10 @@ final class RenderScreens {
             case "Block Esp" -> new ModuleScreen(parent, module, f -> {
                 f.description("Hebt gew\u00e4hlte Bl\u00f6cke durch W\u00e4nde hervor.");
                 f.section("Allgemein");
-                f.slider("Radius", 8, 64, () -> blockEspRadius, v -> {
-                    blockEspRadius = v;
+                f.slider("Reichweite (Chunks)", 1, 12, () -> blockEspChunks, v -> {
+                    blockEspChunks = v;
                     rescan();
-                }, 32);
+                }, 6);
                 f.wideButton("Bl\u00f6cke w\u00e4hlen (" + blockEspBlocks.size() + ")", false,
                         () -> Minecraft.getInstance().gui.setScreen(new PickerScreen(f, "Block Esp",
                                 PickerScreen.Kind.BLOCK, PickerScreen.ofSet(blockEspBlocks), null, null)));
@@ -42,31 +42,31 @@ final class RenderScreens {
             case "Storage Esp" -> new ModuleScreen(parent, module, f -> {
                 f.description("Hebt Kisten, Fässer, Öfen usw. hervor.");
                 f.section("Allgemein");
-                f.slider("Radius", 8, 64, () -> storageEspRadius, v -> storageEspRadius = v, 48);
+                f.slider("Reichweite (Chunks)", 1, 12, () -> storageEspChunks, v -> storageEspChunks = v, 6);
                 f.footer(() -> storageEsp, v -> storageEsp = v);
             });
             case "Hole Esp" -> new ModuleScreen(parent, module, f -> {
                 f.description("Zeigt sichere 1x1-Löcher zum Hineinstellen.");
                 f.section("Allgemein");
-                f.slider("Radius", 4, 32, () -> holeEspRadius, v -> holeEspRadius = v, 16);
+                f.slider("Reichweite (Chunks)", 1, 12, () -> holeEspChunks, v -> holeEspChunks = v, 6);
                 f.footer(() -> holeEsp, v -> holeEsp = v);
             });
             case "Void Esp" -> new ModuleScreen(parent, module, f -> {
                 f.description("Zeigt L\u00f6cher, durch die man in die Leere f\u00e4llt.");
                 f.section("Allgemein");
-                f.slider("Radius", 4, 24, () -> voidEspRadius, v -> voidEspRadius = v, 10);
+                f.slider("Reichweite (Chunks)", 1, 12, () -> voidEspChunks, v -> voidEspChunks = v, 6);
                 f.footer(() -> voidEsp, v -> voidEsp = v);
             });
             case "City Esp" -> new ModuleScreen(parent, module, f -> {
                 f.description("Hebt Blöcke rund um Gegner hervor (PvP).");
                 f.section("Allgemein");
-                f.slider("Reichweite", 2, 12, () -> cityEspRange, v -> cityEspRange = v, 6);
+                f.slider("Reichweite (Chunks)", 1, 32, () -> cityEspChunks, v -> cityEspChunks = v, 6);
                 f.footer(() -> cityEsp, v -> cityEsp = v);
             });
             case "Tunnel Esp" -> new ModuleScreen(parent, module, f -> {
                 f.description("Hebt gegrabene 1x2-G\u00e4nge hervor.");
                 f.section("Allgemein");
-                f.slider("Radius", 4, 32, () -> tunnelEspRadius, v -> tunnelEspRadius = v, 16);
+                f.slider("Reichweite (Chunks)", 1, 12, () -> tunnelEspChunks, v -> tunnelEspChunks = v, 6);
                 f.footer(() -> tunnelEsp, v -> tunnelEsp = v);
             });
             case "Tracers" -> new ModuleScreen(parent, module, f -> {
@@ -75,14 +75,14 @@ final class RenderScreens {
                 f.toggle("Spieler", () -> tracersPlayers, v -> tracersPlayers = v, true);
                 f.toggle("Mobs", () -> tracersMobs, v -> tracersMobs = v, false);
                 f.toggle("Items", () -> tracersItems, v -> tracersItems = v, false);
-                f.slider("Reichweite", 16, 256, () -> tracersRange, v -> tracersRange = v, 96);
+                f.slider("Reichweite (Chunks)", 1, 32, () -> tracersChunks, v -> tracersChunks = v, 6);
                 f.footer(() -> tracers, v -> tracers = v);
             });
             case "Nametags" -> new ModuleScreen(parent, module, f -> {
                 f.description("Namen über Spielern und Mobs, durch Wände.");
                 f.section("Allgemein");
                 f.toggle("Leben zeigen", () -> nametagsHealth, v -> nametagsHealth = v, true);
-                f.slider("Reichweite", 16, 128, () -> nametagsRange, v -> nametagsRange = v, 64);
+                f.slider("Reichweite (Chunks)", 1, 32, () -> nametagsChunks, v -> nametagsChunks = v, 6);
                 f.footer(() -> nametags, v -> nametags = v);
             });
             case "Entity Owner" -> new ModuleScreen(parent, module, f -> {
@@ -90,13 +90,13 @@ final class RenderScreens {
                 f.section("Allgemein");
                 f.toggle("Zahme Tiere", () -> ownerAnimals, v -> ownerAnimals = v, true);
                 f.toggle("Geschosse", () -> ownerProjectiles, v -> ownerProjectiles = v, true);
-                f.slider("Reichweite", 8, 64, () -> ownerRange, v -> ownerRange = v, 32);
+                f.slider("Reichweite (Chunks)", 1, 32, () -> ownerChunks, v -> ownerChunks = v, 6);
                 f.footer(() -> entityOwner, v -> entityOwner = v);
             });
             case "Item Highlight" -> new ModuleScreen(parent, module, f -> {
                 f.description("Rahmt am Boden liegende Items ein.");
                 f.section("Allgemein");
-                f.slider("Reichweite", 8, 96, () -> itemHighlightRange, v -> itemHighlightRange = v, 48);
+                f.slider("Reichweite (Chunks)", 1, 32, () -> itemHighlightChunks, v -> itemHighlightChunks = v, 6);
                 f.footer(() -> itemHighlight, v -> itemHighlight = v);
             });
             case "Marker" -> pointScreen(parent, module, false, () -> marker, v -> marker = v);
@@ -142,7 +142,7 @@ final class RenderScreens {
             case "Light Overlay" -> new ModuleScreen(parent, module, f -> {
                 f.description("Markiert dunkle Blöcke, auf denen Mobs spawnen.");
                 f.section("Allgemein");
-                f.slider("Radius", 4, 24, () -> lightOverlayRadius, v -> lightOverlayRadius = v, 12);
+                f.slider("Reichweite (Chunks)", 1, 12, () -> lightOverlayChunks, v -> lightOverlayChunks = v, 6);
                 f.footer(() -> lightOverlay, v -> lightOverlay = v);
             });
             case "Break Indicators" -> new ModuleScreen(parent, module, f -> {
@@ -234,7 +234,7 @@ final class RenderScreens {
                 f.toggle("Mobs", () -> chamsMobs, v -> chamsMobs = v, true);
                 f.toggle("Nur hinter W\u00e4nden", () -> chamsHiddenOnly, v -> chamsHiddenOnly = v, false);
                 f.section("Darstellung");
-                f.slider("Reichweite", 8, 128, () -> chamsRange, v -> chamsRange = v, 64);
+                f.slider("Reichweite (Chunks)", 1, 32, () -> chamsChunks, v -> chamsChunks = v, 6);
                 f.slider("Deckkraft (%)", 5, 100, () -> chamsAlpha, v -> chamsAlpha = v, 45);
                 f.footer(() -> chams, v -> chams = v);
             });
@@ -252,7 +252,7 @@ final class RenderScreens {
                 f.toggle("Kohle", () -> wallCoal, v -> wallCoal = v, false);
                 f.toggle("Netherquarz", () -> wallQuartz, v -> wallQuartz = v, false);
                 f.section("Suche");
-                f.slider("Reichweite", 8, 48, () -> wallHackRadius, v -> wallHackRadius = v, 24);
+                f.slider("Reichweite (Chunks)", 1, 12, () -> wallHackChunks, v -> wallHackChunks = v, 6);
                 f.footer(() -> wallHack, v -> wallHack = v);
             });
             case "Item Physics" -> flagScreen(parent, module, "Items am Boden liegen flach, statt sich zu drehen und zu h\u00fcpfen.",

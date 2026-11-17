@@ -41,11 +41,11 @@ public class EspScreen extends Form {
         hex("Bl\u00f6cke", () -> Esp.colBlock, v -> Esp.colBlock = v);
 
         section("Reichweite");
-        slider("Radius", 8, 256, () -> Esp.radius, v -> Esp.radius = v, 64);
-        slider("Block-Radius", 4, 48, () -> Esp.blockRadius, v -> {
-            Esp.blockRadius = v;
+        slider("Reichweite (Chunks)", 1, 32, () -> Esp.rangeChunks, v -> Esp.rangeChunks = v, 6);
+        slider("Block-Reichweite (Chunks)", 1, 12, () -> Esp.blockChunks, v -> {
+            Esp.blockChunks = v;
             Esp.rescan();
-        }, 24);
+        }, 6);
 
         wideButton("Mobs wählen (" + count(Esp.mobTypes.size(), Lang.t("alle")) + ")", false,
                 () -> this.minecraft.gui.setScreen(new PickerScreen(this, "ESP: Mobs",

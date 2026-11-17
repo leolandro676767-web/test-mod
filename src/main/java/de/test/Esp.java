@@ -40,8 +40,8 @@ public final class Esp {
     public static boolean box = true;
     public static boolean tracers = false;
     public static boolean labels = true;
-    public static int radius = 64;       // Spieler, Mobs, Items
-    public static int blockRadius = 24;  // Bloecke
+    public static int rangeChunks = 6;   // Spieler, Mobs, Items (in Chunks, 1 Chunk = 16 Bloecke)
+    public static int blockChunks = 6;   // Bloecke (in Chunks)
 
     /** Leer = alle Mobs; sonst nur diese Typen (auch Nicht-Mobs wie Boote, wenn gewaehlt). */
     public static final Set<EntityType<?>> mobTypes = new LinkedHashSet<>();
@@ -106,7 +106,7 @@ public final class Esp {
         }
         // verteilt auf SCAN_INTERVAL Ticks statt alles auf einmal (kein Ruckler bei grossem Radius)
         Level level = mc.level;
-        SCAN.stepSphere(mc.player.blockPosition(), blockRadius, SCAN_INTERVAL,
+        SCAN.stepSphere(mc.player.blockPosition(), blockChunks * 16, SCAN_INTERVAL,
                 pos -> blockTypes.contains(level.getBlockState(pos).getBlock()), foundBlocks);
     }
 
@@ -133,6 +133,7 @@ public final class Esp {
                 }
             }
             if (players || mobs || items) {
+                double radius = rangeChunks * 16.0;
                 AABB area = self.getBoundingBox().inflate(radius);
                 for (Entity e : mc.level.getEntities(self, area)) {
                     if (drawn >= MAX_TARGETS) break;
