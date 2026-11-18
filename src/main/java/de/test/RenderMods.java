@@ -540,8 +540,9 @@ public final class RenderMods {
         return ew != ns; // keiner = offen, beide = Loch statt Gang
     }
 
-    /** Vom LivingEntityMixin: jemand hat ein Totem verbraucht (Ereignis 35). */
+    /** Vom ClientPacketListenerMixin: jemand hat ein Totem verbraucht (Ereignis 35). */
     public static void onTotemPop(LivingEntity e) {
+        Safe.run("Auto Totem", () -> Survival.onTotemPop(e)); // zuerst: sofort das naechste Totem nachlegen
         DebrisMiner.onTotemPop(e); // Auto-Log nach Totem
         TunnelMiner.onTotemPop(e);
         if (!popChams) return;

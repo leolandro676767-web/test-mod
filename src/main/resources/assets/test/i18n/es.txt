@@ -1070,3 +1070,14 @@
 1233	Alcance en chunks (0 = toda la distancia de visión)
 1234	Alcance de bloques (chunks)
 1235	Alcance del clic central (chunks)
+1236	Auto Totem: pon tótems en la barra rápida; el servidor no los acepta desde el inventario.
+1237	Auto Totem: el clic en el inventario no funciona aquí
+1238	Auto Totem: el servidor no acepta el clic en el inventario
+1239	 – ahora uso la tecla de la mano secundaria (para eso tiene que haber tótems en la barra rápida).
+1240	Activado
+1241	Tótems: 
+1242	Desactivado: ¡actívalo primero abajo!
+1243	Sin «Siempre en la mano secundaria», tu objeto de la mano secundaria (p. ej. un escudo) se queda ahí hasta que la vida baje del límite. Cuando se gasta un tótem, pone el siguiente al instante, no en el siguiente tick, incluso con un cofre abierto.
+1244	Si el servidor no acepta el cambio en el inventario (algunos anticheats), lo dice en el chat y usa la tecla de la mano secundaria; para eso tiene que haber tótems en la barra rápida. Ningún tótem protege del daño del vacío ni de /kill.
+1245	Si el servidor no acepta el cambio en el inventario (algunos anticheats), lo dice en el chat y usa la tecla de la mano secundaria; para eso tiene que haber tótems en la barra rápida. Consejo: lleva siempre algunos tótems en la barra rápida.
+1246	Contra lo que ningún tótem ayuda: el daño del vacío y /kill. Y dos golpes mortales más seguidos que tu ping (p. ej. dos cristales con 150 ms): el siguiente tótem aún va de camino al servidor.

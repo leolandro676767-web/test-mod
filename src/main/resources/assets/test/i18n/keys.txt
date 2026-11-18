@@ -1235,3 +1235,14 @@
 1233	Reichweite in Chunks (0 = ganze Sichtweite)
 1234	Block-Reichweite (Chunks)
 1235	Mittelklick-Reichweite (Chunks)
+1236	Auto Totem: Leg Totems in die Hotbar – aus dem Inventar nimmt der Server sie nicht an.
+1237	Auto Totem: Inventar-Klick geht hier nicht
+1238	Auto Totem: Der Server nimmt den Inventar-Klick nicht an
+1239	~ – nehme jetzt die Taste für die zweite Hand (dafür müssen Totems in der Hotbar sein).
+1240	An
+1241	~Totems: 
+1242	Aus – erst unten einschalten!
+1243	Ohne „Immer in der zweiten Hand“ bleibt dein Gegenstand in der zweiten Hand (z.B. Schild), bis das Leben unter die Grenze fällt. Nach einem verbrauchten Totem legt er sofort nach, nicht erst im nächsten Tick – auch, wenn gerade eine Kiste offen ist.
+1244	Nimmt der Server den Tausch im Inventar nicht an (manche Anti-Cheats), schreibt er das in den Chat und nimmt stattdessen die Taste für die zweite Hand – dafür müssen Totems in der Hotbar liegen. Gegen Schaden durch die Leere oder /kill hilft kein Totem.
+1245	Nimmt der Server den Tausch im Inventar nicht an (manche Anti-Cheats), schreibt er das in den Chat und nimmt stattdessen die Taste für die zweite Hand – dafür müssen Totems in der Hotbar liegen. Tipp: Leg immer ein paar Totems in die Hotbar.
+1246	Wogegen kein Totem hilft: Schaden durch die Leere und /kill. Und zwei tödliche Treffer schneller hintereinander als dein Ping (z.B. zwei Kristalle bei 150 ms) – das nächste Totem ist dann noch auf dem Weg zum Server.

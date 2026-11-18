@@ -1066,3 +1066,14 @@
 1233	Portée en chunks (0 = toute la distance de vue)
 1234	Portée des blocs (chunks)
 1235	Portée du clic molette (chunks)
+1236	Auto Totem : mets des totems dans la barre d'action – le serveur ne les accepte pas depuis l'inventaire.
+1237	Auto Totem : le clic dans l'inventaire ne fonctionne pas ici
+1238	Auto Totem : le serveur n'accepte pas le clic dans l'inventaire
+1239	 – j'utilise maintenant la touche de la seconde main (il faut des totems dans la barre d'action).
+1240	Activé
+1241	Totems : 
+1242	Désactivé – active-le d'abord en bas !
+1243	Sans « Toujours dans la seconde main », ton objet en seconde main (p. ex. un bouclier) y reste jusqu'à ce que la vie passe sous la limite. Après un totem utilisé, il remet le suivant tout de suite, pas seulement au tick suivant – même avec un coffre ouvert.
+1244	Si le serveur n'accepte pas l'échange dans l'inventaire (certains anti-cheats), il l'écrit dans le chat et utilise la touche de la seconde main – il faut des totems dans la barre d'action. Aucun totem ne protège du vide ni de /kill.
+1245	Si le serveur n'accepte pas l'échange dans l'inventaire (certains anti-cheats), il l'écrit dans le chat et utilise la touche de la seconde main – il faut des totems dans la barre d'action. Astuce : garde toujours quelques totems dans la barre d'action.
+1246	Ce contre quoi aucun totem n'aide : les dégâts du vide et /kill. Et deux coups mortels plus rapprochés que ton ping (p. ex. deux cristaux à 150 ms) – le totem suivant est encore en route vers le serveur.

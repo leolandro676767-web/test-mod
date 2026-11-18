@@ -4,13 +4,17 @@ import de.test.Safe;
 import de.test.BossStack;
 import de.test.MiscMods;
 import de.test.PlayerMods;
+import de.test.RenderMods;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
+import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerRotationPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -82,5 +86,16 @@ public abstract class ClientPacketListenerMixin {
     @Inject(method = "handleBossUpdate", at = @At("HEAD"), cancellable = true, require = 0)
     private void test$boss(ClientboundBossEventPacket packet, CallbackInfo ci) {
         if (Safe.test("Boss Stack", () -> BossStack.onPacket(packet))) ci.cancel();
+    }
+
+    // Totem ausgeloest (Ereignis 35): Minecraft behandelt das hier selbst und gibt es nie an
+    // LivingEntity.handleEntityEvent weiter - deshalb hier abfangen (TAIL: nur im Haupt-Thread)
+    @Inject(method = "handleEntityEvent", at = @At("TAIL"), require = 0)
+    private void test$entityEvent(ClientboundEntityEventPacket packet, CallbackInfo ci) {
+        if (packet.getEventId() != 35) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || !mc.isSameThread()) return;
+        Entity e = packet.getEntity(mc.level);
+        if (e instanceof LivingEntity le) Safe.run("Totem", () -> RenderMods.onTotemPop(le));
     }
 }

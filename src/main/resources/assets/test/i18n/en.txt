@@ -1051,3 +1051,14 @@
 1233	Range in chunks (0 = whole view distance)
 1234	Block range (chunks)
 1235	Middle-click range (chunks)
+1236	Auto Totem: Put totems in your hotbar – the server won't accept them from the inventory.
+1237	Auto Totem: inventory click doesn't work here
+1238	Auto Totem: the server doesn't accept the inventory click
+1239	 – now using the offhand key instead (totems must be in the hotbar for that).
+1240	On
+1241	Totems: 
+1242	Off – turn it on below first!
+1243	Without "Always in the offhand", your offhand item (e.g. a shield) stays there until your health drops below the limit. After a totem is used up, it puts in the next one right away, not just on the next tick – even while a chest is open.
+1244	If the server doesn't accept the swap in the inventory (some anti-cheats), it says so in chat and uses the offhand key instead – totems must be in the hotbar for that. No totem helps against void damage or /kill.
+1245	If the server doesn't accept the swap in the inventory (some anti-cheats), it says so in chat and uses the offhand key instead – totems must be in the hotbar for that. Tip: always keep a few totems in your hotbar.
+1246	What no totem helps against: void damage and /kill. And two lethal hits closer together than your ping (e.g. two crystals at 150 ms) – the next totem is still on its way to the server.

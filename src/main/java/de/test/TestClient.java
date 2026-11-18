@@ -153,6 +153,7 @@ public class TestClient implements ClientModInitializer {
             Safe.run("Bewegung", () -> Movement.startTick(mc));
             Safe.run("Spieler", () -> PlayerMods.startTick(mc));
             Safe.run("Freecam", () -> CameraMods.startTick(mc));
+            Safe.run("Auto Totem", () -> Survival.totemTick(mc)); // vor dem Bewegungs-Paket, wie ein Tastendruck
         });
         ClientTickEvents.END_CLIENT_TICK.register(TestClient::onTick);
         // Free Look erst ganz zum Schluss: alle Module (auch das Laufen) haben die Laufrichtung gesetzt
@@ -459,7 +460,6 @@ public class TestClient implements ClientModInitializer {
         if (autoLogout && logoutArmed && health > 0.0f && health <= logoutHealth) {
             TunnelMiner.stop(mc, null);
             DebrisMiner.stop(mc, null);
-        TunnelMiner.stop(mc, null);
             logoutArmed = false;
             Walker.stop(mc);
             walking = false;
@@ -482,7 +482,7 @@ public class TestClient implements ClientModInitializer {
         runAutoDrop(mc);
         runAutoClicker(mc);
         Safe.run("Bot-Verteidigung", () -> BotGuard.tick(mc));
-        Safe.run("Auto Totem/Armor", () -> Survival.tick(mc));
+        Safe.run("Auto Armor", () -> Survival.tick(mc));
         Safe.run("Info-Anzeige", () -> InfoHud.tick(mc));
         Safe.run("Kill Aura", () -> KillAura.tick(mc));
         Safe.run("Bewegung", () -> Movement.endTick(mc));
