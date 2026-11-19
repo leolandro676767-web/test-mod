@@ -2,12 +2,17 @@
   "schemaVersion": 1,
   "id": "test",
   "version": "${version}",
-  "name": "1912 Client",
-  "description": "1912 Client",
+  "name": "1912 Utilities",
+  "description": "Komfort- und Anzeige-Tweaks für Minecraft.",
+  "icon": "assets/test/icon.png",
   "environment": "client",
-  "mixins": ["test.mixins.json"],
+  "mixins": [
+    "test.mixins.json"
+  ],
   "entrypoints": {
-    "client": ["de.test.TestClient"]
+    "client": [
+      "de.test.TestClient"
+    ]
   },
   "depends": {
     "fabricloader": ">=0.19.3",

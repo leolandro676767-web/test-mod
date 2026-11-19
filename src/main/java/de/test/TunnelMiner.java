@@ -67,6 +67,10 @@ public final class TunnelMiner {
     public static int eatHunger = 14;           // essen bei Hunger <= Wert (20 = satt)
     public static boolean keepGapples = true;
 
+    // --- Einsammeln ---
+    public static boolean collect = true;       // liegengebliebene Items einsammeln
+    public static int collectRadius = 8;        // Bloecke
+
     // --- Werkzeug ---
     public static boolean toolGuard = true;
     public static int toolPercent = 5;          // Grenze in Prozent der Haltbarkeit
@@ -105,7 +109,7 @@ public final class TunnelMiner {
     // Zustand
     // =====================================================================================
 
-    private enum Phase { TUNNEL, EAT, COLLECT, RETURN }
+    private enum Phase { TUNNEL, EAT, COLLECT, PICKUP, RETURN }
 
     private static boolean running;
     private static boolean paused;
@@ -153,6 +157,10 @@ public final class TunnelMiner {
     private static boolean digging;
     private static boolean walkerTicked;
     private static final Set<Long> badBlocks = new HashSet<>();
+    private static final Pickup.Want WANT = new Pickup.Want();
+    private static BlockPos pickupBack;        // hier hat er zum Einsammeln aufgehoert (genau dorthin zurueck)
+    private static boolean pickupReturning;
+    private static int pickupCenter;
     private static final boolean[] alerted = new boolean[9];
 
     private static boolean kFwd;
@@ -238,6 +246,7 @@ public final class TunnelMiner {
         if (!running) return;
         running = false;
         Look.human = false;
+        if (phase == Phase.PICKUP) Pickup.stop(mc);
         if (Walker.isActive() && !TestClient.areaActive) Walker.stop(mc);
         clearKeys();
         applyKeys(mc);
@@ -346,6 +355,7 @@ public final class TunnelMiner {
             case TUNNEL -> tunnel(mc, level, p);
             case EAT -> eat(p);
             case COLLECT -> collect(p);
+            case PICKUP -> pickup(mc, level, p);
             case RETURN -> returnToLine(mc, level, p);
         }
     }
@@ -457,6 +467,16 @@ public final class TunnelMiner {
         }
         // 4. Erze an Wand und Decke
         if (ores && oreTick(mc, level, p, feet)) return;
+        // 4b. Liegengebliebene Items einsammeln (was voraus liegt, nimmt er beim Weitergehen sowieso mit)
+        if (collect && digPos == null && sideLeft == 0 && Pickup.has(mc, p, want())) {
+            phase = Phase.PICKUP;
+            pickupBack = feet;
+            pickupReturning = false;
+            pickupCenter = 0;
+            walkerFails = 0;
+            Pickup.begin();
+            return;
+        }
         // 5. Ausweichen fertig / zurueck auf die Linie
         if (sideLeft == 0 && (curX != mainX || curZ != mainZ)) {
             curX = mainX;
@@ -907,6 +927,69 @@ public final class TunnelMiner {
             collectSpot = null;
             collectBack = null;
         }
+    }
+
+    /** Was der Tunnel Miner einsammelt: nur neben oder hinter ihm, auf Tunnelhoehe, kein Gestein zum Wegwerfen. */
+    private static Pickup.Want want() {
+        WANT.radius = collectRadius;
+        WANT.minAge = 12; // kurz landen lassen - er laeuft schnell weiter, sonst ist es schon zu weit weg
+        WANT.dirX = curX;
+        WANT.dirZ = curZ;
+        WANT.minY = tunnelY - 1.5;
+        WANT.maxY = tunnelY + 3.5;
+        WANT.ok = (st, source) -> !(dropJunk && isJunk(st));
+        return WANT;
+    }
+
+    private static void pickup(Minecraft mc, Level level, LocalPlayer p) {
+        idleTicks = 0;
+        digPos = null;
+        if (!pickupReturning) {
+            action = "Sammelt Items ein";
+            boolean more;
+            try {
+                more = Pickup.collect(mc, level, p, want());
+            } catch (RuntimeException | LinkageError e) {
+                Safe.report("Einsammeln", e);
+                Pickup.stop(mc);
+                more = false;
+            }
+            if (more) {
+                walkerTicked = true; // die Tasten setzt der Walker
+                return;
+            }
+            pickupReturning = true;
+            walkerFails = 0;
+        }
+        // genau dorthin zurueck, wo er aufgehoert hat (3x3: sonst steht er neben der Mitte und meint, er sei
+        // ausgewichen)
+        action = "Kehrt zum Tunnel zurück";
+        BlockPos feet = feet(p);
+        if (pickupBack == null || feet.equals(pickupBack) && p.onGround()) {
+            if (Walker.isActive()) Walker.stop(mc);
+            if (pickupBack == null || moveTo(p, pickupBack, Look.yawOf(curX, curZ)) || ++pickupCenter > 40) {
+                phase = Phase.TUNNEL;
+                lastFeet = feet;
+            }
+            return;
+        }
+        if (!Walker.isActive()) {
+            if (++walkerFails > 3) {
+                phase = Phase.RETURN; // dann eben irgendwo zurueck auf die Linie
+                walkerFails = 0;
+                return;
+            }
+            Walker.startDigExact(pickupBack.getX(), pickupBack.getY(), pickupBack.getZ());
+        }
+        walkerTicked = true;
+        String r;
+        try {
+            r = Walker.tick(mc, level, p);
+        } catch (RuntimeException | LinkageError e) {
+            Safe.report("Laufen", e);
+            r = "Fehler";
+        }
+        if (r != null && Walker.isActive()) Walker.stop(mc);
     }
 
     // ---------- Rueckweg ----------

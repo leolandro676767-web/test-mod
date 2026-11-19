@@ -14,6 +14,41 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
+// Diese Dateien gibt es nicht mehr - ihr Inhalt steckt jetzt in anderen Dateien (damit es unter 100 Dateien
+// bleibt). Hochladen im Browser loescht nichts: liegen sie noch alt im Repository, werden sie einfach nicht
+// mitgebaut.
+sourceSets {
+    main {
+        java {
+            exclude(
+                    'de/test/DropScreen.java',
+                    'de/test/LanguageScreen.java',
+                    'de/test/LevelScreen.java',
+                    'de/test/ClickerScreen.java',
+                    'de/test/BlockPickScreen.java',
+                    'de/test/BindsScreen.java',
+                    'de/test/ProfileScreen.java',
+                    'de/test/KillAuraScreen.java',
+                    'de/test/BotGuardScreen.java',
+                    'de/test/TunnelScreen.java',
+                    'de/test/GotoScreen.java',
+                    'de/test/BlockScreen.java',
+                    'de/test/AreaScreen.java',
+                    'de/test/DesignScreen.java',
+                    'de/test/InvSlotScreen.java',
+                    'de/test/InvLayoutScreen.java',
+                    'de/test/EspScreen.java',
+                    'de/test/Brand.java',
+                    'de/test/BetterTooltips.java',
+                    'de/test/BlockScan.java',
+                    'de/test/PathWorld.java',
+                    'de/test/SwarmNet.java',
+                    'de/test/PlayerScreens.java'
+            )
+        }
+    }
+}
+
 processResources {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": inputs.properties.version }

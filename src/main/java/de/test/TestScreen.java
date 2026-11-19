@@ -21,9 +21,11 @@ import net.minecraft.network.chat.Component;
 public class TestScreen extends Screen {
     private static final int GAP = 6;
     private static final int HEADER_H = Ui.HEADER_H;
-    private static final int ENTRY_H = 18;
+    private static int ENTRY_H = 18;      // 18, bei wenig Platz bis hinunter zu 12 (siehe DENSITY)
     private static final int DOTS_W = 9;     // Klickbereich rechts fuer die Einstellungen (drei Punkte)
     private static final int SCROLL_W = 5;   // Platz fuer den schmalen Scrollbalken
+    private int scrollW = SCROLL_W;          // ohne Scrollen (alles passt) braucht es den Platz nicht
+    private int gap = GAP;                   // Abstand der Spalten (eng: etwas kleiner)
     private static final int SEARCH_H = 16;
     private static final int FOOTER_H = 14;
     private static final int R = Ui.RADIUS;  // Eckenradius
@@ -58,6 +60,7 @@ public class TestScreen extends Screen {
         final List<Entry> matches = new ArrayList<>(); // passend zur Suche
         final List<Entry> visible = new ArrayList<>(); // gerade sichtbare Zeilen
         int index;
+        int bit;         // Bit fuer "eingeklappt" (bleibt gleich, auch wenn Spalten zusammengelegt werden)
         int x, y, w;
         float t0, t1;    // Ausschnitt des Farbverlaufs fuer die Kopfzeile
         boolean scrollable;
@@ -65,9 +68,24 @@ public class TestScreen extends Screen {
         float open = 1f; // 0 = eingeklappt, 1 = ausgeklappt (animiert)
         float headHover = 0f;
         float laneHover = 0f;
+        int plainW;      // Breite ohne Tasten-Schilder (fuer die Menue-Groesse)
+        Column parent;   // Teil einer langen Spalte: die ganze Spalte
+        boolean cont;    // Fortsetzung (ohne Zaehler in der Kopfzeile)
+        int relY;        // Lage im Stapel
 
         Column(String title) {
             this.title = Lang.t(title);
+        }
+
+        /** Teil einer Spalte (gleicher Name, gleiche Breite, klappt mit der ganzen Spalte ein). */
+        Column(Column parent, boolean cont) {
+            this.title = parent.title;
+            this.parent = parent;
+            this.cont = cont;
+            this.index = parent.index;
+            this.bit = parent.bit;
+            this.w = parent.w;
+            this.plainW = parent.plainW;
         }
     }
 
@@ -235,6 +253,8 @@ public class TestScreen extends Screen {
                 () -> PlayerMods.fastUse = !PlayerMods.fastUse, () -> PlayerMods.screen("Fast Use", this)));
         player.entries.add(module("Ghost Hand", () -> PlayerMods.ghostHand,
                 () -> PlayerMods.ghostHand = !PlayerMods.ghostHand, () -> PlayerMods.screen("Ghost Hand", this)));
+        player.entries.add(module("Haltbarkeit", () -> Extras.durability,
+                () -> Extras.durability = !Extras.durability, () -> Extras.screen("Haltbarkeit", this)));
         player.entries.add(module("Instant Rebreak", () -> PlayerMods.instantRebreak,
                 () -> PlayerMods.instantRebreak = !PlayerMods.instantRebreak, () -> PlayerMods.screen("Instant Rebreak", this)));
         player.entries.add(module("Kill Aura", () -> KillAura.enabled, KillAura::toggle,
@@ -313,6 +333,8 @@ public class TestScreen extends Screen {
                 () -> RenderMods.logoutSpots = !RenderMods.logoutSpots, () -> RenderMods.screen("Logout Spots", this)));
         render.entries.add(module("Marker", () -> RenderMods.marker,
                 () -> RenderMods.marker = !RenderMods.marker, () -> RenderMods.screen("Marker", this)));
+        render.entries.add(module("Minimap", () -> Extras.minimap,
+                () -> Extras.minimap = !Extras.minimap, () -> Extras.screen("Minimap", this)));
         render.entries.add(module("Nametags", () -> RenderMods.nametags,
                 () -> RenderMods.nametags = !RenderMods.nametags, () -> RenderMods.screen("Nametags", this)));
         render.entries.add(module("No Render", () -> RenderMods.noRender,
@@ -321,6 +343,8 @@ public class TestScreen extends Screen {
                 () -> RenderMods.popChams = !RenderMods.popChams, () -> RenderMods.screen("Pop Chams", this)));
         render.entries.add(module("Storage Esp", () -> RenderMods.storageEsp,
                 () -> RenderMods.storageEsp = !RenderMods.storageEsp, () -> RenderMods.screen("Storage Esp", this)));
+        render.entries.add(module("Tasten-Anzeige", () -> Extras.keys,
+                () -> Extras.keys = !Extras.keys, () -> Extras.screen("Tasten-Anzeige", this)));
         render.entries.add(module("Time Changer", () -> RenderMods.timeChanger,
                 () -> RenderMods.timeChanger = !RenderMods.timeChanger, () -> RenderMods.screen("Time Changer", this)));
         render.entries.add(module("Tracers", () -> RenderMods.tracers,
@@ -337,6 +361,72 @@ public class TestScreen extends Screen {
                 () -> RenderMods.wallHack = !RenderMods.wallHack, () -> RenderMods.screen("Wall Hack", this)));
         render.entries.add(module("Waypoints", () -> RenderMods.waypoints,
                 () -> RenderMods.waypoints = !RenderMods.waypoints, () -> RenderMods.screen("Waypoints", this)));
+        render.entries.add(module("Zoom", () -> Extras.zoom,
+                () -> Extras.zoom = !Extras.zoom, () -> Extras.screen("Zoom", this)));
+        render.entries.add(module("Fadenkreuz", () -> Extras.crosshair,
+                () -> Extras.crosshair = !Extras.crosshair, () -> Extras.screen("Fadenkreuz", this)));
+        render.entries.add(module("Boat Fly", () -> Extras.boatFly,
+                () -> Extras.boatFly = !Extras.boatFly, () -> Extras.screen("Boat Fly", this)));
+        player.entries.add(module("Trigger Bot", () -> CombatMods.trigger,
+                () -> CombatMods.trigger = !CombatMods.trigger, () -> CombatMods.screen("Trigger Bot", this)));
+        player.entries.add(module("Auto Weapon", () -> CombatMods.autoWeapon,
+                () -> CombatMods.autoWeapon = !CombatMods.autoWeapon, () -> CombatMods.screen("Auto Weapon", this)));
+        player.entries.add(module("Crystal Aura", () -> CombatMods.crystal,
+                () -> CombatMods.crystal = !CombatMods.crystal, () -> CombatMods.screen("Crystal Aura", this)));
+        player.entries.add(module("Surround", () -> CombatMods.surround,
+                () -> CombatMods.surround = !CombatMods.surround, () -> CombatMods.screen("Surround", this)));
+        player.entries.add(module("Auto Farm", () -> WorldMods.farm,
+                () -> WorldMods.farm = !WorldMods.farm, () -> WorldMods.screen("Auto Farm", this)));
+        player.entries.add(module("Nuker", () -> WorldMods.nuker,
+                () -> WorldMods.nuker = !WorldMods.nuker, () -> WorldMods.screen("Nuker", this)));
+        player.entries.add(module("Chest Stealer", () -> WorldMods.stealer,
+                () -> WorldMods.stealer = !WorldMods.stealer, () -> WorldMods.screen("Chest Stealer", this)));
+        player.entries.add(module("Aim Assist", () -> CombatMods.aimAssist,
+                () -> CombatMods.aimAssist = !CombatMods.aimAssist, () -> CombatMods.screen("Aim Assist", this)));
+        player.entries.add(module("Bow Aimbot", () -> CombatMods.bowAim,
+                () -> CombatMods.bowAim = !CombatMods.bowAim, () -> CombatMods.screen("Bow Aimbot", this)));
+        player.entries.add(module("Auto Trap", () -> CombatMods.autoTrap,
+                () -> CombatMods.autoTrap = !CombatMods.autoTrap, () -> CombatMods.screen("Auto Trap", this)));
+        player.entries.add(module("Hitboxes", () -> CombatMods.hitboxes,
+                () -> CombatMods.hitboxes = !CombatMods.hitboxes, () -> CombatMods.screen("Hitboxes", this)));
+        player.entries.add(module("Auto Light", () -> WorldMods.autoLight,
+                () -> WorldMods.autoLight = !WorldMods.autoLight, () -> WorldMods.screen("Auto Light", this)));
+        player.entries.add(module("Bonemeal Aura", () -> WorldMods.bonemeal,
+                () -> WorldMods.bonemeal = !WorldMods.bonemeal, () -> WorldMods.screen("Bonemeal Aura", this)));
+        player.entries.add(module("Tier-Automatik", () -> WorldMods.animals,
+                () -> WorldMods.animals = !WorldMods.animals, () -> WorldMods.screen("Tier-Automatik", this)));
+        player.entries.add(module("Elytra-Autopilot", () -> TravelMods.autopilot,
+                () -> TravelMods.autopilot = !TravelMods.autopilot, () -> TravelMods.screen("Elytra-Autopilot", this)));
+        player.entries.add(module("Elytra-Tausch", () -> TravelMods.elytraSwap,
+                () -> TravelMods.elytraSwap = !TravelMods.elytraSwap, () -> TravelMods.screen("Elytra-Tausch", this)));
+        player.entries.add(module("Todespunkt", () -> TravelMods.deathPoint,
+                () -> TravelMods.deathPoint = !TravelMods.deathPoint, () -> TravelMods.screen("Todespunkt", this)));
+        player.entries.add(module("Auto Pot", () -> CombatMods.autoPot,
+                () -> CombatMods.autoPot = !CombatMods.autoPot, () -> CombatMods.screen("Auto Pot", this)));
+        player.entries.add(module("Auto Web", () -> CombatMods.autoWeb,
+                () -> CombatMods.autoWeb = !CombatMods.autoWeb, () -> CombatMods.screen("Auto Web", this)));
+        player.entries.add(module("Arrow Dodge", () -> CombatMods.arrowDodge,
+                () -> CombatMods.arrowDodge = !CombatMods.arrowDodge, () -> CombatMods.screen("Arrow Dodge", this)));
+        player.entries.add(module("Hole Filler", () -> CombatMods.holeFiller,
+                () -> CombatMods.holeFiller = !CombatMods.holeFiller, () -> CombatMods.screen("Hole Filler", this)));
+        player.entries.add(module("Villager Roller", () -> WorldMods.roller,
+                () -> WorldMods.roller = !WorldMods.roller, () -> WorldMods.screen("Villager Roller", this)));
+        player.entries.add(module("Auto Smelt", () -> WorldMods.smelt,
+                () -> WorldMods.smelt = !WorldMods.smelt, () -> WorldMods.screen("Auto Smelt", this)));
+        player.entries.add(module("Auto Sign", () -> WorldMods.autoSign,
+                () -> WorldMods.autoSign = !WorldMods.autoSign, () -> WorldMods.screen("Auto Sign", this)));
+        player.entries.add(module("Spieler-Radar", () -> HudMods.radar,
+                () -> HudMods.radar = !HudMods.radar, () -> HudMods.screen("Spieler-Radar", this)));
+        player.entries.add(module("Schadenszahlen", () -> HudMods.damage,
+                () -> HudMods.damage = !HudMods.damage, () -> HudMods.screen("Schadenszahlen", this)));
+        player.entries.add(module("Kompass-Leiste", () -> HudMods.compass,
+                () -> HudMods.compass = !HudMods.compass, () -> HudMods.screen("Kompass-Leiste", this)));
+        player.entries.add(module("Chunk-Grenzen", () -> HudMods.chunks,
+                () -> HudMods.chunks = !HudMods.chunks, () -> HudMods.screen("Chunk-Grenzen", this)));
+        player.entries.add(module("Base Finder", () -> BaseFinder.enabled,
+                () -> BaseFinder.enabled = !BaseFinder.enabled, () -> BaseFinder.screen(this)));
+        player.entries.add(module("Baum-F\u00e4ller", () -> WorldMods.tree,
+                () -> WorldMods.tree = !WorldMods.tree, () -> WorldMods.screen("Baum-F\u00e4ller", this)));
 
         Column world = new Column("Welt");
         world.entries.add(toggle("Bl\u00f6cke abbauen", () -> TestClient.autoMine,
@@ -414,6 +504,7 @@ public class TestScreen extends Screen {
                 () -> MiscMods.swarm = !MiscMods.swarm, () -> MiscMods.screen("Swarm", this)));
 
         Column misc = new Column("Men\u00fc");
+        misc.entries.add(open("Modus", () -> new LevelScreen(this)));
         misc.entries.add(open("Design anpassen", () -> new DesignScreen(this)));
         misc.entries.add(open("Sprache / Language", () -> new LanguageScreen(this)));
         misc.entries.add(open("Men\u00fc-Taste \u00e4ndern",
@@ -423,12 +514,8 @@ public class TestScreen extends Screen {
         misc.entries.add(new Entry(Keybinds.PANIC_NAME, null, Keybinds::panic));
         misc.entries.add(new Entry("Schlie\u00dfen", null, this::onClose));
 
-        columns.add(move);
-        columns.add(player);
-        columns.add(render);
-        columns.add(world);
-        columns.add(inv);
-        columns.add(misc2);
+        regroup(List.of(move, player, render, world, inv, misc2));
+        misc.bit = GROUPS.length;
         columns.add(misc);
         for (int i = 0; i < columns.size(); i++) columns.get(i).index = i;
 
@@ -441,26 +528,89 @@ public class TestScreen extends Screen {
         Keybinds.ACTIONS.put(Keybinds.PANIC_NAME, new Keybinds.Action(null, Keybinds::panic));
     }
 
-    /** Die einfachen Module, die der Standardmodus zeigt (Welt, Inventar und Menue sind immer komplett). */
-    private static final java.util.Set<String> SIMPLE = java.util.Set.of(
-            "Auto Jump", "Auto Walk", "Flight", "High Jump", "No Fall", "Safe Walk", "Sneak", "Speed", "Sprint", "Step",
-            "Anti Afk", "Auto Armor", "Auto Clicker", "Auto Eat", "Auto Fish", "Auto Respawn", "Auto Tool",
-            "Auto Totem", "Fast Use", "Info-Anzeige", "Kill Aura",
-            "Reach",
-            "Speed Mine",
-            "Better Tooltips", "Chams", "Freecam", "Fullbright", "Item Highlight", "Nametags", "Time Changer",
-            "Tracers", "Waypoints",
-            "Auto Reconnect", "Better Chat", "Discord Presence", "Freunde", "Inventory Tweaks", "Notifier",
-            "Server-Schutz");
+    /** Spalten des Menues und was hineingehoert (Reihenfolge wie hier). */
+    private static final String[][] GROUPS = {
+        {"Bewegung", "Anti Void", "Auto Jump", "Auto Walk", "Fast Climb", "Gui Move", "No Fall", "No Slow", "Parkour",
+            "Reverse Step", "Safe Walk", "Scaffold", "Slippy", "Sneak", "Speed", "Spider", "Sprint", "Step", "Velocity"},
+        {"Fliegen", "Air Jump", "Auto Wasp", "Blink", "Boat Fly", "Click Tp", "Elytra-Autopilot", "Elytra-Tausch", "Elytra Boost", "Elytra Fly", "Entity Control",
+            "Flight", "High Jump", "Jesus", "Long Jump", "Trident Boost"},
+        {"Kampf", "Aim Assist", "Anchor", "Arrow Dodge", "Auto Armor", "Auto Clicker", "Auto Gap", "Auto Mend",
+            "Auto Pot", "Auto Totem", "Auto Trap", "Auto Weapon", "Auto Web", "Bot-Verteidigung", "Bow Aimbot",
+            "Crystal Aura", "Exp Thrower", "Fake Player", "Hitboxes", "Hole Filler", "Kill Aura", "No Rotate",
+            "Potion Saver", "Reach", "Rotation", "Surround", "Trigger Bot"},
+        {"Spieler", "Anti Afk", "Anti Hunger", "Auto Eat", "Auto Fish", "Auto Respawn", "Fast Use", "Haltbarkeit",
+            "Middle Click Extra", "Multitask", "Name Protect", "No Interact", "No Status Effects", "Portals", "Todespunkt"},
+        {"Welt", "Air Place", "Auto Farm", "Auto Light", "Auto Sign", "Auto Tool", "Auto-Logout", "Baum-F\u00e4ller",
+            "Bereich",
+            "Block", "Bl\u00f6cke abbauen", "Bonemeal Aura", "Break Delay", "Debris Miner", "Ghost Hand",
+            "Instant Rebreak", "Koordinaten", "Liquid Interact", "No Mining Trace", "Nuker", "Speed Mine",
+            "Tier-Automatik", "Tunnel Miner", "Villager Roller"},
+        {"Anzeige", "Better Tab", "Better Tooltips", "Block Selection", "Blur", "Boss Stack", "Breadcrumbs",
+            "Camera Tweaks", "Chunk-Grenzen", "Entity Owner", "Fadenkreuz", "Free Look", "Fullbright", "Hand View",
+            "Info-Anzeige", "Item Physics", "Kompass-Leiste", "Light Overlay", "Marker", "Minimap", "No Render",
+            "Schadenszahlen", "Tasten-Anzeige", "Time Changer", "Trail", "Waypoints", "Zoom"},
+        {"ESP", "Base Finder", "Block Esp", "Break Indicators", "Chams", "City Esp", "ESP", "Freecam", "Hole Esp", "Item Highlight",
+            "Logout Spots", "Nametags", "Pop Chams", "Spieler-Radar", "Storage Esp", "Tracers", "Trajectories", "Tunnel Esp",
+            "Void Esp", "Wall Hack"},
+        {"Inventar", "AutoDrop", "Auto Replenish", "Auto Smelt", "Chest Stealer", "Chest Swap", "Inventory Tweaks"},
+        {"Misc", "Anti Packet Kick", "Auto Reconnect", "Better Beacons", "Better Chat", "Book Bot", "Discord Presence",
+            "Freunde", "Message Aura", "Notebot", "Notifier", "Packet Canceller", "Server Spoof", "Server-Schutz",
+            "Sound Blocker", "Spam", "Swarm"}
+    };
 
     /**
-     * Ob ein Eintrag im aktuellen Modus zu sehen ist. Im Standardmodus bleiben ausserdem alle Module
-     * sichtbar, die gerade an sind oder eine Taste haben - sonst waeren sie an, ohne dass man es sieht.
+     * Anfänger und Standard haben nur wenige Module: damit keine fast leeren Spalten herumstehen, werden dort
+     * Bewegung, Fliegen und Kampf zu "Spieler", Welt zu "Inventar" und ESP zu "Anzeige" (Index in GROUPS).
      */
+    private static final int[][] MERGE = {{0, 3}, {1, 3}, {2, 3}, {4, 7}, {6, 5}};
+
+    /** Verteilt die Module auf die Spalten aus GROUPS; was dort fehlt, bleibt in seiner alten Spalte. */
+    private void regroup(List<Column> old) {
+        java.util.Map<String, Entry> byName = new java.util.LinkedHashMap<>();
+        java.util.Map<String, String> oldCol = new java.util.HashMap<>();
+        for (Column c : old) {
+            for (Entry e : c.entries) {
+                byName.put(e.name, e);
+                oldCol.put(e.name, c.title);
+            }
+        }
+        Column[] groups = new Column[GROUPS.length];
+        for (int gi = 0; gi < GROUPS.length; gi++) {
+            String[] g = GROUPS[gi];
+            Column c = new Column(g[0]);
+            c.bit = gi;
+            for (int i = 1; i < g.length; i++) {
+                Entry e = byName.remove(g[i]);
+                if (e != null) c.entries.add(e);
+            }
+            groups[gi] = c;
+        }
+        if (Levels.level < Levels.EXPERT) {
+            for (int[] m : MERGE) {
+                Column to = groups[m[1]];
+                to.entries.addAll(groups[m[0]].entries);
+                groups[m[0]].entries.clear();
+                to.entries.sort((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(a.label, b.label));
+            }
+        }
+        for (Column c : groups) if (!c.entries.isEmpty()) columns.add(c);
+        // neue Module, die (noch) in keiner Gruppe stehen: unter ihrer alten Spalte anhaengen
+        for (Entry e : byName.values()) {
+            Column target = null;
+            for (Column c : columns) if (c.title.equals(oldCol.get(e.name))) target = c;
+            if (target == null) {
+                target = new Column(oldCol.get(e.name));
+                target.bit = GROUPS.length + 1 + Math.min(5, columns.size());
+                columns.add(target);
+            }
+            target.entries.add(e);
+        }
+    }
+
+    /** Ob ein Eintrag im gewaehlten Modus (Anfänger / Standard / Experte) zu sehen ist; das Menue immer. */
     private boolean inMode(Column col, Entry e) {
-        if (Theme.menuMode == 1 || col.index >= 3 && col.index != 5) return true;
-        if (SIMPLE.contains(e.name) || Keybinds.get(e.name) != null) return true;
-        return e.state != null && e.state.getAsBoolean();
+        if (col.index == columns.size() - 1) return true;
+        return Levels.visible(e.name);
     }
 
     /** Die Menue-Spalte bekommt keine Tasten - ausser "Alle Module aus / an". */
@@ -479,17 +629,19 @@ public class TestScreen extends Screen {
             int need = head;
             int plain = head;
             for (Entry e : col.entries) {
+                if (!inMode(col, e)) continue; // ausgeblendete Module brauchen keinen Platz
                 need = Math.max(need, needWidth(e));
                 plain = Math.max(plain, needWidth(e) - badgeW(e));
             }
             col.w = Math.max(Theme.columnWidth(), need);
-            total += Math.max(Theme.columnWidth(), plain);
+            col.plainW = Math.max(Theme.columnWidth(), plain);
+            total += col.plainW;
         }
         total += (columns.size() - 1) * GAP;
 
-        // Eigene Menue-Groesse (gilt nur, solange ein 1912-Menue offen ist): "Auto" waehlt sie so,
-        // dass alle Spalten nebeneinander passen
-        GuiScale.need(total + 24, 330);
+        // Eigene Menue-Groesse (gilt nur, solange ein 1912-Menue offen ist): "Auto" waehlt die groesste, bei der
+        // alle Module ohne Scrollen hineinpassen (sonst wie frueher: alle Spalten nebeneinander)
+        GuiScale.needFit(this::fitsAt, total + 24, 330);
         GuiScale.apply();
         this.width = this.minecraft.getWindow().getGuiScaledWidth();
         this.height = this.minecraft.getWindow().getGuiScaledHeight();
@@ -506,7 +658,7 @@ public class TestScreen extends Screen {
     }
 
     private boolean collapsed(Column col) {
-        return !searching() && Theme.isCollapsed(col.index);
+        return !searching() && Theme.isCollapsed(col.bit);
     }
 
     /** Platz, den ein Eintrag braucht, damit sein Name ganz zu lesen ist. */
@@ -555,6 +707,23 @@ public class TestScreen extends Screen {
         return out;
     }
 
+    private static final int STACK_GAP = 8;   // Abstand zweier Spalten uebereinander
+    /** Dichte, von luftig bis eng: {Logo (0 normal, 1 klein, 2 nur Schrift), Zeilenhoehe}. */
+    private static final int[][] DENSITY = {{0, 18}, {1, 18}, {1, 16}, {2, 16}, {2, 14}, {2, 12}};
+    /**
+     * Was probiert wird, der Reihe nach: {Dichte (Index in DENSITY), Anordnung, Stufe}. Anordnung 0 = sauber
+     * (lange Spalten gleichmaessig nebeneinander, nichts wird mittendrin abgeschnitten); 4 bzw. 2 = wie eine
+     * Zeitung, jedes Stueck einer Spalte hat dann mindestens so viele Zeilen. Stufe 0 = mit Logo und ordentlich,
+     * 1 = notfalls ohne Logo, 2 = egal wie, Hauptsache ohne Scrollen.
+     */
+    private static final int[][] OPTIONS = {
+        {0, 0, 0}, {1, 0, 0}, {2, 0, 0}, {0, 4, 0}, {1, 4, 0}, {2, 4, 0},
+        {3, 0, 1}, {3, 4, 1},
+        {0, 2, 2}, {1, 2, 2}, {2, 2, 2}, {3, 2, 2}, {4, 0, 2}, {4, 4, 2}, {4, 2, 2},
+        {5, 0, 2}, {5, 4, 2}, {5, 2, 2}};
+    private int logoMode;
+    private boolean fitMode; // alles passt ohne Scrollen
+
     private void layout() {
         String q = q();
         shown.clear();
@@ -562,36 +731,237 @@ public class TestScreen extends Screen {
             col.matches.clear();
             boolean titleHit = !q.isEmpty() && col.title.toLowerCase(Locale.ROOT).contains(q);
             for (Entry e : col.entries) {
-                // die Suche findet immer alle Module, auch die im Standardmodus ausgeblendeten
-                boolean hit = q.isEmpty() ? inMode(col, e) : titleHit || e.label.toLowerCase(Locale.ROOT).contains(q)
-                        || e.name.toLowerCase(Locale.ROOT).contains(q);
+                // auch die Suche findet nur Module des gewaehlten Modus
+                boolean hit = inMode(col, e) && (q.isEmpty() || titleHit
+                        || e.label.toLowerCase(Locale.ROOT).contains(q) || e.name.toLowerCase(Locale.ROOT).contains(q));
                 if (hit) col.matches.add(e);
             }
             if (!col.matches.isEmpty()) shown.add(col);
         }
 
+        // Am liebsten alles ohne Scrollen: die Spalten wie in einer Zeitung von oben nach unten, dann in den
+        // naechsten Stapel (eine lange Spalte geht dort weiter). Wird es zu eng: kleineres Logo, flachere Zeilen.
         int maxW = this.width - 16;
-        logoScale = Theme.logoSize > 0 ? Theme.logoSize : (this.height >= 300 ? 2 : 1);
-        int logoH = Theme.showLogo ? Logo.height(logoScale) : 10;
-        int topY = 8 + logoH + 8 + SEARCH_H + 10;
-        int rowGap = 12;
-        int availV = this.height - FOOTER_H - 6 - topY;
-
-        // Hoehe und Lage des Rasters immer wie ohne Suche -> Suchfeld und Logo springen nicht
-        int gridRowsAll = flow(columns, maxW).size();
-        fitRows = Math.max(4, ((availV - (gridRowsAll - 1) * rowGap) / gridRowsAll - HEADER_H) / ENTRY_H);
-        int maxRows = 1;
-        for (Column col : columns) {
-            int n = 0;
-            for (Entry e : col.entries) if (inMode(col, e)) n++;
-            maxRows = Math.max(maxRows, Math.min(fitRows, n));
+        fitMode = false;
+        List<List<Column>> slots = null;
+        int gridH = 0;
+        int topY = 0;
+        int availV = 0;
+        for (int[] o : OPTIONS) {
+            int[] d = DENSITY[o[0]];
+            logoMode = d[0];
+            ENTRY_H = d[1];
+            topY = topFor(this.height, logoMode);
+            availV = this.height - FOOTER_H - 6 - topY;
+            // Hoehe wie ohne Suche -> Suchfeld und Logo springen beim Tippen nicht
+            List<List<Column>> all = stack(columns, false, availV, ENTRY_H, o[1]);
+            if (all == null || widthOf(all, false, gapFor(d)) > maxW) continue;
+            gap = gapFor(d);
+            gridH = 0;
+            for (List<Column> st : all) gridH = Math.max(gridH, stackHeight(st));
+            slots = all;
+            if (searching()) {
+                slots = stack(shown, true, availV, ENTRY_H, o[1]);
+                if (slots == null) slots = stack(shown, true, availV, ENTRY_H, 2);
+            }
+            fitMode = slots != null;
+            if (fitMode) break;
         }
-        int rowH = HEADER_H + maxRows * ENTRY_H;
-        int gridH = gridRowsAll * rowH + (gridRowsAll - 1) * rowGap;
+        if (!fitMode) {
+            logoMode = 0;
+            ENTRY_H = 18;
+            scrollW = SCROLL_W;
+            gap = GAP;
+            layoutScroll(maxW);
+            return;
+        }
+        scrollW = 0;
+        logoScale = logoMode == 1 ? 1 : (Theme.logoSize > 0 ? Theme.logoSize : (this.height >= 300 ? 2 : 1));
+        int logoH = logoHeightFor(this.height, logoMode);
         gridY = topY + Math.max(0, (availV - gridH) / 3);
         searchY = gridY - 10 - SEARCH_H;
         logoY = searchY - 8 - logoH;
+        placeSearch();
+        fitRows = 1 << 20; // nie scrollen
 
+        shown.clear();
+        int total = widthOf(slots, false, gap);
+        int x = (this.width - total) / 2;
+        int x0 = x;
+        for (List<Column> st : slots) {
+            int sw = 0;
+            for (Column c : st) sw = Math.max(sw, c.w);
+            sw -= SCROLL_W; // kein Scrollbalken noetig
+            for (Column c : st) {
+                c.x = x;
+                c.y = gridY + c.relY;
+                c.w = sw;
+                c.t0 = (x - x0) / (float) Math.max(1, total);
+                c.t1 = (x + sw - x0) / (float) Math.max(1, total);
+                place(c);
+                shown.add(c);
+            }
+            x += sw + gap;
+        }
+    }
+
+    /** Abstand der Spalten: ohne Logo (sehr eng) etwas kleiner. */
+    private static int gapFor(int[] density) {
+        return density[0] == 2 ? 4 : GAP;
+    }
+
+    private int logoHeightFor(int h, int mode) {
+        if (!Theme.showLogo || mode == 2) return 10;
+        int sc = mode == 1 ? 1 : (Theme.logoSize > 0 ? Theme.logoSize : (h >= 300 ? 2 : 1));
+        return Logo.height(sc);
+    }
+
+    private int topFor(int h, int mode) {
+        return 8 + logoHeightFor(h, mode) + 8 + SEARCH_H + 10;
+    }
+
+    /** Eintraege einer Spalte im gewaehlten Modus (ohne Suche). */
+    private List<Entry> modeEntries(Column col) {
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : col.entries) if (inMode(col, e)) out.add(e);
+        return out;
+    }
+
+    /**
+     * Ordnet die Spalten in Stapeln nebeneinander an (von oben nach unten, dann der naechste Stapel); eine zu
+     * lange Spalte geht im naechsten Stapel weiter, mit ihrem Namen oben. null = passt nicht.
+     * @param search true = die Suchtreffer (col.matches), false = alles im gewaehlten Modus
+     * @param pack   0 = sauber: eine Spalte kommt ganz in einen Stapel; ist sie laenger als ein Stapel, wird sie
+     *               gleichmaessig auf eigene Stapel verteilt. 4 bzw. 2 = Zeitung: der Rest eines Stapels wird
+     *               aufgefuellt, jedes Stueck hat aber mindestens so viele Zeilen.
+     */
+    private List<List<Column>> stack(List<Column> cols, boolean search, int availV, int entryH, int pack) {
+        int cap = (availV - HEADER_H) / entryH;
+        if (cap < 2) return null;
+        List<List<Column>> slots = new ArrayList<>();
+        List<Column> cur = new ArrayList<>();
+        int y = 0;
+        for (Column col : cols) {
+            List<Entry> list = search ? col.matches : modeEntries(col);
+            if (list.isEmpty()) continue;
+            boolean shut = !search && Theme.isCollapsed(col.bit) || search && collapsed(col);
+            int n = shut ? 0 : list.size();
+            boolean menu = col.index == columns.size() - 1; // die Menue-Spalte wird nie geteilt
+
+            if (pack == 0) {
+                int need = HEADER_H + n * entryH;
+                if (!cur.isEmpty() && y + STACK_GAP + need <= availV) {
+                    y = addPart(cur, col, false, list, y, n * entryH);
+                    continue;
+                }
+                if (!cur.isEmpty()) {
+                    slots.add(cur);
+                    cur = new ArrayList<>();
+                    y = 0;
+                }
+                if (n <= cap) {
+                    y = addPart(cur, col, false, list, 0, n * entryH);
+                    continue;
+                }
+                if (menu) return null;
+                int k = (n + cap - 1) / cap;
+                int i = 0;
+                for (int p = 0; p < k; p++) {
+                    int take = (n - i + (k - p) - 1) / (k - p);
+                    y = addPart(cur, col, p > 0, list.subList(i, i + take), 0, take * entryH);
+                    i += take;
+                    if (p < k - 1) {
+                        slots.add(cur);
+                        cur = new ArrayList<>();
+                    }
+                }
+                continue;
+            }
+
+            int i = 0;
+            boolean first = true;
+            while (true) {
+                int space = availV - y - (cur.isEmpty() ? 0 : STACK_GAP);
+                int rows = (space - HEADER_H) / entryH;
+                int rem = n - i;
+                int take;
+                if (space < HEADER_H) {
+                    take = -1;
+                } else if (rows >= rem) {
+                    take = rem;
+                } else if (pack <= 2) {
+                    take = rows < 2 ? -1 : rows;
+                    if (take > 2 && rem - take == 1) take--; // keine einzelne Zeile allein weiterfuehren
+                } else {
+                    take = rem - rows < pack ? rem - pack : rows; // der Rest soll nicht zu kurz werden
+                    if (take < pack || menu) take = -1;
+                }
+                if (take < 0) {
+                    if (cur.isEmpty()) return null;
+                    slots.add(cur);
+                    cur = new ArrayList<>();
+                    y = 0;
+                    continue;
+                }
+                y = addPart(cur, col, !first, shut ? list : list.subList(i, i + take), y, take * entryH);
+                i += take;
+                first = false;
+                if (i >= n) break;
+                slots.add(cur);
+                cur = new ArrayList<>();
+                y = 0;
+            }
+        }
+        if (!cur.isEmpty()) slots.add(cur);
+        return slots;
+    }
+
+    /**
+     * Haengt ein Stueck einer Spalte unten an einen Stapel; gibt die neue Hoehe des Stapels zurueck.
+     * @param rowsH Hoehe der Zeilen (0 bei eingeklappter Spalte)
+     */
+    private static int addPart(List<Column> stack, Column col, boolean cont, List<Entry> entries, int y, int rowsH) {
+        Column part = new Column(col, cont);
+        part.matches.addAll(entries);
+        part.relY = stack.isEmpty() ? 0 : y + STACK_GAP;
+        stack.add(part);
+        return part.relY + HEADER_H + rowsH;
+    }
+
+    private int stackHeight(List<Column> st) {
+        Column last = st.get(st.size() - 1);
+        boolean shut = Theme.isCollapsed(last.bit);
+        return last.relY + HEADER_H + (shut ? 0 : last.matches.size() * ENTRY_H);
+    }
+
+    /** Breite aller Stapel nebeneinander, ohne Scrollbalken (beim Anordnen ohne Scrollen gibt es keinen). */
+    private static int widthOf(List<List<Column>> slots, boolean plain, int gap) {
+        int w = 0;
+        for (List<Column> st : slots) {
+            int m = 0;
+            for (Column c : st) m = Math.max(m, plain ? c.plainW : c.w);
+            w += m - SCROLL_W;
+        }
+        return w + Math.max(0, slots.size() - 1) * gap;
+    }
+
+    /**
+     * Fuer die Menue-Groesse "Auto": passt bei dieser Bildschirmgroesse alles ohne Scrollen?
+     * @param level wie unordentlich es hoechstens sein darf (Stufe in OPTIONS)
+     */
+    private boolean fitsAt(int w, int h, int level) {
+        for (int[] o : OPTIONS) {
+            if (o[2] > level) break;
+            int[] d = DENSITY[o[0]];
+            int availV = h - FOOTER_H - 6 - topFor(h, d[0]);
+            List<List<Column>> slots = stack(columns, false, availV, d[1], o[1]);
+            if (slots != null && widthOf(slots, true, gapFor(d)) <= w - 16) return true;
+        }
+        return false;
+    }
+
+    /** Suchfeld und "Tasten zuweisen" ueber den Spalten. */
+    private void placeSearch() {
         // Suchfeld (bleibt dasselbe Objekt, damit Text und Cursor beim Neuaufbau erhalten bleiben)
         int sw = Math.min(200, this.width - 40);
         if (searchBox == null) {
@@ -618,6 +988,33 @@ public class TestScreen extends Screen {
             pendingRebuild = true; // Spalten brauchen im Zuweisen-Modus etwas mehr Platz
         }).bounds(sx0 + sw + 6, searchY, bw, SEARCH_H).build());
 
+    }
+
+    /** Wenn es nicht ohne Scrollen geht (sehr kleines Fenster): Spalten in Reihen, lange Spalten scrollen. */
+    private void layoutScroll(int maxW) {
+        logoScale = Theme.logoSize > 0 ? Theme.logoSize : (this.height >= 300 ? 2 : 1);
+        int logoH = Theme.showLogo ? Logo.height(logoScale) : 10;
+        int topY = 8 + logoH + 8 + SEARCH_H + 10;
+        int rowGap = 12;
+        int availV = this.height - FOOTER_H - 6 - topY;
+
+        // Hoehe und Lage des Rasters immer wie ohne Suche -> Suchfeld und Logo springen nicht
+        int gridRowsAll = flow(columns, maxW).size();
+        fitRows = Math.max(4, ((availV - (gridRowsAll - 1) * rowGap) / gridRowsAll - HEADER_H) / ENTRY_H);
+        int maxRows = 1;
+        for (Column col : columns) {
+            int n = 0;
+            for (Entry e : col.entries) if (inMode(col, e)) n++;
+            maxRows = Math.max(maxRows, Math.min(fitRows, n));
+        }
+        int rowH = HEADER_H + maxRows * ENTRY_H;
+        int gridH = gridRowsAll * rowH + (gridRowsAll - 1) * rowGap;
+        gridY = topY + Math.max(0, (availV - gridH) / 3);
+        searchY = gridY - 10 - SEARCH_H;
+        logoY = searchY - 8 - logoH;
+
+        placeSearch();
+
         // Spalten (nur die mit Treffern) in Reihen anordnen
         List<List<Column>> lines = flow(shown, maxW);
         for (int gr = 0; gr < lines.size(); gr++) {
@@ -643,8 +1040,9 @@ public class TestScreen extends Screen {
         // Klick auf die Kopfzeile klappt die Spalte ein bzw. aus (nicht waehrend der Suche)
         addWidget(Button.builder(Component.empty(), b -> {
             if (searching()) return;
-            Theme.toggleCollapsed(col.index);
+            Theme.toggleCollapsed(col.bit);
             TestConfig.save();
+            if (fitMode) pendingRebuild = true; // die Stapel neu packen
         }).bounds(col.x, col.y, col.w, HEADER_H).build());
         buildVisible(col);
         for (int e = 0; e < col.visible.size(); e++) {
@@ -654,8 +1052,8 @@ public class TestScreen extends Screen {
             en.last = e == col.visible.size() - 1;
             en.anim = en.state != null && en.state.getAsBoolean() ? 1f : 0f;
             // links umschalten, rechts (Punkte) Einstellungen oeffnen
-            int dotsX = col.x + col.w - SCROLL_W - DOTS_W;
-            int toggleW = en.settings != null ? dotsX - en.x : col.w - SCROLL_W;
+            int dotsX = col.x + col.w - scrollW - DOTS_W;
+            int toggleW = en.settings != null ? dotsX - en.x : col.w - scrollW;
             boolean canBind = bindable(col, en);
             addWidget(Button.builder(Component.empty(), b -> {
                 if (collapsed(col)) return;
@@ -791,7 +1189,7 @@ public class TestScreen extends Screen {
 
         // Logo (oder nur Schriftzug)
         int cx = this.width / 2;
-        if (Theme.showLogo) {
+        if (Theme.showLogo && logoMode < 2) {
             Logo.drawMenu(g, this.font, cx, logoY, logoScale, ga, dy, Fx.mouseX(), Fx.mouseY());
         } else {
             String title = "1 9 1 2";
@@ -823,16 +1221,17 @@ public class TestScreen extends Screen {
         String keys = "Men\u00fc " + TestClient.guiKey.getTranslatedKeyMessage().getString();
         String sep = "   ·   ";
         String[] hints = {
-            "Klick: an/aus" + sep + "Punkte: Einstellungen" + sep + "Mausrad: scrollen" + sep + "Tasten: " + keys,
+            "Klick: an/aus" + sep + "Punkte: Einstellungen" + sep + (fitMode ? "" : "Mausrad: scrollen" + sep)
+                + "Tasten: " + keys,
             "Klick: an/aus" + sep + "Punkte: Einstellungen" + sep + "Tasten: " + keys,
             "Klick: an/aus" + sep + "Punkte: Einstellungen",
             "Klick: an/aus"
         };
-        if (Theme.menuMode == 0 && !bindMode) {
-            // Standardmodus: zeigen, wo die restlichen Module zu finden sind
+        if (Levels.level < Levels.EXPERT && !bindMode) {
+            // Anfaenger / Standard: zeigen, wo die restlichen Module zu finden sind
             hints = new String[] {
-                hints[1] + sep + "Alle Module: Design anpassen, Modus Experte",
-                "Klick: an/aus" + sep + "Alle Module: Design anpassen, Modus Experte",
+                hints[1] + sep + "Mehr Module: Modus",
+                "Klick: an/aus" + sep + "Mehr Module: Modus",
                 hints[2], hints[3]
             };
         }
@@ -882,7 +1281,7 @@ public class TestScreen extends Screen {
 
         int active = 0;
         int toggles = 0;
-        for (Entry en : col.matches) {
+        for (Entry en : col.parent != null ? col.parent.matches : col.matches) {
             if (en.state != null) {
                 toggles++;
                 if (en.state.getAsBoolean()) active++;
@@ -891,13 +1290,13 @@ public class TestScreen extends Screen {
         // Plus/Minus: blendet weich um, wenn die Spalte ein-/ausklappt
         int pmX = x + w - 12;
         Ui.plusMinusIcon(g, pmX, y + 10, 1f - col.open, 0xFFFFFFFF);
-        String count = toggles > 0 ? active + "/" + toggles : "";
+        String count = toggles > 0 && !col.cont ? active + "/" + toggles : ""; // Fortsetzung: ohne Zaehler
         int countW = this.font.width(count);
         if (!count.isEmpty()) Ui.text(g, this.font, count, pmX - 8 - countW, y + 7, 0xC8FFFFFF, true);
         name(g, col.title, x + 8, y + 7, pmX - 8 - countW - 6 - (x + 8), 0xFFFFFFFF);
 
         int accent = Theme.accent();
-        int right = x + w - SCROLL_W;           // rechter Rand des Zeileninhalts
+        int right = x + w - scrollW;            // rechter Rand des Zeileninhalts
         int dotsX = right - DOTS_W;
         for (Entry en : col.visible) {
             // nur Zeilen zeichnen, die beim Ein-/Ausklappen schon komplett sichtbar sind
@@ -933,12 +1332,12 @@ public class TestScreen extends Screen {
                 float pulse = wait ? 0.5f + 0.5f * (float) Math.sin(Fx.time() * 6f) : 0f;
                 int bg = wait ? Ui.withA(accent, Math.round(0x50 + 0x50 * pulse))
                         : key != null ? Ui.withA(0xFFFFFF, 0x1A) : Ui.withA(0xFFFFFF, 0x0C);
-                Ui.roundRect(g, bx, ey + 3, bw, 12, 3, bg);
+                Ui.roundRect(g, bx, ey + (ENTRY_H - 12) / 2, bw, 12, 3, bg);
                 int tc = wait ? 0xFFFFFFFF : key != null ? Ui.lerp(MUTED, TEXT, 0.5f) : Ui.withA(MUTED, 0x90);
-                Ui.text(g, this.font, badge, bx + 4, ey + 5, tc, false);
+                Ui.text(g, this.font, badge, bx + 4, ey + (ENTRY_H - 8) / 2, tc, false);
                 nameEnd = bx - 4;
             }
-            name(g, en.label, nameX, ey + 5, nameEnd - nameX, textColor);
+            name(g, en.label, nameX, ey + (ENTRY_H - 8) / 2, nameEnd - nameX, textColor);
 
             if (en.settings != null) {
                 // Drei Punkte fuer die Einstellungen; leuchten, wenn die Maus darueber ist
@@ -946,7 +1345,8 @@ public class TestScreen extends Screen {
                 int dc = overDots ? accent : Ui.lerp(Ui.withA(MUTED, 0xB0), TEXT, en.hover * 0.6f);
                 int dx = dotsX + (DOTS_W - 2) / 2;
                 for (int i = 0; i < 3; i++) {
-                    Ui.fill(g, dx, ey + 4 + i * 4, dx + 2, ey + 6 + i * 4, dc);
+                    int dy0 = ey + (ENTRY_H - 10) / 2 + i * 4;
+                    Ui.fill(g, dx, dy0, dx + 2, dy0 + 2, dc);
                 }
             }
             if (en.state != null) Ui.switchPill(g, dotsX - 2 - 16, ey + (ENTRY_H - 8) / 2, en.anim);

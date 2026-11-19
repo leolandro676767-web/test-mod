@@ -91,7 +91,7 @@ public final class Lang {
 
     /**
      * Fuer Chat-Meldungen: Component.literal mit uebersetztem Text. Meldungen, die mit "1912: " beginnen,
-     * bekommen den farbigen Absender "1912 Client" (siehe Brand).
+     * bekommen den farbigen Absender "1912 Utilities" (siehe Brand).
      */
     public static MutableComponent literal(String s) {
         String text = t(s);

@@ -42,14 +42,14 @@ public final class MiscMods {
     public static int betterChatWindow = 10;        // Sekunden, in denen Wiederholungen ausgeblendet werden
 
     public static boolean bookBot = false;          // einmalig: schreibt das Buch und schaltet sich aus
-    public static String bookBotText = "1912 Client";
+    public static String bookBotText = "1912 Utilities";
     public static int bookBotPages = 50;
     public static boolean bookBotSign = false;
     public static String bookBotTitle = "1912";
 
     public static boolean discordPresence = false;
     public static String discordAppId = "";           // Application ID der eigenen Discord-Anwendung
-    public static String discordText = "1912 Client"; // zweite Zeile
+    public static String discordText = "1912 Utilities"; // zweite Zeile
     public static boolean discordShowServer = false;
 
     public static boolean inventoryTweaks = false;
@@ -87,7 +87,7 @@ public final class MiscMods {
 
     public static boolean spam = false;
     public static int spamDelay = 5;                // Sekunden
-    public static String spamText = "1912 Client";
+    public static String spamText = "1912 Utilities";
 
     public static boolean serverGuard = false;
     /** Server-Adressen (Teile reichen), mit Komma getrennt, z.B. "hypixel, gommehd". */
@@ -165,7 +165,7 @@ public final class MiscMods {
             p.sendSystemMessage(Lang.literal("\u00a7c1912: Book Bot - erst Buch und Feder in die Hand nehmen"));
             return;
         }
-        String text = bookBotText == null || bookBotText.isBlank() ? "1912 Client" : bookBotText;
+        String text = bookBotText == null || bookBotText.isBlank() ? "1912 Utilities" : bookBotText;
         if (text.length() > 1024) text = text.substring(0, 1024);
         java.util.List<String> pages = new java.util.ArrayList<>();
         for (int i = 0; i < Math.max(1, Math.min(100, bookBotPages)); i++) pages.add(text);
@@ -426,7 +426,7 @@ public final class MiscMods {
             case "Book Bot" -> new ModuleScreen(parent, module, f -> {
                 f.description("Beschreibt Buch und Feder in deiner Hand\nund schaltet sich danach wieder aus.");
                 f.section("Inhalt");
-                f.text("Text je Seite", () -> bookBotText, v -> bookBotText = v, "1912 Client");
+                f.text("Text je Seite", () -> bookBotText, v -> bookBotText = v, "1912 Utilities");
                 f.slider("Seiten", 1, 100, () -> bookBotPages, v -> bookBotPages = v, 50);
                 f.section("Signieren");
                 f.toggle("Buch signieren", () -> bookBotSign, v -> bookBotSign = v, false);
@@ -437,7 +437,7 @@ public final class MiscMods {
                 f.description("Zeigt in Discord, dass du gerade spielst.\nDiscord muss auf diesem PC laufen.");
                 f.section("Allgemein");
                 f.text("App-ID", () -> discordAppId, v -> discordAppId = v, "");
-                f.text("Zweite Zeile", () -> discordText, v -> discordText = v, "1912 Client");
+                f.text("Zweite Zeile", () -> discordText, v -> discordText = v, "1912 Utilities");
                 f.toggle("Server-Adresse zeigen", () -> discordShowServer, v -> discordShowServer = v, false);
                 f.note(() -> "Status: " + Lang.t(DiscordIpc.status()));
                 f.note("App-ID: auf discord.com/developers/applications eine Anwendung anlegen. Ihr Name "
@@ -506,7 +506,7 @@ public final class MiscMods {
             case "Spam" -> new ModuleScreen(parent, module, f -> {
                 f.description("Schreibt wiederholt eine Nachricht.\nBeginnt mit / für Befehle.");
                 f.section("Allgemein");
-                f.text("Text", () -> spamText, v -> spamText = v, "1912 Client");
+                f.text("Text", () -> spamText, v -> spamText = v, "1912 Utilities");
                 f.slider("Abstand (s)", 1, 60, () -> spamDelay, v -> spamDelay = v, 5);
                 f.footer(() -> spam, v -> spam = v);
             });

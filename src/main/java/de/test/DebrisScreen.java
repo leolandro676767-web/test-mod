@@ -91,6 +91,11 @@ public class DebrisScreen extends Form {
                 true);
         toggle("Für Items in Gruben hinuntersteigen", () -> DebrisMiner.collectPits,
                 v -> DebrisMiner.collectPits = v, true);
+        toggle("Auch andere Funde einsammeln (z.B. Gold, Quarz)", () -> DebrisMiner.collectOther,
+                v -> DebrisMiner.collectOther = v, true);
+        note("Andere Funde: nur Items aus Blöcken, die er selbst abgebaut hat – kein Netherrack oder anderes "
+                + "Gestein, das er sowieso wegwirft, und nichts von anderen Spielern. Was voraus im Tunnel liegt, "
+                + "nimmt er beim Weitergehen mit; bleibt etwas neben oder hinter ihm liegen, holt er es kurz.");
 
         section("Lava");
         toggle("Lava-Schutz", () -> DebrisMiner.lavaAvoid, v -> DebrisMiner.lavaAvoid = v, true);
@@ -225,5 +230,327 @@ public class DebrisScreen extends Form {
             var cmds = DebrisMiner.commands(DebrisMiner.homeCommand);
             return "wie oben: " + (cmds.isEmpty() ? "/home" : String.join("; ", cmds));
         });
+    }
+}
+
+/** Einstellungen fuer den Tunnel Miner (gerade graben, z.B. Strip Mining in der Overworld). */
+class TunnelScreen extends Form {
+    private Button start;
+
+    public TunnelScreen(Screen parent) {
+        super(Component.literal("Tunnel Miner"), parent);
+    }
+
+    private static String startLabel() {
+        return TunnelMiner.isRunning() ? "Tunnel Miner STOPPEN" : "Tunnel Miner starten";
+    }
+
+    @Override
+    protected void build() {
+        description("Gräbt einfach geradeaus, auf der Höhe, auf der du stehst – gedacht für die Overworld (Strip "
+                + "Mining), geht aber überall. Er hält die Maustaste gedrückt und behält einen festen Blickwinkel, "
+                + "statt jeden Block einzeln anzuschauen.");
+        start = wideButton(startLabel(), true, this::startOrStop);
+        note(TunnelMiner::status);
+
+        section("Tunnel");
+        choice("Größe", TunnelMiner.SIZES, () -> TunnelMiner.size, v -> TunnelMiner.size = v, 0);
+        choice("Richtung", DebrisMiner.DIRECTIONS, () -> TunnelMiner.direction, v -> TunnelMiner.direction = v, 0);
+        number("Max. Länge (0 = unbegrenzt)", () -> TunnelMiner.maxLength,
+                v -> TunnelMiner.maxLength = Math.max(0, v), 0);
+        choice("Abbauen", TunnelMiner.METHODS, () -> TunnelMiner.method, v -> TunnelMiner.method = v, 0);
+        note("„Fester Blickwinkel“: Er hält die Taste gedrückt und bewegt die Maus nicht zu jedem Block. Beim "
+                + "1x2-Tunnel schaut er 19° nach unten: Das Fadenkreuz trifft erst den Kopfblock, dann durch das Loch "
+                + "den Fußblock und die Fußblöcke weiter vorne – aber nie den Boden. Er geht nach, sobald vorne Platz "
+                + "ist. „Block für Block“ schaut jeden Block einzeln an (langsamer).");
+        toggle("3x3: Reste einzeln abbauen", () -> TunnelMiner.cleanup, v -> TunnelMiner.cleanup = v, true);
+        note("„3x3 (3x3-Spitzhacke)“: Nimm die 3x3-Spitzhacke beim Start in die Hand. Er schaut waagerecht auf den "
+                + "mittleren Block jedes Abschnitts, die Spitzhacke nimmt die acht drumherum mit. Was sie nicht "
+                + "mitnimmt (z.B. Erze), baut er mit einer zweiten, normalen Spitzhacke aus der Hotbar einzeln ab – "
+                + "ohne die bleiben solche Reste stehen (außer sie sind im Weg).");
+        toggle("Löcher im Boden zubauen", () -> TunnelMiner.fillFloor, v -> TunnelMiner.fillFloor = v, true);
+        choice("Bei Lava oder Wasser", TunnelMiner.FLUID_MODES, () -> TunnelMiner.fluidMode,
+                v -> TunnelMiner.fluidMode = v, 0);
+        toggle("Nach dem Ausweichen zurück auf die Linie", () -> TunnelMiner.returnAxis,
+                v -> TunnelMiner.returnAxis = v, true);
+        note("Lava und Wasser erkennt er, bevor er den Block daneben aufmacht. „Ausweichen“: ein paar Blöcke zur "
+                + "Seite und parallel weiter; danach zurück auf die alte Linie, sobald es sicher ist.");
+
+        section("Bewegung");
+        toggle("Menschlich bewegen", () -> TunnelMiner.humanize, v -> TunnelMiner.humanize = v, true);
+        note("Dreht sich weicher, mit leichtem Zittern wie an der Maus; beim Abbauen hält er die Maus ruhig, und "
+                + "er bleibt nicht immer genau gleich weit vor der Wand stehen.");
+
+        section("Erze");
+        toggle("Erze an Wand und Decke mitnehmen", () -> TunnelMiner.ores, v -> TunnelMiner.ores = v, true);
+        choice("Welche Erze", TunnelMiner.ORE_SETS, () -> TunnelMiner.oreSet, v -> TunnelMiner.oreSet = v, 0);
+        note("Nur Erze, die man vom Tunnel aus sieht (kein Röntgenblick). „Wertvolle“: Diamant, Smaragd, Gold, "
+                + "Eisen, Lapis, Redstone. Erze im Boden lässt er liegen, damit kein Loch entsteht. Mit der "
+                + "3x3-Spitzhacke nimmt er für Erze lieber eine normale Spitzhacke.");
+
+        section("Einsammeln");
+        toggle("Liegengebliebene Items einsammeln", () -> TunnelMiner.collect, v -> TunnelMiner.collect = v, true);
+        slider("Umkreis (Blöcke)", 2, 16, () -> TunnelMiner.collectRadius, v -> TunnelMiner.collectRadius = v, 8);
+        note("Was beim Abbauen vor ihm herausfällt, nimmt er beim Weitergehen mit. Bleibt etwas neben oder hinter "
+                + "ihm liegen (z.B. Erz aus der Wand), geht er kurz hin und dann zurück in den Tunnel. Nur eigene "
+                + "Items, und kein Gestein, das er sowieso wegwirft.");
+
+        section("Inventar");
+        toggle("Gestein wegwerfen", () -> TunnelMiner.dropJunk, v -> TunnelMiner.dropJunk = v, true);
+        slider("Baublöcke behalten (Stapel)", 0, 9, () -> TunnelMiner.keepBlocks, v -> TunnelMiner.keepBlocks = v, 1);
+        toggle("Automatisch essen", () -> TunnelMiner.autoEat, v -> TunnelMiner.autoEat = v, true);
+        slider("Essen bei Hunger", 1, 19, () -> TunnelMiner.eatHunger, v -> TunnelMiner.eatHunger = v, 14);
+        toggle("Goldäpfel nicht essen", () -> TunnelMiner.keepGapples, v -> TunnelMiner.keepGapples = v, true);
+        note("Weggeworfen werden nur volle Stapel, nach hinten. Ein paar Baublöcke (z.B. Bruchstein) behält er zum "
+                + "Zubauen von Löchern. Ist das Inventar voll, hält er an.");
+
+        section("Werkzeug");
+        toggle("Spitzhacke schonen", () -> TunnelMiner.toolGuard, v -> TunnelMiner.toolGuard = v, true);
+        slider("Grenze (% Haltbarkeit)", 1, 50, () -> TunnelMiner.toolPercent, v -> TunnelMiner.toolPercent = v, 5);
+        toggle("Anhalten, wenn keine Spitzhacke mehr da ist", () -> TunnelMiner.toolStop,
+                v -> TunnelMiner.toolStop = v, true);
+
+        section("Auto-Log");
+        toggle("Bei Spieler in der Nähe trennen", () -> TunnelMiner.playerLog, v -> TunnelMiner.playerLog = v, true);
+        slider("Reichweite in Chunks (0 = ganze Sichtweite)", 0, 32, () -> TunnelMiner.playerChunks,
+                v -> TunnelMiner.playerChunks = v, 6);
+        toggle("Freundesliste des Clients mitbenutzen", () -> TunnelMiner.useFriends,
+                v -> TunnelMiner.useFriends = v, true);
+        text("Weitere Freunde (mit Komma getrennt)", () -> TunnelMiner.whitelist, v -> TunnelMiner.whitelist = v, "",
+                256, null);
+        toggle("Nicht starten, wenn schon jemand da ist", () -> TunnelMiner.playerCheckStart,
+                v -> TunnelMiner.playerCheckStart = v, true);
+        toggle("Bei wenig Leben trennen", () -> TunnelMiner.healthLog, v -> TunnelMiner.healthLog = v, true);
+        slider("Bei Herzen (oder weniger)", 1, 10, () -> TunnelMiner.logHearts, v -> TunnelMiner.logHearts = v, 4);
+        toggle("Nach einem Totem trennen", () -> TunnelMiner.totemLog, v -> TunnelMiner.totemLog = v, true);
+        note("Gilt, solange der Tunnel Miner läuft. Danach verbindet Auto Reconnect nicht von selbst neu. Unabhängig "
+                + "davon gibt es im Menü unter „Welt“ das allgemeine Auto-Logout (immer aktiv, eigene Herzen).");
+
+        section("Verteidigung");
+        toggle("Mobs abwehren", () -> BotGuard.forTunnel, v -> BotGuard.forTunnel = v, true);
+        wideButton("Einstellungen der Bot-Verteidigung", false,
+                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
+
+        section("Anzeige");
+        toggle("Zustand im Bild anzeigen", () -> TunnelMiner.showStatus, v -> TunnelMiner.showStatus = v, true);
+        toggle("Nächsten Abschnitt hervorheben", () -> TunnelMiner.highlight, v -> TunnelMiner.highlight = v, true);
+        footer(null, null);
+    }
+
+    private void startOrStop() {
+        if (TunnelMiner.isRunning()) {
+            TunnelMiner.stop(this.minecraft, "Tunnel Miner aus");
+            start.setMessage(Component.literal(startLabel()));
+            return;
+        }
+        TestConfig.save();
+        String error = TunnelMiner.start(this.minecraft);
+        if (error != null) {
+            start.setMessage(Component.literal(error));
+            return;
+        }
+        this.minecraft.gui.setScreen(null);
+    }
+}
+
+/** Koordinaten waehlen und dorthin laufen (Wegsuche wie Baritone). */
+class GotoScreen extends Form {
+    private Button start;
+
+    public GotoScreen(Screen parent) {
+        super(Component.literal("Zu Koordinaten gehen"), parent);
+    }
+
+    private static String startLabel() {
+        return TestClient.areaActive && TestClient.gotoMode ? "Gehen STOPPEN" : "Losgehen";
+    }
+
+    @Override
+    protected void build() {
+        description("Sucht den besten Weg zum Ziel: läuft gerade Strecken am Stück,\n"
+                + "springt auf Stufen und über Lücken, schwimmt und baut nur ab,\n"
+                + "wenn es nicht anders geht.");
+        section("Ziel");
+        coords("Koordinaten",
+                () -> new int[] {TestClient.gx, TestClient.gy, TestClient.gz},
+                v -> {
+                    TestClient.gx = v[0];
+                    TestClient.gy = v[1];
+                    TestClient.gz = v[2];
+                });
+        start = wideButton(startLabel(), true, this::startOrStop);
+        note(() -> TestClient.gotoMode ? Walker.status(this.minecraft) : "Bereit");
+
+        section("Weg");
+        toggle("Blöcke abbauen", () -> TestClient.autoMine, v -> TestClient.autoMine = v, true);
+        toggle("Blöcke setzen", () -> Walker.allowPlace, v -> Walker.allowPlace = v, true);
+        toggle("Über Lücken springen", () -> Walker.allowParkour, v -> Walker.allowParkour = v, true);
+        toggle("Sprinten", () -> Walker.sprint, v -> Walker.sprint = v, true);
+        slider("Max. Fallhöhe", 1, 10, () -> Walker.maxFall, v -> Walker.maxFall = v, 3);
+
+        section("Anzeige");
+        toggle("Weg anzeigen", () -> Walker.showPath, v -> Walker.showPath = v, true);
+        toggle("Von der Seite zuschauen (Free Look)", () -> RenderMods.freeLook, v -> {
+            RenderMods.freeLook = v;
+            if (v) RenderMods.freecam = false;
+        }, false);
+        toggle("Ziel hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
+        choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
+        section("Verteidigung");
+        toggle("Mobs abwehren", () -> BotGuard.forGoto, v -> BotGuard.forGoto = v, true);
+        wideButton("Einstellungen der Bot-Verteidigung", false,
+                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
+        footer(null, null);
+    }
+
+    private void startOrStop() {
+        if (TestClient.areaActive && TestClient.gotoMode) {
+            TestClient.stopArea(this.minecraft, "Gehen abgebrochen");
+            start.setMessage(Component.literal(startLabel()));
+            return;
+        }
+        String error = TestClient.startGoto(this.minecraft);
+        if (error != null) {
+            start.setMessage(Component.literal(error));
+            return;
+        }
+        this.minecraft.gui.setScreen(null);
+    }
+}
+
+/** Block waehlen und automatisch abbauen lassen. */
+class BlockScreen extends Form {
+    private Button select;
+    private Button start;
+
+    public BlockScreen(Screen parent) {
+        super(Component.literal("Block abbauen"), parent);
+    }
+
+    private static String selectLabel() {
+        return "Block aus Liste w\u00e4hlen (" + TestClient.selectedBlockName() + ")";
+    }
+
+    private static String startLabel() {
+        return TestClient.areaActive ? "Abbau STOPPEN" : "Abbau STARTEN";
+    }
+
+    @Override
+    protected void build() {
+        description("W\u00e4hle einen Block aus der Liste aller Bl\u00f6cke\noder \u00fcbernimm den anvisierten.");
+        select = wideButton(selectLabel(), false, () -> this.minecraft.gui.setScreen(new BlockPickScreen(this)));
+        wideButton("Anvisierten Block \u00fcbernehmen", false, () -> {
+            // Der Block, auf den man vor dem Oeffnen des Menues geschaut hat
+            if (TestClient.selectLookedAt(this.minecraft)) {
+                select.setMessage(Component.literal(selectLabel()));
+            } else {
+                select.setMessage(Component.literal("Erst einen Block anvisieren"));
+            }
+        });
+        section("Suche");
+        slider("Reichweite (Chunks)", 1, 12, () -> TestClient.searchChunks, v -> TestClient.searchChunks = v, 6);
+        slider("H\u00f6he (Bl\u00f6cke)", 2, 20, () -> TestClient.searchHeight, v -> TestClient.searchHeight = v, 12);
+        start = wideButton(startLabel(), true, this::startOrStop);
+        section("Einsammeln");
+        toggle("Items einsammeln", () -> TestClient.blockCollect, v -> TestClient.blockCollect = v, true);
+        toggle("Auch Items vom Weg dorthin", () -> TestClient.blockCollectAll, v -> TestClient.blockCollectAll = v,
+                false);
+        slider("Umkreis (Blöcke)", 2, 16, () -> TestClient.blockCollectRadius,
+                v -> TestClient.blockCollectRadius = v, 8);
+        note("Sobald nichts mehr in Reichweite ist, holt er die Items, die beim Abbauen herausgefallen sind – nur "
+                + "seine eigenen, nichts von anderen Spielern. Ohne „Auch Items vom Weg dorthin“ nur die vom "
+                + "gesuchten Block, nicht z.B. Steine, die er auf dem Weg abbaut.");
+        section("Anzeige");
+        toggle("Ziele hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
+        choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
+        section("Verteidigung");
+        toggle("Mobs abwehren", () -> BotGuard.forBlock, v -> BotGuard.forBlock = v, true);
+        wideButton("Einstellungen der Bot-Verteidigung", false,
+                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
+        footer(null, null);
+    }
+
+    private void startOrStop() {
+        if (TestClient.areaActive) {
+            TestClient.stopArea(this.minecraft, "Abbau gestoppt");
+            start.setMessage(Component.literal(startLabel()));
+            return;
+        }
+        String error = TestClient.startBlock(this.minecraft);
+        if (error != null) {
+            start.setMessage(Component.literal(error));
+            return;
+        }
+        this.minecraft.gui.setScreen(null);
+    }
+}
+
+/** Quader zwischen zwei Ecken abbauen. */
+class AreaScreen extends Form {
+    private Button start;
+
+    public AreaScreen(Screen parent) {
+        super(Component.literal("Bereich abbauen"), parent);
+    }
+
+    private static String startLabel() {
+        return TestClient.areaActive ? "Abbau STOPPEN" : "Abbau STARTEN";
+    }
+
+    @Override
+    protected void build() {
+        description("Baut alle Bl\u00f6cke zwischen zwei Ecken ab.");
+        section("Bereich");
+        coords("Ecke 1",
+                () -> new int[] {TestClient.ax1, TestClient.ay1, TestClient.az1},
+                v -> {
+                    TestClient.ax1 = v[0];
+                    TestClient.ay1 = v[1];
+                    TestClient.az1 = v[2];
+                });
+        coords("Ecke 2",
+                () -> new int[] {TestClient.ax2, TestClient.ay2, TestClient.az2},
+                v -> {
+                    TestClient.ax2 = v[0];
+                    TestClient.ay2 = v[1];
+                    TestClient.az2 = v[2];
+                });
+        note(() -> {
+            long dx = Math.abs((long) TestClient.ax2 - TestClient.ax1) + 1;
+            long dy = Math.abs((long) TestClient.ay2 - TestClient.ay1) + 1;
+            long dz = Math.abs((long) TestClient.az2 - TestClient.az1) + 1;
+            return "Gr\u00f6\u00dfe: " + dx + " x " + dy + " x " + dz + " = " + (dx * dy * dz)
+                    + " Bl\u00f6cke (max. 50000)";
+        });
+        start = wideButton(startLabel(), true, this::startOrStop);
+        section("Einsammeln");
+        toggle("Items einsammeln", () -> TestClient.areaCollect, v -> TestClient.areaCollect = v, true);
+        slider("Umkreis (Blöcke)", 2, 16, () -> TestClient.areaCollectRadius,
+                v -> TestClient.areaCollectRadius = v, 8);
+        note("Sobald nichts mehr in Reichweite ist, holt er die Items, die beim Abbauen herausgefallen sind – nur "
+                + "seine eigenen, nichts von anderen Spielern. Ist das Inventar voll, lässt er sie liegen.");
+        section("Anzeige");
+        toggle("Ziele hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
+        toggle("Bereichsrahmen", () -> RenderMods.miningShowArea, v -> RenderMods.miningShowArea = v, true);
+        choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
+        section("Verteidigung");
+        toggle("Mobs abwehren", () -> BotGuard.forArea, v -> BotGuard.forArea = v, true);
+        wideButton("Einstellungen der Bot-Verteidigung", false,
+                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
+        footer(null, null);
+    }
+
+    private void startOrStop() {
+        if (TestClient.areaActive) {
+            TestClient.stopArea(this.minecraft, "Bereich abgebrochen");
+            start.setMessage(Component.literal(startLabel()));
+            return;
+        }
+        String error = TestClient.startArea(this.minecraft);
+        if (error != null) {
+            start.setMessage(Component.literal(error));
+            return;
+        }
+        this.minecraft.gui.setScreen(null);
     }
 }

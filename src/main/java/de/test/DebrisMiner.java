@@ -99,6 +99,7 @@ public final class DebrisMiner {
     public static int collectTimeout = 10;      // Sekunden
     public static boolean collectHigh = true;   // hoch liegende Items herunterholen (Block darunter abbauen)
     public static boolean collectPits = true;   // fuer Items in Gruben hinuntersteigen
+    public static boolean collectOther = true;  // auch andere eigene Funde (z.B. Gold, Quarz), kein Gestein
 
     // --- Lava ---
     public static boolean lavaAvoid = true;
@@ -841,6 +842,23 @@ public final class DebrisMiner {
         scanTunnel(level, feet);
         if (!targets.isEmpty()) {
             beginVein(mc, feet);
+            return;
+        }
+        // 1b. Andere Funde (z.B. Gold, Quarz), die neben oder hinter ihm liegen geblieben sind: kurz holen
+        if (collect && collectOther && Pickup.has(mc, p, want(p))) {
+            resume = feet;
+            resumeX = curX;
+            resumeZ = curZ;
+            resumeSide = sideLeft;
+            stopWalker(mc);
+            digPos = null;
+            stepTarget = null;
+            phase = Phase.COLLECT;
+            ticks = 0;
+            walkerFails = 0;
+            stuckTicks = 0;
+            ignoredItems.clear();
+            collectItem = -1;
             return;
         }
 
@@ -1599,7 +1617,7 @@ public final class DebrisMiner {
             return;
         }
         if (!collectPits && item.getY() < p.getY() - 0.5) {
-            ignoredItems.add(item.getId()); // liegt in einer Grube: so eingestellt, nicht hinunter
+            ignoreItem(item); // liegt in einer Grube: so eingestellt, nicht hinunter
             return;
         }
         if (item.getId() != collectItem) {
@@ -1610,7 +1628,7 @@ public final class DebrisMiner {
         }
         if (inPickupRange(p, item)) {
             stopWalker(mc); // wird gleich aufgesammelt
-            if (++arrivedTicks > 60) ignoredItems.add(item.getId());
+            if (++arrivedTicks > 60) ignoreItem(item);
             return;
         }
         if (nudge > 0) {
@@ -1651,7 +1669,7 @@ public final class DebrisMiner {
             if (walkGoal != null && !Walker.isActive()) {
                 // schon hingelaufen, aber nicht drangekommen
                 if (++arrivedTicks > 40) {
-                    ignoredItems.add(item.getId());
+                    ignoreItem(item);
                     arrivedTicks = 0;
                     walkGoal = null;
                 }
@@ -1662,7 +1680,7 @@ public final class DebrisMiner {
         }
         String r = tickWalker(mc, level, p);
         if (r != null && !Walker.ARRIVED.equals(r)) {
-            ignoredItems.add(item.getId());
+            ignoreItem(item);
             walkGoal = null;
         }
     }
@@ -1692,6 +1710,31 @@ public final class DebrisMiner {
     }
 
     /** Gedropptes Debris (und eigene Shulker-Kisten/Endertruhe) im Umkreis. */
+    private static void ignoreItem(ItemEntity item) {
+        ignoredItems.add(item.getId());
+        Pickup.ignore(item);
+    }
+
+    /** Anderer eigener Fund (aus einem selbst abgebauten Block), der mit soll? */
+    private static boolean wantOther(LocalPlayer p, ItemEntity ie) {
+        ItemStack st = ie.getItem();
+        return collectOther && Pickup.isOwn(ie) && !isJunk(st) && Pickup.canTake(p, st);
+    }
+
+    private static final Pickup.Want WANT = new Pickup.Want();
+
+    /** Fuer den Tunnel: liegengebliebene Funde neben oder hinter ihm (voraus laeuft er sowieso drueber). */
+    private static Pickup.Want want(LocalPlayer p) {
+        WANT.radius = collectRadius;
+        WANT.minAge = 12; // kurz landen lassen - er laeuft schnell weiter, sonst ist es schon zu weit weg
+        WANT.dirX = curX;
+        WANT.dirZ = curZ;
+        WANT.minY = tunnelY - (collectPits ? 3.0 : 0.5);
+        WANT.maxY = tunnelY + 3.5;
+        WANT.ok = (st, source) -> !isJunk(st);
+        return WANT;
+    }
+
     private static ItemEntity nearestDrop(Minecraft mc, LocalPlayer p) {
         ItemEntity best = null;
         double bd = Double.MAX_VALUE;
@@ -1699,7 +1742,8 @@ public final class DebrisMiner {
         for (Entity e : mc.level.getEntities(p, p.getBoundingBox().inflate(r, 4.0, r))) {
             if (!(e instanceof ItemEntity ie) || !ie.isAlive() || ignoredItems.contains(ie.getId())) continue;
             ItemStack st = ie.getItem();
-            boolean want = st.is(Items.ANCIENT_DEBRIS) || isShulker(st) || st.is(Items.ENDER_CHEST);
+            boolean want = st.is(Items.ANCIENT_DEBRIS) || isShulker(st) || st.is(Items.ENDER_CHEST)
+                    || wantOther(p, ie);
             if (!want) continue;
             double d = ie.distanceToSqr(p);
             if (d < bd) {
@@ -1711,6 +1755,17 @@ public final class DebrisMiner {
     }
 
     private static void endCollect(Minecraft mc) {
+        // was jetzt noch an anderen Funden herumliegt (nicht erreicht, Zeit um): aufgeben, sonst geht er
+        // vom Tunnel aus immer wieder hin
+        LocalPlayer pl = mc.player;
+        if (pl != null && mc.level != null) {
+            double r = Math.max(2, collectRadius);
+            for (Entity e : mc.level.getEntities(pl, pl.getBoundingBox().inflate(r, 4.0, r))) {
+                if (e instanceof ItemEntity ie && ie.isAlive() && Pickup.isOwn(ie) && !ie.getItem().is(Items.ANCIENT_DEBRIS)) {
+                    Pickup.ignore(ie);
+                }
+            }
+        }
         stopWalker(mc);
         bestDist = Double.MAX_VALUE;
         noProgress = 0;
@@ -2615,7 +2670,7 @@ public final class DebrisMiner {
         kRight = left < -sideDead;
     }
 
-    /** Chat-Meldung mit "1912 Client"-Absender (text auf Deutsch, wird uebersetzt). */
+    /** Chat-Meldung mit "1912 Utilities"-Absender (text auf Deutsch, wird uebersetzt). */
     private static void say(Minecraft mc, String text) {
         if (mc.player != null) mc.player.sendSystemMessage(Lang.literal("1912: " + Lang.t(text)));
     }

@@ -86,6 +86,12 @@ public class TestClient implements ClientModInitializer {
     public static Block selectedBlock = null;
     public static int searchChunks = 6;   // Block-Modus: Suchradius waagerecht (in Chunks)
     public static int searchHeight = 12;  // Block-Modus: Suchradius vertikal
+    // Items einsammeln (Block-Modus und Bereich)
+    public static boolean blockCollect = true;
+    public static boolean blockCollectAll = false; // auch, was er auf dem Weg abbaut (sonst nur vom gesuchten Block)
+    public static int blockCollectRadius = 8;      // Bloecke
+    public static boolean areaCollect = true;
+    public static int areaCollectRadius = 8;
     public static int ax1 = 0, ay1 = 0, az1 = 0, ax2 = 0, ay2 = 0, az2 = 0;
     private static final long MAX_AREA_VOLUME = 50000L;
     private static int minX, minY, minZ, maxX, maxY, maxZ;
@@ -94,6 +100,8 @@ public class TestClient implements ClientModInitializer {
     private static BlockPos walkTarget = null;
     private static int mineTicks = 0;
     private static boolean retried = false;
+    private static boolean collecting = false;
+    private static final Pickup.Want WANT = new Pickup.Want();
     // selbst platzierte Bloecke (Bruecken/Saeulen): werden nicht wieder abgebaut
     private static final Set<Long> placed = new HashSet<>();
 
@@ -138,9 +146,16 @@ public class TestClient implements ClientModInitializer {
         // Alle Module aus/an (J) und alle Module bekommen ihre Tasten im 1912-Menue ("Tasten zuweisen").
         guiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.gui", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, category));
+        // Zoom: gehalten zoomen (Standard C) - steht wie das Menue in den Minecraft-Steuerungen
+        Extras.zoomKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.test.zoom", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, category));
         Esp.register();
         KillAura.register();
         InfoHud.register();
+        Extras.register();
+        CombatMods.register();
+        HudMods.register();
+        BaseFinder.register();
         Keybinds.register();
 
         TestConfig.load();
@@ -229,6 +244,7 @@ public class TestClient implements ClientModInitializer {
     private static boolean dropMenuSlot(Minecraft mc, int menuSlot) {
         if (!initClick()) return false;
         try {
+            PlayerMods.noteThrow(mc.player, menuSlot);
             clickMethod.invoke(mc.gameMode, 0, menuSlot, 1, throwConstant, mc.player);
             return true;
         } catch (ReflectiveOperationException | RuntimeException e) {
@@ -291,6 +307,7 @@ public class TestClient implements ClientModInitializer {
         placed.clear();
         noBlocksWarned = false;
         retried = false;
+        collecting = false;
         setTarget(null);
         walking = false;
         phase = Phase.WALK;
@@ -313,6 +330,7 @@ public class TestClient implements ClientModInitializer {
         placed.clear();
         noBlocksWarned = false;
         retried = false;
+        collecting = false;
         setTarget(new BlockPos(gx, gy, gz));
         walking = false;
         phase = Phase.WALK;
@@ -374,6 +392,7 @@ public class TestClient implements ClientModInitializer {
         placed.clear();
         noBlocksWarned = false;
         retried = false;
+        collecting = false;
         setTarget(null);
         walking = false;
         gotoMode = false;
@@ -411,6 +430,8 @@ public class TestClient implements ClientModInitializer {
     }
 
     public static void stopArea(Minecraft mc, String message) {
+        if (collecting) Pickup.stop(mc);
+        collecting = false;
         Walker.stop(mc);
         areaActive = false;
         blockMode = false;
@@ -430,6 +451,8 @@ public class TestClient implements ClientModInitializer {
         Safe.run("Tasten", () -> Keybinds.tick(mc));
         Safe.run("ESP", () -> Esp.tick(mc));
         Safe.run("Freunde", () -> Friends.tick(mc));
+        Safe.run("Einsammeln", () -> Pickup.tick(mc));
+        Safe.run("Modus", () -> Levels.tick(mc));
         while (guiKey.consumeClick()) {
             mc.gui.setScreen(new TestScreen(mc.gui.screen()));
         }
@@ -441,8 +464,14 @@ public class TestClient implements ClientModInitializer {
             TunnelMiner.reset();
             BotGuard.reset();
             KillAura.reset();
+            CombatMods.reset();
+            WorldMods.reset();
+            TravelMods.reset();
+            HudMods.reset();
+            BaseFinder.reset();
             Safe.run("Misc", () -> MiscMods.tickOffline(mc));
             Walker.reset();
+            collecting = false;
             walking = false;
             areaActive = false;
             blockMode = false;
@@ -484,7 +513,13 @@ public class TestClient implements ClientModInitializer {
         Safe.run("Bot-Verteidigung", () -> BotGuard.tick(mc));
         Safe.run("Auto Armor", () -> Survival.tick(mc));
         Safe.run("Info-Anzeige", () -> InfoHud.tick(mc));
+        Safe.run("Extras", () -> Extras.tick(mc));
         Safe.run("Kill Aura", () -> KillAura.tick(mc));
+        Safe.run("Kampf", () -> CombatMods.tick(mc));
+        Safe.run("Welt", () -> WorldMods.tick(mc));
+        Safe.run("Reisen", () -> TravelMods.tick(mc));
+        Safe.run("Anzeige", () -> HudMods.tick(mc));
+        Safe.run("Base Finder", () -> BaseFinder.tick(mc));
         Safe.run("Bewegung", () -> Movement.endTick(mc));
         Safe.run("Bewegung", () -> Movement2.endTick(mc));
         Safe.run("Spieler", () -> PlayerMods.endTick(mc));
@@ -637,6 +672,22 @@ public class TestClient implements ClientModInitializer {
             setTarget(null);
         }
 
+        // 0. Gerade beim Einsammeln: erst fertig machen
+        if (collecting) {
+            mc.options.keyAttack.setDown(false);
+            boolean more;
+            try {
+                more = Pickup.collect(mc, level, mc.player, want());
+            } catch (RuntimeException | LinkageError e) {
+                Safe.report("Einsammeln", e);
+                Pickup.stop(mc);
+                more = false;
+            }
+            if (more) return;
+            collecting = false;
+            walkTarget = null;
+        }
+
         // 1. Ist das aktuelle Ziel in Reichweite? Sonst den naechsten erreichbaren Block suchen.
         double[] point = areaTarget != null ? visiblePoint(level, player, areaTarget) : null;
         if (point == null) {
@@ -672,7 +723,18 @@ public class TestClient implements ClientModInitializer {
         }
         mc.options.keyAttack.setDown(false);
 
-        // 3. Nichts in Reichweite: naechsten Block im Bereich als Laufziel waehlen.
+        // 3. Nichts mehr in Reichweite: erst die Items einsammeln, die herumliegen (nicht mitten im Sprung)
+        if ((blockMode ? blockCollect : areaCollect) && !(Walker.isActive() && Walker.inCriticalMove(mc.player))
+                && Pickup.has(mc, mc.player, want())) {
+            if (Walker.isActive()) Walker.stop(mc);
+            walkTarget = null;
+            stopMove(mc);
+            Pickup.begin();
+            collecting = true;
+            return;
+        }
+
+        // 3b. Naechsten Block im Bereich als Laufziel waehlen.
         if (areaTarget == null) {
             BlockPos t = nearestOverall(level, player);
             if (t == null && !skipped.isEmpty() && !retried) {
@@ -694,6 +756,16 @@ public class TestClient implements ClientModInitializer {
             walkTarget = areaTarget;
         }
         walkOn(mc, level);
+    }
+
+    /** Was der Block-Modus / Bereich einsammelt. */
+    private static Pickup.Want want() {
+        WANT.radius = blockMode ? blockCollectRadius : areaCollectRadius;
+        WANT.minAge = 10;
+        Block wanted = selectedBlock;
+        boolean onlyTarget = blockMode && !blockCollectAll && wanted != null;
+        WANT.ok = onlyTarget ? (st, source) -> source == wanted : (st, source) -> true;
+        return WANT;
     }
 
     /** Einen Tick mit dem Walker laufen; klappt es nicht (kein Weg, angekommen und nichts zu sehen): naechster Block. */

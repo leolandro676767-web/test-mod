@@ -328,6 +328,12 @@ public final class PlayerMods {
     }
 
     /** Klick in einem beliebigen offenen Menue (z.B. Shulker-Kiste), containerId = dessen Nummer. */
+    /** Einsammeln: was hier weggeworfen wird, soll kein Bot gleich wieder aufheben. */
+    static void noteThrow(LocalPlayer p, int menuSlot) {
+        var slots = p.containerMenu.slots;
+        if (menuSlot >= 0 && menuSlot < slots.size()) Pickup.noteThrow(p, slots.get(menuSlot).getItem().getItem());
+    }
+
     static boolean clickIn(LocalPlayer p, int containerId, int menuSlot, int button, String type) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.gameMode == null) return false;
@@ -344,6 +350,7 @@ public final class PlayerMods {
             }
         }
         if (clickMethod == null) return false;
+        if ("THROW".equals(type)) noteThrow(p, menuSlot);
         try {
             for (Object c : clickEnum.getEnumConstants()) {
                 if (((Enum<?>) c).name().equals(type)) {

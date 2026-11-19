@@ -1,4 +1,4 @@
-# 1912 Client: English (Nummer aus keys.txt TAB Übersetzung). Fehlende Nummern bleiben unverändert.
+# 1912 Utilities: English (Nummer aus keys.txt TAB Übersetzung). Fehlende Nummern bleiben unverändert.
 1	Mine Area
 2	STOP mining
 3	START mining
@@ -1062,3 +1062,347 @@
 1244	If the server doesn't accept the swap in the inventory (some anti-cheats), it says so in chat and uses the offhand key instead – totems must be in the hotbar for that. No totem helps against void damage or /kill.
 1245	If the server doesn't accept the swap in the inventory (some anti-cheats), it says so in chat and uses the offhand key instead – totems must be in the hotbar for that. Tip: always keep a few totems in your hotbar.
 1246	What no totem helps against: void damage and /kill. And two lethal hits closer together than your ping (e.g. two crystals at 150 ms) – the next totem is still on its way to the server.
+1247	Collect items
+1248	Radius (blocks)
+1249	As soon as nothing is in reach anymore, it fetches the items that dropped while mining – only its own, nothing from other players. If the inventory is full, it leaves them.
+1250	Also items from the way there
+1251	As soon as nothing is in reach anymore, it fetches the items that dropped while mining – only its own, nothing from other players. Without "Also items from the way there" only the ones from the searched block, not e.g. stone it mines on the way.
+1252	Also collect other finds (e.g. gold, quartz)
+1253	Other finds: only items from blocks it mined itself – no netherrack or other stone it throws away anyway, and nothing from other players. What lies ahead in the tunnel it picks up while walking on; if something is left beside or behind it, it quickly goes to get it.
+1254	Collecting items
+1255	Collect items left behind
+1256	What drops in front of it while mining, it picks up while walking on. If something is left beside or behind it (e.g. ore from the wall), it quickly goes there and then back into the tunnel. Only its own items, and no stone it throws away anyway.
+1257	Searches as soon as it is on.
+1258	Searched: 
+1259	 of 
+1260	 loaded chunks  ·  found: 
+1261	All ores found are exposed – the server probably hides the others (anti-xray). It only sends them when you are right next to them; no client can show them earlier.
+1262	Unusually many ores – these are probably fake ores from the server's anti-xray.
+1263	1912 Utilities
+1264	Beginner: only the simplest modules. Default: display and comfort, nothing with an unfair advantage. Expert: all modules. Whatever isn't included gets switched off.
+1265	Which modules the menu shows. Default is preselected.
+1266	Beginner: 
+1267	 modules – only the simplest, e.g. Sprint, Fullbright, waypoints and chat.
+1268	Default: 
+1269	 modules – plus everything that only affects display or comfort but gives no unfair advantage.
+1270	Expert: all 
+1271	 modules.
+1272	Whatever isn't part of the selected mode gets switched off, doesn't react to its key and doesn't show up in the search either.
+1273	Beginner
+1274	Mode 
+1275	 module switched off
+1276	 modules switched off
+1277	 (all modules: Menu, Mode, Expert).
+1278	More modules: Mode
+1279	Close
+1280	Far
+1281	Extras
+1282	Zoom
+1283	Minimap
+1284	Key display
+1285	Cave
+1286	LMB
+1287	 CPS
+1288	RMB
+1289	 is about to break: only 
+1290	 durability left!
+1291	: 
+1292	 durability (
+1293	Zooms in while you hold the zoom key (default: C, can be changed in the Minecraft controls under "1912 Utilities").
+1294	Strength (times)
+1295	Mouse wheel makes it stronger / weaker
+1296	Smooth zoom
+1297	Slower mouse while zooming
+1298	Smooth camera while zooming
+1299	While zooming, the mouse wheel doesn't change the hotbar slot. When you let go, the strength is back to the setting.
+1300	Small map in a corner. North is up, the arrow shows where you are looking.
+1301	Area
+1302	Coordinates below
+1303	Show waypoints
+1304	Show other players
+1305	Show caves underground
+1306	Underground and in the Nether it shows the cave at your height instead of the surface. In the top right it moves below the potion icons.
+1307	Shows which keys you're pressing right now and your clicks per second.
+1308	Mouse buttons
+1309	Clicks per second (CPS)
+1310	Warns before a tool, weapon or armor breaks (the elytra too).
+1311	Warn at (% durability)
+1312	Play a sound
+1313	Large on screen
+1314	Right before it breaks it warns a second time. After repairing, everything is reset.
+1315	Flying
+1316	Obsidian
+1317	Obsidian and ender chests
+1318	Also cobblestone & co.
+1319	Crystal Aura
+1320	Auto Weapon
+1321	Surround
+1322	Trigger Bot
+1323	Surround off: you moved
+1324	Surround: no suitable blocks in the hotbar
+1325	Attacks automatically as soon as your crosshair is on an enemy. You aim yourself - unlike Kill Aura it doesn't turn anything.
+1326	Wait for cooldown (%)
+1327	Random delay (ticks)
+1328	It never hits friends, players in creative mode or villagers.
+1329	Takes the best weapon from the hotbar for every hit - also with Kill Aura and Trigger Bot.
+1330	Prefer
+1331	Axe against shields
+1332	Switch back afterwards
+1333	With "Switch back afterwards" you have the previous item in your hand again after one and a half seconds without a hit. An axe makes shields useless for a few seconds.
+1334	Places end crystals on obsidian or bedrock next to the enemy and detonates them right away. Beforehand it calculates how much damage the enemy and you yourself take.
+1335	Damage
+1336	At least on the enemy (health)
+1337	At most on you (health)
+1338	Never so much that you die
+1339	Range and timing
+1340	Range (tenths of blocks)
+1341	Enemy up to (tenths of blocks)
+1342	Place every (ticks)
+1343	Detonate every (ticks)
+1344	Place crystals
+1345	Detonate crystals
+1346	Take crystals into your hand itself
+1347	Also attack monsters
+1348	Pause while eating
+1349	Mark the spot
+1350	Crystals in the main or off hand. 2 health = 1 heart. It doesn't include enchantments and potions - the real damage is often a bit lower. It never attacks friends.
+1351	Places obsidian all around your feet - crystals next to you can then hardly hurt you anymore.
+1352	Move to the center of the block
+1353	Also under your feet
+1354	Turn off when you move
+1355	The blocks must be in the hotbar; your selection stays as it was.
+1356	Cross
+1357	Cross with dot
+1358	Dot
+1359	Circle
+1360	T shape
+1361	White
+1362	Cyan
+1363	Yellow
+1364	Pink
+1365	Theme color
+1366	Boat Fly
+1367	Fly with a boat: jump = up, sprint (Ctrl) = down. The boat goes in the direction you look.
+1368	Boat turns with your view
+1369	Anti-Kick lets the boat sink briefly every two seconds - otherwise many servers kick you for flying.
+1370	Crosshair
+1371	Your own crosshair instead of the one from Minecraft.
+1372	Shape
+1373	Thickness
+1374	Gap in the middle
+1375	Dark outline
+1376	Red when you aim at an enemy
+1377	Show cooldown below it
+1378	Also in the outside view (F5)
+1379	Auto Farm
+1380	Nuker
+1381	Chest Stealer
+1382	Tree Feller
+1383	Everything
+1384	Only instantly breakable
+1385	Only selected blocks
+1386	Chest Stealer: inventory full
+1387	Tree Feller: 
+1388	 logs were too high
+1389	Harvests everything ripe around you and replants right away.
+1390	Per tick
+1391	Plants
+1392	Replant
+1393	Also plant empty farmland
+1394	Melons and pumpkins
+1395	Sugar cane (bottom one stays)
+1396	Nether wart
+1397	Cocoa
+1398	Pick sweet berries
+1399	Collect the harvest (walks there)
+1400	The seeds must be in the hotbar. Wheat, carrots, potatoes, beetroot, torchflowers and nether wart are planted where they were harvested.
+1401	Breaks all blocks around you, as far as you can reach.
+1402	What
+1403	Nuker: blocks
+1404	Instantly breakable per tick
+1405	Nothing below your feet
+1406	From top to bottom
+1407	Use the best tool
+1408	"Only selected blocks" uses the list under "Select blocks". Otherwise it never breaks chests and other blocks with contents, and never bedrock anyway.
+1409	Takes everything out automatically when you open a chest.
+1410	Pause between two grabs (ticks)
+1411	A bit random (looks more human)
+1412	Close afterwards
+1413	Only chests, barrels and shulker boxes
+1414	If your inventory is full, it stops. Without "Only chests, barrels and shulker boxes" it also empties furnaces, hoppers and dispensers.
+1415	Break one log - it fells the whole tree, collects the wood and plants a sapling.
+1416	Only real trees (with leaves)
+1417	Stand under the trunk (for tall trees)
+1418	Collect the wood
+1419	Plant a sapling
+1420	Use the best axe
+1421	It only gets as high as you can reach - with big spruces and jungle trees something stays at the top. "Only real trees" protects wooden houses.
+1422	Auto Trap
+1423	Aim Assist
+1424	Gently turns your view to the enemy closest to your crosshair. You have to attack yourself.
+1425	Speed (degrees/s)
+1426	Field of view (degrees)
+1427	Only while you hold the attack key
+1428	Also up and down
+1429	Also through walls
+1430	Bow Aimbot
+1431	While you draw the bow, it aims at the enemy - with the arrow's drop and leading the target. You have to let go yourself.
+1432	Lead the target when it moves
+1433	Also with the trident
+1434	Fully drawn it hits best. Crossbows fire right on the click - it can't help with those.
+1435	Traps the nearest enemy in obsidian.
+1436	Trap completely (with a roof)
+1437	Also use cobblestone & co.
+1438	Also monsters
+1439	The blocks must be in the hotbar. It never traps friends.
+1440	Hitboxes
+1441	Enemies are a bit bigger when you aim at them - you hit more easily.
+1442	Bigger by (tenths of blocks)
+1443	More than 3 is easy for anti-cheats to notice, because you then hit from further away.
+1444	Death point
+1445	Elytra swap
+1446	Travel
+1447	Auto Light
+1448	Bonemeal Aura
+1449	Animal automation
+1450	Elytra autopilot
+1451	Elytra autopilot: 
+1452	enter a target (X Z)
+1453	no elytra equipped
+1454	couldn't take off (room above?)
+1455	Elytra autopilot: arrived
+1456	Elytra swap: no spare elytra in the inventory
+1457	Elytra swapped
+1458	End
+1459	Died at 
+1460	Flies to the coordinates by itself with the elytra: takes off, climbs to height, fires rockets and lands at the target.
+1461	Target (X Z)
+1462	Flight height (Y)
+1463	Use rockets
+1464	Land at the target
+1465	Put on the elytra, rockets in the hotbar, then turn it on. Without rockets it can only glide and won't get far. Over mountains it automatically flies higher. Turning it off = steer yourself right away.
+1466	Puts on a new elytra from the inventory before the old one breaks - even in mid-flight.
+1467	Swap at (durability left)
+1468	A new elytra has 432 durability; in flight it loses 1 per second.
+1469	Remembers where you died - so you find your stuff again.
+1470	Coordinates in the chat
+1471	Set a waypoint
+1472	Only keep the last one
+1473	The waypoint is called "Death point" and is listed with the Waypoints. They are turned on for it.
+1474	Auto Light: no torches in the hotbar
+1475	Places torches wherever it's so dark that monsters can spawn.
+1476	Pause between two torches (ticks)
+1477	Also outside (at night)
+1478	Torches must be in the hotbar. It only places one where there's no light at all yet - so a few torches are enough for a whole cave.
+1479	Fertilizes plants and saplings around you with bone meal from the hotbar.
+1480	Only fields, saplings and berries
+1481	Without "Only fields" it also fertilizes grass - then flowers grow everywhere there.
+1482	Feeds animals in reach so they have young, and shears sheep.
+1483	Breed
+1484	Shear sheep
+1485	The right food (e.g. wheat, carrots or seeds) and the shears must be in the hotbar. It feeds each animal at most every 5 minutes - the game doesn't allow more often anyway.
+1486	Auto Pot
+1487	Auto Web
+1488	Arrow Dodge
+1489	Hole Filler
+1490	Throws a splash potion of healing from the hotbar under you when your health is low.
+1491	At health below (2 = 1 heart)
+1492	Pause between two potions (ticks)
+1493	Only splash potions of healing (also level II). Your view only jumps down for a very short moment.
+1494	Places cobwebs on enemies near you - they can then hardly get away.
+1495	Also at head height
+1496	Cobwebs in the hotbar. It never webs friends or yourself.
+1497	Calculates whether an arrow (or trident) will hit you and jumps aside in time.
+1498	Dodge (tenths of blocks)
+1499	This early (ticks before)
+1500	Jump while doing so
+1501	It leaves your own arrows and ones that are already stuck alone.
+1502	Fills holes (1x1, obsidian all around) near you - enemies then can't hide from crystals.
+1503	Only holes near enemies
+1504	This close to the enemy (blocks)
+1505	Only obsidian and bedrock holes
+1506	It leaves the hole you're standing in yourself free.
+1507	Damage numbers
+1508	Chunk borders
+1509	Compass bar
+1510	Player radar
+1511	NE
+1512	SE
+1513	SW
+1514	NW
+1515	SO
+1516	NO
+1517	List of players near you - with distance, health and an arrow in their direction.
+1518	At most (players)
+1519	Up to (blocks, 0 = all)
+1520	Arrow in their direction
+1521	You only see players your game has loaded (usually up to about 100 blocks). Friends are shown in their color.
+1522	Briefly shows how much damage you did when you hit.
+1523	Only your own hits
+1524	In hearts (otherwise health points)
+1525	Yellow: the hit was fatal. Without "Only your own hits" you see every damage nearby, also from fall damage or other players.
+1526	A compass at the top of the screen: directions, degrees and your waypoints.
+1527	Width
+1528	Distance from the top
+1529	Show degrees
+1530	If there are boss bars at the top, move the compass below them with "Distance from the top".
+1531	Shows the borders of the chunk you're standing in as yellow lines.
+1532	Also the neighboring chunks (blue)
+1533	Height above and below you
+1534	Auto Sign
+1535	Auto Smelt
+1536	Villager Roller
+1537	Villager Roller: 
+1538	stand next to a villager and a lectern
+1539	the villager is gone
+1540	it doesn't take the lectern (is it close enough?)
+1541	the trade doesn't open
+1542	no offers arrived
+1543	Found: 
+1544	Villager Roller: found after 
+1545	 attempts: 
+1546	the lectern is too far away
+1547	it keeps its job (already traded or has another lectern)
+1548	no lectern in the hotbar
+1549	the lectern can't be placed
+1550	emeralds
+1551	Breaks the lectern and places it again until the librarian offers the book you want. Then it stops and plays a sound.
+1552	Enchantments (comma-separated)
+1553	At most (emeralds)
+1554	Only the highest level
+1555	Stand next to a villager without a job (or a librarian nobody has traded with yet) and its lectern; a second lectern in the hotbar doesn't hurt. Names in English (mending, unbreaking, efficiency) or as they're called in the game.
+1556	Fills furnaces with fuel and ingredients from your inventory when you open them and takes out what's done.
+1557	Ores and raw metal
+1558	Sand, cobblestone, clay and co.
+1559	Only coal as fuel
+1560	The blast furnace only gets ores, the smoker only food. Without "Only coal" it also burns planks and sticks, but never tools or buckets.
+1561	Writes your text on a sign right when you place it.
+1562	Line 1
+1563	Line 2
+1564	Line 3
+1565	Line 4
+1566	Only empty signs
+1567	About 15 characters fit per line. If all lines are empty, you can write normally.
+1568	Base Finder
+1569	Base Finder: lots of traces nearby
+1570	at 
+1571	sugar cane
+1572	amethyst
+1573	kelp
+1574	Sugar cane (3 high): 
+1575	Amethyst clusters: 
+1576	 (buds: 
+1577	Kelp up to the top: 
+1578	Players were probably here!
+1579	A few traces
+1580	Hardly any traces
+1581	Shows traces that players were here for a long time: plants and crystals only grow while someone is nearby. Many of them = probably a base nearby.
+1582	Traces
+1583	Sugar cane, 3 blocks high (green)
+1584	Amethyst clusters in geodes (purple)
+1585	Kelp up to the surface (turquoise)
+1586	Boxes around the traces
+1587	Panel with the numbers
+1588	Report in the chat
+1589	Report from this many traces
+1590	These are hints, not proof: sugar cane can also be 3 high on its own, and fresh geodes already have a few clusters (they only count when there are more clusters than buds). Only many traces at once really mean something.

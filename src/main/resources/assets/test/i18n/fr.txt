@@ -1,4 +1,4 @@
-# 1912 Client: Français (Nummer aus keys.txt TAB Übersetzung). Fehlende Nummern bleiben unverändert.
+# 1912 Utilities: Français (Nummer aus keys.txt TAB Übersetzung). Fehlende Nummern bleiben unverändert.
 1	Miner une zone
 2	ARRÊTER le minage
 3	DÉMARRER le minage
@@ -1077,3 +1077,347 @@
 1244	Si le serveur n'accepte pas l'échange dans l'inventaire (certains anti-cheats), il l'écrit dans le chat et utilise la touche de la seconde main – il faut des totems dans la barre d'action. Aucun totem ne protège du vide ni de /kill.
 1245	Si le serveur n'accepte pas l'échange dans l'inventaire (certains anti-cheats), il l'écrit dans le chat et utilise la touche de la seconde main – il faut des totems dans la barre d'action. Astuce : garde toujours quelques totems dans la barre d'action.
 1246	Ce contre quoi aucun totem n'aide : les dégâts du vide et /kill. Et deux coups mortels plus rapprochés que ton ping (p. ex. deux cristaux à 150 ms) – le totem suivant est encore en route vers le serveur.
+1247	Ramasser les objets
+1248	Rayon (blocs)
+1249	Dès qu'il n'y a plus rien à portée, il ramasse les objets tombés pendant le minage – seulement les siens, rien des autres joueurs. Si l'inventaire est plein, il les laisse.
+1250	Aussi les objets du chemin
+1251	Dès qu'il n'y a plus rien à portée, il ramasse les objets tombés pendant le minage – seulement les siens, rien des autres joueurs. Sans « Aussi les objets du chemin », seulement ceux du bloc recherché, pas p. ex. la pierre qu'il casse en chemin.
+1252	Ramasser aussi les autres trouvailles (p. ex. or, quartz)
+1253	Autres trouvailles : seulement les objets des blocs qu'il a cassés lui-même – pas de netherrack ni d'autre pierre qu'il jette de toute façon, et rien des autres joueurs. Ce qui est devant dans le tunnel, il le ramasse en avançant ; si quelque chose reste à côté ou derrière lui, il va vite le chercher.
+1254	Ramasse des objets
+1255	Ramasser les objets laissés derrière
+1256	Ce qui tombe devant lui pendant le minage, il le ramasse en avançant. Si quelque chose reste à côté ou derrière lui (p. ex. du minerai du mur), il y va vite puis revient dans le tunnel. Seulement ses propres objets, et pas de pierre qu'il jette de toute façon.
+1257	Cherche dès qu'il est activé.
+1258	Parcourus : 
+1259	 sur 
+1260	 chunks chargés  ·  trouvés : 
+1261	Tous les minerais trouvés sont à découvert – le serveur cache sans doute les autres (anti-xray). Il ne les envoie que quand tu es juste à côté ; aucun client ne peut les afficher plus tôt.
+1262	Beaucoup trop de minerais – ce sont sans doute de faux minerais de l'anti-xray du serveur.
+1263	1912 Utilities
+1264	Débutant : seulement les modules les plus simples. Standard : affichage et confort, rien qui donne un avantage injuste. Expert : tous les modules. Ce qui n'en fait pas partie est désactivé.
+1265	Quels modules le menu affiche. Par défaut : Standard.
+1266	Débutant : 
+1267	 modules – seulement les plus simples, p. ex. Sprint, Fullbright, points de passage et chat.
+1268	Standard : 
+1269	 modules – plus tout ce qui ne concerne que l'affichage ou le confort, sans avantage injuste.
+1270	Expert : les 
+1271	 modules.
+1272	Ce qui ne fait pas partie du mode choisi est désactivé, ne réagit plus à sa touche et n'apparaît pas non plus dans la recherche.
+1273	Débutant
+1274	Mode 
+1275	 module désactivé
+1276	 modules désactivés
+1277	 (tous les modules : Menu, Mode, Expert).
+1278	Plus de modules : Mode
+1279	Proche
+1280	Loin
+1281	Extras
+1282	Zoom
+1283	Minicarte
+1284	Affichage des touches
+1285	Grotte
+1286	G
+1287	 CPS
+1288	D
+1289	 va bientôt casser : plus que 
+1290	 de durabilité !
+1291	: 
+1292	 de durabilité (
+1293	Zoome tant que tu maintiens la touche de zoom (par défaut : C, modifiable dans les commandes de Minecraft sous « 1912 Utilities »).
+1294	Puissance (fois)
+1295	La molette le rend plus fort / plus faible
+1296	Zoom fluide
+1297	Souris plus lente pendant le zoom
+1298	Lisser la caméra pendant le zoom
+1299	Pendant le zoom, la molette ne change pas l'emplacement de la barre d'action. Quand tu relâches, la puissance revient au réglage.
+1300	Petite carte dans un coin. Le nord est en haut, la flèche montre la direction de ton regard.
+1301	Zone
+1302	Coordonnées en dessous
+1303	Afficher les points de passage
+1304	Afficher les autres joueurs
+1305	Afficher les grottes sous terre
+1306	Sous terre et dans le Nether, elle montre la grotte à ta hauteur au lieu de la surface. En haut à droite, elle se place sous les icônes de potions.
+1307	Montre les touches que tu appuies et tes clics par seconde.
+1308	Boutons de la souris
+1309	Clics par seconde (CPS)
+1310	Avertit avant qu'un outil, une arme ou une armure ne casse (les élytres aussi).
+1311	Avertir à (% de durabilité)
+1312	Jouer un son
+1313	En grand à l'écran
+1314	Juste avant la casse, il avertit une seconde fois. Après réparation, tout est réinitialisé.
+1315	Vol
+1316	Obsidienne
+1317	Obsidienne et coffres de l'Ender
+1318	Aussi pierre taillée & co.
+1319	Crystal Aura
+1320	Auto Weapon
+1321	Surround
+1322	Trigger Bot
+1323	Surround désactivé : tu as bougé
+1324	Surround : aucun bloc adapté dans la barre d'action
+1325	Frappe automatiquement dès que ton réticule est sur un ennemi. Tu vises toi-même - contrairement à Kill Aura, il ne tourne rien.
+1326	Attendre la recharge (%)
+1327	Délai aléatoire (ticks)
+1328	Il ne frappe jamais les amis, les joueurs en mode créatif ni les villageois.
+1329	Prend la meilleure arme de la barre d'action à chaque coup - aussi avec Kill Aura et Trigger Bot.
+1330	De préférence
+1331	Hache contre les boucliers
+1332	Revenir ensuite
+1333	Avec « Revenir ensuite », tu as de nouveau l'objet précédent en main après une seconde et demie sans frapper. Une hache rend les boucliers inutiles pendant quelques secondes.
+1334	Pose des cristaux de l'End sur de l'obsidienne ou de la bedrock près de l'ennemi et les fait exploser aussitôt. Avant, il calcule combien de dégâts l'ennemi et toi-même subissez.
+1335	Dégâts
+1336	Au moins sur l'ennemi (vie)
+1337	Au plus sur toi (vie)
+1338	Jamais au point de mourir
+1339	Portée et cadence
+1340	Portée (dixièmes de bloc)
+1341	Ennemi jusqu'à (dixièmes de bloc)
+1342	Poser tous les (ticks)
+1343	Faire exploser tous les (ticks)
+1344	Poser des cristaux
+1345	Faire exploser les cristaux
+1346	Prendre lui-même les cristaux en main
+1347	Attaquer aussi les monstres
+1348	Pause en mangeant
+1349	Marquer l'emplacement
+1350	Cristaux dans la main principale ou secondaire. 2 de vie = 1 cœur. Il ne compte pas les enchantements et les potions - les vrais dégâts sont souvent un peu plus faibles. Il n'attaque jamais les amis.
+1351	Pose de l'obsidienne tout autour de tes pieds - les cristaux à côté de toi ne peuvent alors presque plus te blesser.
+1352	Se placer au centre du bloc
+1353	Aussi sous les pieds
+1354	Désactiver quand tu bouges
+1355	Les blocs doivent être dans la barre d'action ; ta sélection reste telle quelle.
+1356	Croix
+1357	Croix avec point
+1358	Point
+1359	Cercle
+1360	Forme en T
+1361	Blanc
+1362	Cyan
+1363	Jaune
+1364	Rose
+1365	Couleur du thème
+1366	Boat Fly
+1367	Voler en bateau : sauter = monter, sprinter (Ctrl) = descendre. Le bateau va dans la direction de ton regard.
+1368	Le bateau tourne avec ton regard
+1369	Anti-Kick fait descendre le bateau un instant toutes les deux secondes - sinon beaucoup de serveurs t'expulsent pour vol.
+1370	Réticule
+1371	Un réticule personnalisé à la place de celui de Minecraft.
+1372	Forme
+1373	Épaisseur
+1374	Espace au centre
+1375	Contour sombre
+1376	Rouge quand tu vises un ennemi
+1377	Afficher la recharge en dessous
+1378	Aussi en vue extérieure (F5)
+1379	Auto Farm
+1380	Nuker
+1381	Chest Stealer
+1382	Bûcheron
+1383	Tout
+1384	Seulement ceux qui cassent instantanément
+1385	Seulement les blocs choisis
+1386	Chest Stealer : inventaire plein
+1387	Bûcheron : 
+1388	 troncs étaient trop hauts
+1389	Récolte tout ce qui est mûr autour de toi et replante aussitôt.
+1390	Par tick
+1391	Plantes
+1392	Replanter
+1393	Planter aussi les terres labourées vides
+1394	Pastèques et citrouilles
+1395	Canne à sucre (celle du bas reste)
+1396	Verrues du Nether
+1397	Cacao
+1398	Cueillir les baies sucrées
+1399	Ramasser la récolte (y va à pied)
+1400	Les graines doivent être dans la barre d'action. Blé, carottes, pommes de terre, betteraves, fleurs-torches et verrues du Nether sont replantés là où ils ont été récoltés.
+1401	Casse tous les blocs autour de toi, aussi loin que tu atteins.
+1402	Quoi
+1403	Nuker : blocs
+1404	Instantanés par tick
+1405	Rien sous tes pieds
+1406	De haut en bas
+1407	Prendre le meilleur outil
+1408	« Seulement les blocs choisis » utilise la liste sous « Choisir les blocs ». Sinon, il ne casse jamais les coffres et autres blocs avec contenu, et jamais la bedrock.
+1409	Prend tout automatiquement à l'ouverture d'un coffre.
+1410	Pause entre deux prises (ticks)
+1411	Un peu aléatoire (plus humain)
+1412	Fermer ensuite
+1413	Seulement coffres, tonneaux et boîtes de Shulker
+1414	Si ton inventaire est plein, il s'arrête. Sans « Seulement coffres, tonneaux et boîtes de Shulker », il vide aussi les fours, entonnoirs et distributeurs.
+1415	Casse une bûche - il abat tout l'arbre, ramasse le bois et plante une pousse.
+1416	Seulement de vrais arbres (avec feuilles)
+1417	Se placer sous le tronc (pour les grands arbres)
+1418	Ramasser le bois
+1419	Planter une pousse
+1420	Prendre la meilleure hache
+1421	Il ne monte qu'aussi haut que tu atteins - sur les grands épicéas et arbres de la jungle, il reste quelque chose en haut. « Seulement de vrais arbres » protège les maisons en bois.
+1422	Auto Trap
+1423	Aim Assist
+1424	Tourne doucement ton regard vers l'ennemi le plus proche du réticule. Frapper, c'est à toi.
+1425	Vitesse (degrés/s)
+1426	Champ de vision (degrés)
+1427	Seulement en maintenant la touche d'attaque
+1428	Aussi en haut et en bas
+1429	Aussi à travers les murs
+1430	Bow Aimbot
+1431	Pendant que tu bandes l'arc, il vise l'ennemi - avec la chute de la flèche et en anticipant. Relâcher, c'est à toi.
+1432	Anticiper si la cible bouge
+1433	Aussi avec le trident
+1434	Arc bandé à fond, il touche le mieux. Les arbalètes tirent dès le clic - là, il ne peut pas aider.
+1435	Enferme l'ennemi le plus proche dans de l'obsidienne.
+1436	Enfermer complètement (avec plafond)
+1437	Utiliser aussi pierre taillée & co.
+1438	Aussi les monstres
+1439	Les blocs doivent être dans la barre d'action. Il n'enferme jamais les amis.
+1440	Hitboxes
+1441	Les ennemis sont un peu plus grands quand tu les vises - tu touches plus facilement.
+1442	Plus grand de (dixièmes de bloc)
+1443	Plus de 3 se remarque facilement par les anti-cheats, car tu frappes alors de plus loin.
+1444	Point de mort
+1445	Échange d'élytres
+1446	Voyage
+1447	Auto Light
+1448	Bonemeal Aura
+1449	Automatisation des animaux
+1450	Pilote automatique d'élytres
+1451	Pilote automatique d'élytres : 
+1452	entre une destination (X Z)
+1453	aucunes élytres équipées
+1454	impossible de décoller (de la place au-dessus ?)
+1455	Pilote automatique d'élytres : arrivé
+1456	Échange d'élytres : pas d'élytres de rechange dans l'inventaire
+1457	Élytres échangées
+1458	End
+1459	Mort à 
+1460	Vole tout seul avec les élytres jusqu'aux coordonnées : décolle, monte en altitude, utilise des fusées et atterrit à destination.
+1461	Destination (X Z)
+1462	Altitude de vol (Y)
+1463	Utiliser des fusées
+1464	Atterrir à destination
+1465	Mets les élytres, des fusées dans la barre d'action, puis active-le. Sans fusées, il ne peut que planer et n'ira pas loin. Au-dessus des montagnes, il vole automatiquement plus haut. Le désactiver = tu pilotes aussitôt toi-même.
+1466	Équipe de nouvelles élytres depuis l'inventaire avant que les anciennes ne cassent - même en plein vol.
+1467	Échanger à (durabilité restante)
+1468	Des élytres neuves ont 432 de durabilité ; en vol, elles en perdent 1 par seconde.
+1469	Se souvient de l'endroit où tu es mort - pour retrouver tes affaires.
+1470	Coordonnées dans le chat
+1471	Placer un point de passage
+1472	Ne garder que le dernier
+1473	Le point de passage s'appelle « Point de mort » et figure dans les Waypoints. Ils sont activés pour cela.
+1474	Auto Light : pas de torches dans la barre d'action
+1475	Pose des torches partout où il fait assez sombre pour que des monstres apparaissent.
+1476	Pause entre deux torches (ticks)
+1477	Aussi dehors (la nuit)
+1478	Les torches doivent être dans la barre d'action. Il n'en pose une que là où il n'y a encore aucune lumière - ainsi peu de torches suffisent pour toute une grotte.
+1479	Fertilise les plantes et pousses autour de toi avec de la poudre d'os de la barre d'action.
+1480	Seulement cultures, pousses et baies
+1481	Sans « Seulement cultures », il fertilise aussi l'herbe - alors des fleurs poussent partout.
+1482	Nourrit les animaux à portée pour qu'ils aient des petits, et tond les moutons.
+1483	Faire reproduire
+1484	Tondre les moutons
+1485	La bonne nourriture (p. ex. blé, carottes ou graines) et les cisailles doivent être dans la barre d'action. Il nourrit chaque animal au plus toutes les 5 minutes - le jeu ne permet pas plus souvent.
+1486	Auto Pot
+1487	Auto Web
+1488	Arrow Dodge
+1489	Hole Filler
+1490	Lance une potion jetable de soin de la barre d'action sous toi quand ta vie est basse.
+1491	Si la vie est sous (2 = 1 cœur)
+1492	Pause entre deux potions (ticks)
+1493	Seulement les potions jetables de soin (aussi niveau II). Ton regard ne descend qu'un très court instant.
+1494	Pose des toiles d'araignée sur les ennemis proches - ils ne peuvent alors presque plus s'échapper.
+1495	Aussi à hauteur de tête
+1496	Des toiles dans la barre d'action. Il n'emprisonne jamais les amis ni toi-même.
+1497	Calcule si une flèche (ou un trident) va te toucher et saute de côté à temps.
+1498	Esquive (dixièmes de bloc)
+1499	Aussi tôt (ticks avant)
+1500	Sauter en même temps
+1501	Il ignore tes propres flèches et celles déjà plantées.
+1502	Remplit les trous (1x1, entourés d'obsidienne) près de toi - les ennemis ne peuvent alors plus se cacher des cristaux.
+1503	Seulement les trous près des ennemis
+1504	Aussi près de l'ennemi (blocs)
+1505	Seulement les trous d'obsidienne et de bedrock
+1506	Il laisse libre le trou dans lequel tu te trouves.
+1507	Chiffres de dégâts
+1508	Bordures de chunks
+1509	Barre de boussole
+1510	Radar de joueurs
+1511	NE
+1512	SE
+1513	SW
+1514	NW
+1515	SO
+1516	NO
+1517	Liste des joueurs proches - avec distance, vie et une flèche dans leur direction.
+1518	Au maximum (joueurs)
+1519	Jusqu'à (blocs, 0 = tous)
+1520	Flèche dans leur direction
+1521	Tu ne vois que les joueurs que ton jeu a chargés (en général jusqu'à environ 100 blocs). Les amis apparaissent dans leur couleur.
+1522	Affiche brièvement combien de dégâts tu as faits en frappant.
+1523	Seulement tes propres coups
+1524	En cœurs (sinon points de vie)
+1525	Jaune : le coup était mortel. Sans « Seulement tes propres coups », tu vois tous les dégâts proches, aussi de chute ou d'autres joueurs.
+1526	Une boussole en haut de l'écran : directions, degrés et tes points de passage.
+1527	Largeur
+1528	Distance depuis le haut
+1529	Afficher les degrés
+1530	S'il y a des barres de boss en haut, descends la boussole avec « Distance depuis le haut ».
+1531	Affiche les bordures du chunk où tu te trouves en lignes jaunes.
+1532	Aussi les chunks voisins (bleu)
+1533	Hauteur au-dessus et en dessous
+1534	Auto Sign
+1535	Auto Smelt
+1536	Villager Roller
+1537	Villager Roller : 
+1538	place-toi à côté d'un villageois et d'un pupitre
+1539	le villageois a disparu
+1540	il ne prend pas le pupitre (est-il assez près ?)
+1541	l'échange ne s'ouvre pas
+1542	aucune offre reçue
+1543	Trouvé : 
+1544	Villager Roller : trouvé après 
+1545	 essais : 
+1546	le pupitre est trop loin
+1547	il garde son métier (a déjà échangé ou a un autre pupitre)
+1548	pas de pupitre dans la barre d'action
+1549	impossible de poser le pupitre
+1550	émeraudes
+1551	Casse le pupitre et le repose jusqu'à ce que le bibliothécaire propose le livre voulu. Ensuite il s'arrête et joue un son.
+1552	Enchantements (séparés par des virgules)
+1553	Au maximum (émeraudes)
+1554	Seulement le niveau le plus élevé
+1555	Place-toi à côté d'un villageois sans métier (ou d'un bibliothécaire avec qui personne n'a encore échangé) et de son pupitre ; un second pupitre dans la barre d'action ne fait pas de mal. Noms en anglais (mending, unbreaking, efficiency) ou tels qu'ils s'appellent dans le jeu.
+1556	Remplit les fours de combustible et d'ingrédients de ton inventaire à l'ouverture et retire ce qui est prêt.
+1557	Minerais et métal brut
+1558	Sable, pierre taillée, argile & co.
+1559	Seulement du charbon comme combustible
+1560	Le haut fourneau ne reçoit que des minerais, le fumoir que de la nourriture. Sans « Seulement du charbon », il brûle aussi des planches et des bâtons, mais jamais d'outils ni de seaux.
+1561	Écrit ton texte sur un panneau dès que tu le poses.
+1562	Ligne 1
+1563	Ligne 2
+1564	Ligne 3
+1565	Ligne 4
+1566	Seulement les panneaux vides
+1567	Environ 15 caractères tiennent par ligne. Si toutes les lignes sont vides, tu peux écrire normalement.
+1568	Base Finder
+1569	Base Finder : beaucoup de traces à proximité
+1570	à 
+1571	canne à sucre
+1572	améthyste
+1573	varech
+1574	Canne à sucre (3 de haut) : 
+1575	Grappes d'améthyste : 
+1576	 (bourgeons : 
+1577	Varech jusqu'en haut : 
+1578	Des joueurs étaient sûrement ici !
+1579	Quelques traces
+1580	Presque aucune trace
+1581	Montre les traces que des joueurs étaient ici longtemps : les plantes et les cristaux ne poussent que si quelqu'un est à proximité. Beaucoup = sûrement une base à proximité.
+1582	Traces
+1583	Canne à sucre de 3 blocs (vert)
+1584	Grappes d'améthyste dans les géodes (violet)
+1585	Varech jusqu'à la surface (turquoise)
+1586	Cadres autour des traces
+1587	Panneau avec les chiffres
+1588	Signaler dans le chat
+1589	Signaler à partir de tant de traces
+1590	Ce sont des indices, pas des preuves : la canne à sucre peut aussi faire 3 de haut toute seule, et les géodes neuves ont déjà quelques grappes (elles ne comptent que s'il y a plus de grappes que de bourgeons). Seules beaucoup de traces à la fois veulent vraiment dire quelque chose.

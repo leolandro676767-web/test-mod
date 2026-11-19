@@ -1,4 +1,5 @@
 {
-  "key.category.test.main": "1912 Client",
-  "key.test.gui": "Open 1912 menu"
+  "key.category.test.main": "1912 Utilities",
+  "key.test.gui": "Open 1912 menu",
+  "key.test.zoom": "Zoom (hold)"
 }

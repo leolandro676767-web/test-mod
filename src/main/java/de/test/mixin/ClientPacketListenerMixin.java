@@ -3,12 +3,14 @@ package de.test.mixin;
 import de.test.Safe;
 import de.test.BossStack;
 import de.test.MiscMods;
+import de.test.ChunkScanHooks;
 import de.test.PlayerMods;
 import de.test.RenderMods;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
 import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
+import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerRotationPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
@@ -97,5 +99,11 @@ public abstract class ClientPacketListenerMixin {
         if (mc.level == null || !mc.isSameThread()) return;
         Entity e = packet.getEntity(mc.level);
         if (e instanceof LivingEntity le) Safe.run("Totem", () -> RenderMods.onTotemPop(le));
+    }
+
+    // ESP: ein Chunk ist (neu) angekommen - die Block-Suchen nehmen ihn sofort dran
+    @Inject(method = "updateLevelChunk", at = @At("TAIL"), require = 0)
+    private void test$chunkLoaded(int x, int z, ClientboundLevelChunkPacketData data, CallbackInfo ci) {
+        Safe.run("ESP", () -> ChunkScanHooks.chunkChanged(x, z));
     }
 }

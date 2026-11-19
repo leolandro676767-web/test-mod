@@ -149,6 +149,7 @@ public final class Keybinds {
             if (ACTIONS.isEmpty()) TestScreen.registerActions();
             Action a = ACTIONS.get(e.getKey());
             if (a == null) continue;
+            if (!Levels.visible(e.getKey())) continue; // im gewaehlten Modus nicht dabei (Menue: Modus)
             if (HOLD.contains(e.getKey()) && a.state() != null) {
                 // halten: nur einschalten (und merken), ausschalten beim Loslassen
                 if (!a.state().getAsBoolean()) {

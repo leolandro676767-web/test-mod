@@ -47,6 +47,13 @@ public final class TestConfig {
         TestClient.clickerEarly = bool(p, "clickerEarly", TestClient.clickerEarly);
         TestClient.searchChunks = Math.max(1, Math.min(12, num(p, "searchChunks", TestClient.searchChunks)));
         TestClient.searchHeight = Math.max(2, Math.min(20, num(p, "searchHeight", TestClient.searchHeight)));
+        TestClient.blockCollect = bool(p, "blockCollect", TestClient.blockCollect);
+        TestClient.blockCollectAll = bool(p, "blockCollectAll", TestClient.blockCollectAll);
+        TestClient.blockCollectRadius = Math.max(2, Math.min(16, num(p, "blockCollectRadius",
+                TestClient.blockCollectRadius)));
+        TestClient.areaCollect = bool(p, "areaCollect", TestClient.areaCollect);
+        TestClient.areaCollectRadius = Math.max(2, Math.min(16, num(p, "areaCollectRadius",
+                TestClient.areaCollectRadius)));
         Theme.scheme = num(p, "themeScheme", Theme.scheme);
         Theme.headHex = num(p, "themeHead", Theme.headHex);
         Theme.accentHex = num(p, "themeAccent", Theme.accentHex);
@@ -55,12 +62,18 @@ public final class TestConfig {
         Theme.logoSize = num(p, "themeLogoSize", Theme.logoSize);
         Theme.colWidth = num(p, "themeColWidth", Theme.colWidth);
         Theme.menuScale = num(p, "themeMenuScale", Theme.menuScale);
-        Theme.menuMode = num(p, "themeMenuMode", Theme.menuMode) == 1 ? 1 : 0;
+        // Modus: Anfänger / Standard / Experte (frueher nur Standard / Experte)
+        if (p.containsKey("menuLevel")) {
+            Levels.level = Math.max(0, Math.min(2, num(p, "menuLevel", Levels.level)));
+        } else if (p.containsKey("themeMenuMode")) {
+            Levels.level = num(p, "themeMenuMode", 0) == 1 ? Levels.EXPERT : Levels.STANDARD;
+        }
         Theme.hudList = num(p, "themeHudList", 1) == 1;
         Theme.lowFx = num(p, "themeLowFx", 0) == 1;
         Theme.hudCorner = Math.max(0, Math.min(3, num(p, "themeHudCorner", 0)));
         Theme.hudListSize = Math.max(0, Math.min(3, num(p, "themeHudListSize", Theme.hudListSize)));
-        Theme.collapsed = num(p, "menuCollapsed", Theme.collapsed) & 0x7F;
+        // neue Spalten (Version 2): alte eingeklappte Spalten passen nicht mehr dazu
+        Theme.collapsed = p.containsKey("menuColumns2") ? num(p, "menuCollapsed", Theme.collapsed) & 0xFFFF : 0;
         Theme.clamp();
         Movement.highJump = bool(p, "highJump", Movement.highJump);
         Movement.jesus = bool(p, "jesus", Movement.jesus);
@@ -146,6 +159,10 @@ public final class TestConfig {
         loadStatics(p, RenderMods.class, "rm.");
         readIds(p.getProperty("rm.blockEspBlocks"), BuiltInRegistries.BLOCK, RenderMods.blockEspBlocks);
         loadStatics(p, MiscMods.class, "mm.");
+        // alter Name als Standardtext: auf den neuen Namen umstellen
+        if ("1912 Client".equals(MiscMods.discordText)) MiscMods.discordText = "1912 Utilities";
+        if ("1912 Client".equals(MiscMods.bookBotText)) MiscMods.bookBotText = "1912 Utilities";
+        if ("1912 Client".equals(MiscMods.spamText)) MiscMods.spamText = "1912 Utilities";
         loadStatics(p, DebrisMiner.class, "dm.");
         loadStatics(p, TunnelMiner.class, "tm.");
         loadStatics(p, Friends.class, "fr.");
@@ -153,6 +170,13 @@ public final class TestConfig {
         loadStatics(p, BotGuard.class, "bg.");
         loadStatics(p, Survival.class, "sv.");
         loadStatics(p, InfoHud.class, "ih.");
+        loadStatics(p, Extras.class, "ex.");
+        loadStatics(p, CombatMods.class, "cb.");
+        loadStatics(p, WorldMods.class, "wo.");
+        loadStatics(p, TravelMods.class, "tv.");
+        loadStatics(p, HudMods.class, "hm.");
+        loadStatics(p, BaseFinder.class, "bf.");
+        readIds(p.getProperty("wo.nukerBlocks"), BuiltInRegistries.BLOCK, WorldMods.nukerBlocks);
         Keybinds.load(p);
         InvLayout.load(p);
         Lang.language = Math.max(0, Math.min(Lang.NAMES.length - 1, num(p, "language", Lang.language)));
@@ -221,6 +245,11 @@ public final class TestConfig {
         p.setProperty("clickerEarly", Boolean.toString(TestClient.clickerEarly));
         p.setProperty("searchChunks", Integer.toString(TestClient.searchChunks));
         p.setProperty("searchHeight", Integer.toString(TestClient.searchHeight));
+        p.setProperty("blockCollect", Boolean.toString(TestClient.blockCollect));
+        p.setProperty("blockCollectAll", Boolean.toString(TestClient.blockCollectAll));
+        p.setProperty("blockCollectRadius", Integer.toString(TestClient.blockCollectRadius));
+        p.setProperty("areaCollect", Boolean.toString(TestClient.areaCollect));
+        p.setProperty("areaCollectRadius", Integer.toString(TestClient.areaCollectRadius));
         p.setProperty("themeScheme", Integer.toString(Theme.scheme));
         p.setProperty("themeHead", Integer.toString(Theme.headHex));
         p.setProperty("themeAccent", Integer.toString(Theme.accentHex));
@@ -229,8 +258,9 @@ public final class TestConfig {
         p.setProperty("themeLogoSize", Integer.toString(Theme.logoSize));
         p.setProperty("themeColWidth", Integer.toString(Theme.colWidth));
         p.setProperty("menuCollapsed", Integer.toString(Theme.collapsed));
+        p.setProperty("menuColumns2", "true");
         p.setProperty("themeMenuScale", Integer.toString(Theme.menuScale));
-        p.setProperty("themeMenuMode", Integer.toString(Theme.menuMode));
+        p.setProperty("menuLevel", Integer.toString(Levels.level));
         p.setProperty("themeHudList", Theme.hudList ? "1" : "0");
         p.setProperty("themeLowFx", Theme.lowFx ? "1" : "0");
         p.setProperty("themeHudCorner", Integer.toString(Theme.hudCorner));
@@ -331,6 +361,13 @@ public final class TestConfig {
         saveStatics(p, BotGuard.class, "bg.");
         saveStatics(p, Survival.class, "sv.");
         saveStatics(p, InfoHud.class, "ih.");
+        saveStatics(p, Extras.class, "ex.");
+        saveStatics(p, CombatMods.class, "cb.");
+        saveStatics(p, WorldMods.class, "wo.");
+        saveStatics(p, TravelMods.class, "tv.");
+        saveStatics(p, HudMods.class, "hm.");
+        saveStatics(p, BaseFinder.class, "bf.");
+        p.setProperty("wo.nukerBlocks", writeIds(WorldMods.nukerBlocks, BuiltInRegistries.BLOCK));
         Keybinds.save(p);
         InvLayout.save(p);
         p.setProperty("language", Integer.toString(Lang.language));
@@ -371,7 +408,7 @@ public final class TestConfig {
         try {
             Files.createDirectories(FILE.getParent());
             try (OutputStream out = Files.newOutputStream(FILE)) {
-                p.store(out, "1912 Client Einstellungen");
+                p.store(out, "1912 Utilities Einstellungen");
             }
         } catch (IOException e) {
             System.err.println("[1912] Konnte Einstellungen nicht speichern: " + e);

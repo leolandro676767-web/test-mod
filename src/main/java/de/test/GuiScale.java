@@ -23,6 +23,25 @@ final class GuiScale {
     static void need(int w, int h) {
         needW = Math.max(480, Math.min(1400, w));
         needH = Math.max(240, Math.min(600, h));
+        fit = null;
+    }
+
+    /** Passt bei dieser Groesse (Breite, Hoehe in GUI-Pixeln) alles? */
+    interface Fits {
+        /** @param level 0 = ordentlich und mit Logo, 1 = notfalls ohne Logo, 2 = egal wie */
+        boolean test(int w, int h, int level);
+    }
+
+    /** null = nur needW/needH zaehlen. */
+    private static Fits fit;
+
+    /**
+     * Wie need, aber "Auto" waehlt die groesste Stufe, bei der fits passt (am liebsten mit Logo). Kleiner als 2
+     * nur bei kleinen Fenstern. Passt es nirgends, zaehlen w und h wie bei need.
+     */
+    static void needFit(Fits fits, int w, int h) {
+        need(w, h);
+        fit = fits;
     }
 
     private static Method getter;
@@ -74,6 +93,24 @@ final class GuiScale {
             default:
                 // Auto: groesste Stufe (hoechstens die des Spiels), bei der alles hineinpasst
                 int min = Math.min(orig, 2);
+                if (fit != null) {
+                    int lowest = fbW < 1600 ? 1 : min; // Stufe 1 nur bei kleinen Fenstern (sonst winzig)
+                    try {
+                        // lieber etwas kleiner und ordentlich als gross und zerstueckelt; Stufe 1 (winzig) nur,
+                        // wenn es sonst gar nicht ohne Scrollen geht
+                        int floor = Math.max(lowest, Math.min(orig, 2));
+                        for (int level = 0; level <= 2; level++) {
+                            for (int t = orig; t >= floor; t--) {
+                                if (fit.test(fbW / t, fbH / t, level)) return t;
+                            }
+                        }
+                        for (int t = floor - 1; t >= lowest; t--) {
+                            if (fit.test(fbW / t, fbH / t, 2)) return t;
+                        }
+                    } catch (RuntimeException e) {
+                        // dann wie frueher
+                    }
+                }
                 int s = orig;
                 while (s > min && (fbW / s < needW || fbH / s < needH)) s--;
                 return s;

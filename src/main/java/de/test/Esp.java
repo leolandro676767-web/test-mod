@@ -86,10 +86,15 @@ public final class Esp {
     private static final int SCAN_INTERVAL = 10;
 
     private static final List<BlockPos> foundBlocks = new ArrayList<>();
-    private static final BlockScan SCAN = new BlockScan(MAX_BLOCKS);
+    private static final ChunkScan SCAN = new ChunkScan(MAX_BLOCKS);
 
     public static void register() {
         HudElementRegistry.addFirst(Identifier.fromNamespaceAndPath("test", "esp"), Safe.hud("ESP", Esp::render));
+    }
+
+    /** Fuer das Menue: Stand der Suche (und ob der Server Erze versteckt). */
+    static String blockStatus() {
+        return enabled && blocks && !blockTypes.isEmpty() ? SCAN.status(foundBlocks) : Lang.t("Sucht, sobald es an ist.");
     }
 
     /** Nach Aenderungen an der Blockauswahl sofort neu suchen. */
@@ -104,10 +109,10 @@ public final class Esp {
             SCAN.clear(foundBlocks);
             return;
         }
-        // verteilt auf SCAN_INTERVAL Ticks statt alles auf einmal (kein Ruckler bei grossem Radius)
-        Level level = mc.level;
-        SCAN.stepSphere(mc.player.blockPosition(), blockChunks * 16, SCAN_INTERVAL,
-                pos -> blockTypes.contains(level.getBlockState(pos).getBlock()), foundBlocks);
+        // Chunk fuer Chunk, neue Chunks und Blockaenderungen sofort (siehe ChunkScan)
+        int r = blockChunks * 16;
+        SCAN.tick(mc.level, mc.player.blockPosition(), r, r, r, true, st -> blockTypes.contains(st.getBlock()),
+                blockTypes.hashCode() * 31 + blockTypes.size(), foundBlocks);
     }
 
     // ---------- Zeichnen (ueber Render3D) ----------

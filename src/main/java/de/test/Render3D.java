@@ -58,7 +58,9 @@ public final class Render3D {
         }
         screenW = mc.getWindow().getGuiScaledWidth();
         screenH = mc.getWindow().getGuiScaledHeight();
-        double fov = mc.options.fov().get();
+        // echtes Sichtfeld dieses Bildes (mit Sprinten, Tränken und Zoom) - sonst sitzen die Kästen daneben
+        double fov = mc.gameRenderer.mainCamera().getFov();
+        if (!(fov > 1.0 && fov < 179.0)) fov = mc.options.fov().get();
         focal = 1.0 / Math.tan(Math.toRadians(fov) / 2.0) * (screenH / 2.0);
         ready = true;
         return true;

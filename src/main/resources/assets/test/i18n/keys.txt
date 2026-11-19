@@ -1,4 +1,4 @@
-# 1912 Client: alle deutschen Texte des Menüs (Nummer TAB Text).
+# 1912 Utilities: alle deutschen Texte des Menüs (Nummer TAB Text).
 # "~" am Anfang = Teilstück eines zusammengesetzten Textes, \n = Zeilenumbruch.
 1	Bereich abbauen
 2	Abbau STOPPEN
@@ -1246,3 +1246,347 @@
 1244	Nimmt der Server den Tausch im Inventar nicht an (manche Anti-Cheats), schreibt er das in den Chat und nimmt stattdessen die Taste für die zweite Hand – dafür müssen Totems in der Hotbar liegen. Gegen Schaden durch die Leere oder /kill hilft kein Totem.
 1245	Nimmt der Server den Tausch im Inventar nicht an (manche Anti-Cheats), schreibt er das in den Chat und nimmt stattdessen die Taste für die zweite Hand – dafür müssen Totems in der Hotbar liegen. Tipp: Leg immer ein paar Totems in die Hotbar.
 1246	Wogegen kein Totem hilft: Schaden durch die Leere und /kill. Und zwei tödliche Treffer schneller hintereinander als dein Ping (z.B. zwei Kristalle bei 150 ms) – das nächste Totem ist dann noch auf dem Weg zum Server.
+1247	Items einsammeln
+1248	Umkreis (Blöcke)
+1249	Sobald nichts mehr in Reichweite ist, holt er die Items, die beim Abbauen herausgefallen sind – nur seine eigenen, nichts von anderen Spielern. Ist das Inventar voll, lässt er sie liegen.
+1250	Auch Items vom Weg dorthin
+1251	Sobald nichts mehr in Reichweite ist, holt er die Items, die beim Abbauen herausgefallen sind – nur seine eigenen, nichts von anderen Spielern. Ohne „Auch Items vom Weg dorthin“ nur die vom gesuchten Block, nicht z.B. Steine, die er auf dem Weg abbaut.
+1252	Auch andere Funde einsammeln (z.B. Gold, Quarz)
+1253	Andere Funde: nur Items aus Blöcken, die er selbst abgebaut hat – kein Netherrack oder anderes Gestein, das er sowieso wegwirft, und nichts von anderen Spielern. Was voraus im Tunnel liegt, nimmt er beim Weitergehen mit; bleibt etwas neben oder hinter ihm liegen, holt er es kurz.
+1254	Sammelt Items ein
+1255	Liegengebliebene Items einsammeln
+1256	Was beim Abbauen vor ihm herausfällt, nimmt er beim Weitergehen mit. Bleibt etwas neben oder hinter ihm liegen (z.B. Erz aus der Wand), geht er kurz hin und dann zurück in den Tunnel. Nur eigene Items, und kein Gestein, das er sowieso wegwirft.
+1257	Sucht, sobald es an ist.
+1258	~Durchsucht: 
+1259	~ von 
+1260	~ geladenen Chunks  ·  gefunden: 
+1261	Alle gefundenen Erze liegen frei – der Server versteckt wohl die übrigen (Anti-Xray). Die schickt er erst, wenn du direkt daneben bist; früher kann sie kein Client anzeigen.
+1262	Ungewöhnlich viele Erze – das sind wohl falsche Erze vom Anti-Xray des Servers.
+1263	1912 Utilities
+1264	Anfänger: nur die einfachsten Module. Standard: Anzeige und Komfort, nichts mit unfairem Vorteil. Experte: alle Module. Was nicht dabei ist, wird ausgeschaltet.
+1265	Welche Module das Menü zeigt. Voreingestellt ist Standard.
+1266	~Anfänger: 
+1267	~ Module – nur die einfachsten, z.B. Sprint, Fullbright, Wegpunkte und Chat.
+1268	~Standard: 
+1269	~ Module – dazu alles, was nur die Anzeige oder den Komfort betrifft, aber keinen unfairen Vorteil bringt.
+1270	~Experte: alle 
+1271	~ Module.
+1272	Was im gewählten Modus nicht dabei ist, wird ausgeschaltet, reagiert nicht auf seine Taste und taucht auch in der Suche nicht auf.
+1273	Anfänger
+1274	~Modus 
+1275	~ Modul ausgeschaltet
+1276	~ Module ausgeschaltet
+1277	~ (alle Module: Menü, Modus, Experte).
+1278	~Mehr Module: Modus
+1279	Nah
+1280	Weit
+1281	Extras
+1282	Zoom
+1283	Minimap
+1284	Tasten-Anzeige
+1285	Höhle
+1286	LMB
+1287	~ CPS
+1288	RMB
+1289	~ geht gleich kaputt: noch 
+1290	~ Haltbarkeit!
+1291	~: noch 
+1292	~ Haltbarkeit (
+1293	Zoomt heran, solange du die Zoom-Taste hältst (Standard: C, änderbar in den Minecraft-Steuerungen unter „1912 Utilities“).
+1294	Stärke (fach)
+1295	Mit dem Mausrad stärker / schwächer
+1296	Weich zoomen
+1297	Maus beim Zoomen langsamer
+1298	Kamera beim Zoomen glätten
+1299	Das Mausrad wechselt beim Zoomen nicht den Hotbar-Platz. Beim Loslassen ist die Stärke wieder wie eingestellt.
+1300	Kleine Karte in einer Ecke. Norden ist oben, der Pfeil zeigt deine Blickrichtung.
+1301	Ausschnitt
+1302	Koordinaten darunter
+1303	Wegpunkte zeigen
+1304	Andere Spieler zeigen
+1305	Unter der Erde Höhlen zeigen
+1306	Unter der Erde und im Nether zeigt sie die Höhle auf deiner Höhe statt der Oberfläche. Oben rechts rutscht sie unter die Trank-Symbole.
+1307	Zeigt, welche Tasten du gerade drückst, und deine Klicks pro Sekunde.
+1308	Maustasten
+1309	Klicks pro Sekunde (CPS)
+1310	Warnt, bevor Werkzeug, Waffe oder Rüstung kaputtgeht (auch die Elytra).
+1311	Warnen bei (% Haltbarkeit)
+1312	Ton abspielen
+1313	Groß auf dem Bildschirm
+1314	Kurz vor dem Zerbrechen warnt er ein zweites Mal. Nach dem Reparieren ist alles wieder zurückgesetzt.
+1315	Fliegen
+1316	Obsidian
+1317	Obsidian und Endertruhen
+1318	Auch Bruchstein & Co.
+1319	Crystal Aura
+1320	Auto Weapon
+1321	Surround
+1322	Trigger Bot
+1323	Surround aus: du hast dich bewegt
+1324	Surround: keine passenden Blöcke in der Hotbar
+1325	Schlägt automatisch zu, sobald dein Fadenkreuz auf einem Gegner ist. Du zielst selbst - anders als Kill Aura dreht er nichts.
+1326	Abklingzeit abwarten (%)
+1327	Zufällige Verzögerung (Ticks)
+1328	Freunde, Spieler im Kreativmodus und Dorfbewohner schlägt er nie.
+1329	Nimmt bei jedem Schlag die beste Waffe aus der Hotbar - auch bei Kill Aura und Trigger Bot.
+1330	Lieber
+1331	Axt gegen Schilde
+1332	Danach zurückwechseln
+1333	Mit „Danach zurückwechseln“ hast du nach anderthalb Sekunden ohne Schlag wieder das vorherige Item in der Hand. Eine Axt macht Schilde für ein paar Sekunden nutzlos.
+1334	Setzt End-Kristalle auf Obsidian oder Grundgestein neben dem Gegner und zündet sie sofort. Er rechnet vorher aus, wie viel Schaden der Gegner und du selbst bekommt.
+1335	Schaden
+1336	Mindestens beim Gegner (Leben)
+1337	Höchstens bei dir (Leben)
+1338	Nie so viel, dass du stirbst
+1339	Reichweite und Takt
+1340	Reichweite (Zehntel-Blöcke)
+1341	Gegner bis (Zehntel-Blöcke)
+1342	Setzen alle (Ticks)
+1343	Zünden alle (Ticks)
+1344	Kristalle setzen
+1345	Kristalle zünden
+1346	Kristalle selbst in die Hand nehmen
+1347	Auch Monster angreifen
+1348	Pause beim Essen
+1349	Platz markieren
+1350	Kristalle in die Haupt- oder Zweithand. 2 Leben = 1 Herz. Verzauberungen und Tränke rechnet er nicht mit - der echte Schaden ist oft etwas kleiner. Freunde greift er nie an.
+1351	Setzt Obsidian rund um deine Füße - Kristalle neben dir können dir dann kaum noch etwas anhaben.
+1352	In die Blockmitte stellen
+1353	Auch unter die Füße
+1354	Ausschalten, wenn du dich bewegst
+1355	Die Blöcke müssen in der Hotbar sein; deine Auswahl bleibt, wie sie war.
+1356	Kreuz
+1357	Kreuz mit Punkt
+1358	Punkt
+1359	Kreis
+1360	T-Form
+1361	Weiß
+1362	Cyan
+1363	Gelb
+1364	Pink
+1365	Designfarbe
+1366	Boat Fly
+1367	Mit dem Boot fliegen: Springen = hoch, Sprinten (Strg) = runter. Das Boot fährt in deine Blickrichtung.
+1368	Boot dreht sich mit deinem Blick
+1369	Anti-Kick lässt das Boot alle zwei Sekunden kurz sinken - sonst werfen viele Server dich wegen Fliegens raus.
+1370	Fadenkreuz
+1371	Ein eigenes Fadenkreuz statt dem von Minecraft.
+1372	Form
+1373	Dicke
+1374	Lücke in der Mitte
+1375	Dunkler Rand
+1376	Rot, wenn du auf einen Gegner zielst
+1377	Abklingzeit darunter anzeigen
+1378	Auch in der Ansicht von außen (F5)
+1379	Auto Farm
+1380	Nuker
+1381	Chest Stealer
+1382	Baum-Fäller
+1383	Alles
+1384	Nur sofort abbaubare
+1385	Nur ausgewählte Blöcke
+1386	Chest Stealer: Inventar voll
+1387	~Baum-Fäller: 
+1388	~ Stämme waren zu hoch
+1389	Erntet alles Reife um dich herum und pflanzt gleich wieder neu.
+1390	Pro Tick
+1391	Pflanzen
+1392	Wieder einpflanzen
+1393	Auch leeren Ackerboden bepflanzen
+1394	Melonen und Kürbisse
+1395	Zuckerrohr (unterstes bleibt)
+1396	Netherwarzen
+1397	Kakao
+1398	Süßbeeren pflücken
+1399	Ernte einsammeln (läuft hin)
+1400	Die Saat muss in der Hotbar sein. Weizen, Karotten, Kartoffeln, Rote Bete, Fackellilien und Netherwarzen pflanzt er dorthin, wo er sie geerntet hat.
+1401	Baut alle Blöcke um dich herum ab, so weit du reichst.
+1402	Was
+1403	Nuker: Blöcke
+1404	Sofort abbaubare pro Tick
+1405	Nichts unter deinen Füßen
+1406	Von oben nach unten
+1407	Bestes Werkzeug nehmen
+1408	„Nur ausgewählte Blöcke“ nimmt die Liste unter „Blöcke wählen“. Truhen und andere Blöcke mit Inhalt baut er sonst nie ab, Grundgestein sowieso nicht.
+1409	Nimmt beim Öffnen einer Truhe automatisch alles heraus.
+1410	Pause zwischen zwei Griffen (Ticks)
+1411	Etwas zufällig (wirkt menschlicher)
+1412	Danach schließen
+1413	Nur Truhen, Fässer und Shulker-Kisten
+1414	Ist dein Inventar voll, hört er auf. Ohne „Nur Truhen, Fässer und Shulker-Kisten“ leert er auch Öfen, Trichter und Werfer.
+1415	Bau einen Stamm ab - er fällt den ganzen Baum, sammelt das Holz ein und pflanzt einen Setzling.
+1416	Nur echte Bäume (mit Blättern)
+1417	Unter den Stamm stellen (für hohe Bäume)
+1418	Holz einsammeln
+1419	Setzling pflanzen
+1420	Beste Axt nehmen
+1421	Er kommt nur so hoch, wie du reichst - bei großen Fichten und Dschungelbäumen bleibt oben etwas stehen. „Nur echte Bäume“ schützt Holzhäuser.
+1422	Auto Trap
+1423	Aim Assist
+1424	Dreht deinen Blick sanft zum Gegner, der am nächsten am Fadenkreuz ist. Schlagen musst du selbst.
+1425	Tempo (Grad/s)
+1426	Blickfeld (Grad)
+1427	Nur, solange du die Angriffstaste hältst
+1428	Auch hoch und runter
+1429	Auch durch Wände
+1430	Bow Aimbot
+1431	Solange du den Bogen spannst, zielt er auf den Gegner - mit Fallkurve und Vorhalten. Loslassen musst du selbst.
+1432	Vorhalten, wenn das Ziel läuft
+1433	Auch beim Dreizack
+1434	Voll gespannt trifft er am besten. Armbrüste schießen sofort beim Klick - dafür hilft er nicht.
+1435	Sperrt den nächsten Gegner in Obsidian ein.
+1436	Ganz einsperren (mit Decke)
+1437	Auch Bruchstein & Co. benutzen
+1438	Auch Monster
+1439	Die Blöcke müssen in der Hotbar sein. Freunde sperrt er nie ein.
+1440	Hitboxes
+1441	Gegner sind beim Anvisieren etwas größer - du triffst leichter.
+1442	Größer um (Zehntel-Blöcke)
+1443	Mehr als 3 fällt Anti-Cheats leicht auf, weil du dann von weiter weg triffst.
+1444	Todespunkt
+1445	Elytra-Tausch
+1446	Reisen
+1447	Auto Light
+1448	Bonemeal Aura
+1449	Tier-Automatik
+1450	Elytra-Autopilot
+1451	~Elytra-Autopilot: 
+1452	Ziel eingeben (X Z)
+1453	keine Elytra angezogen
+1454	konnte nicht losfliegen (Platz nach oben?)
+1455	Elytra-Autopilot: angekommen
+1456	Elytra-Tausch: keine Ersatz-Elytra im Inventar
+1457	Elytra getauscht
+1458	End
+1459	~Gestorben bei 
+1460	Fliegt mit der Elytra selbst zu den Koordinaten: losfliegen, auf Höhe gehen, Raketen zünden und am Ziel landen.
+1461	Ziel (X Z)
+1462	Flughöhe (Y)
+1463	Raketen benutzen
+1464	Am Ziel landen
+1465	Elytra anziehen, Raketen in die Hotbar, dann einschalten. Ohne Raketen kann er nur gleiten und kommt nicht weit. Über Bergen fliegt er automatisch höher. Ausschalten = sofort selbst steuern.
+1466	Zieht eine neue Elytra aus dem Inventar an, bevor die alte kaputtgeht - auch mitten im Flug.
+1467	Tauschen bei (Haltbarkeit übrig)
+1468	Eine Elytra hat neu 432 Haltbarkeit, im Flug verliert sie 1 pro Sekunde.
+1469	Merkt sich, wo du gestorben bist - damit du deine Sachen wiederfindest.
+1470	Koordinaten in den Chat
+1471	Wegpunkt setzen
+1472	Nur den letzten behalten
+1473	Der Wegpunkt heißt „Todespunkt“ und steht bei den Waypoints. Die werden dafür eingeschaltet.
+1474	Auto Light: keine Fackeln in der Hotbar
+1475	Setzt Fackeln überall dort, wo es so dunkel ist, dass Monster entstehen können.
+1476	Pause zwischen zwei Fackeln (Ticks)
+1477	Auch draußen (nachts)
+1478	Fackeln müssen in der Hotbar sein. Er setzt nur dort eine, wo noch gar kein Licht ist - so reichen wenige Fackeln für eine ganze Höhle.
+1479	Düngt Pflanzen und Setzlinge um dich herum mit Knochenmehl aus der Hotbar.
+1480	Nur Felder, Setzlinge und Beeren
+1481	Ohne „Nur Felder“ düngt er auch Gras - dann wachsen dort überall Blumen.
+1482	Füttert Tiere in Reichweite, damit sie Junge bekommen, und schert Schafe.
+1483	Vermehren
+1484	Schafe scheren
+1485	Das passende Futter (z. B. Weizen, Karotten oder Samen) und die Schere müssen in der Hotbar sein. Jedes Tier füttert er höchstens alle 5 Minuten - öfter geht es im Spiel auch nicht.
+1486	Auto Pot
+1487	Auto Web
+1488	Arrow Dodge
+1489	Hole Filler
+1490	Wirft bei wenig Leben einen Heil-Wurftrank aus der Hotbar unter dich.
+1491	Bei Leben unter (2 = 1 Herz)
+1492	Pause zwischen zwei Tränken (Ticks)
+1493	Nur Wurftränke der Heilung (auch Stufe II). Dein Blick springt dafür nur ganz kurz nach unten.
+1494	Setzt Spinnennetze auf Gegner in deiner Nähe - sie kommen dann kaum noch weg.
+1495	Auch auf Kopfhöhe
+1496	Spinnennetze in die Hotbar. Freunde und dich selbst spinnt er nie ein.
+1497	Rechnet aus, ob ein Pfeil (oder Dreizack) dich treffen wird, und springt rechtzeitig zur Seite.
+1498	Ausweichen (Zehntel-Blöcke)
+1499	So früh (Ticks vorher)
+1500	Dabei springen
+1501	Eigene Pfeile und solche, die schon stecken, lässt er in Ruhe.
+1502	Füllt Löcher (1x1, ringsum Obsidian) in deiner Nähe - Gegner können sich dann nicht vor Kristallen verstecken.
+1503	Nur Löcher in der Nähe von Gegnern
+1504	So nah am Gegner (Blöcke)
+1505	Nur Obsidian- und Grundgestein-Löcher
+1506	Das Loch, in dem du selbst stehst, lässt er frei.
+1507	Schadenszahlen
+1508	Chunk-Grenzen
+1509	Kompass-Leiste
+1510	Spieler-Radar
+1511	NE
+1512	SE
+1513	SW
+1514	NW
+1515	SO
+1516	NO
+1517	Liste der Spieler in deiner Nähe - mit Entfernung, Leben und einem Pfeil in ihre Richtung.
+1518	Höchstens (Spieler)
+1519	Bis (Blöcke, 0 = alle)
+1520	Pfeil in ihre Richtung
+1521	Man sieht nur Spieler, die dein Spiel geladen hat (meist bis etwa 100 Blöcke). Freunde stehen in ihrer Farbe da.
+1522	Zeigt beim Treffen kurz an, wie viel Schaden du gemacht hast.
+1523	Nur eigene Treffer
+1524	In Herzen (sonst Lebenspunkte)
+1525	Gelb: der Treffer war tödlich. Ohne „Nur eigene Treffer“ siehst du jeden Schaden in der Nähe, auch von Fallschaden oder anderen Spielern.
+1526	Ein Kompass oben am Bildschirm: Himmelsrichtungen, Gradzahl und deine Wegpunkte.
+1527	Breite
+1528	Abstand von oben
+1529	Gradzahl zeigen
+1530	Stehen oben Bossleisten, schieb den Kompass mit „Abstand von oben“ darunter.
+1531	Zeigt die Grenzen des Chunks, in dem du stehst, als gelbe Linien.
+1532	Auch die Nachbar-Chunks (blau)
+1533	Höhe über und unter dir
+1534	Auto Sign
+1535	Auto Smelt
+1536	Villager Roller
+1537	~Villager Roller: 
+1538	stell dich neben einen Dorfbewohner und ein Lesepult
+1539	der Dorfbewohner ist weg
+1540	er nimmt das Lesepult nicht (steht es nah genug?)
+1541	der Handel geht nicht auf
+1542	keine Angebote angekommen
+1543	~Gefunden: 
+1544	~Villager Roller: gefunden nach 
+1545	~ Versuchen: 
+1546	das Lesepult ist zu weit weg
+1547	er behält seinen Beruf (hat schon gehandelt oder hat ein anderes Pult)
+1548	kein Lesepult in der Hotbar
+1549	das Lesepult lässt sich nicht hinstellen
+1550	Smaragde
+1551	Baut das Lesepult ab und wieder hin, bis der Bibliothekar das Buch anbietet, das du willst. Dann hört er auf und spielt einen Ton.
+1552	Verzauberungen (mit Komma)
+1553	Höchstens (Smaragde)
+1554	Nur die höchste Stufe
+1555	Stell dich neben einen Dorfbewohner ohne Beruf (oder einen Bibliothekar, mit dem noch keiner gehandelt hat) und sein Lesepult, ein zweites Lesepult in der Hotbar schadet nicht. Namen auf Englisch (mending, unbreaking, efficiency) oder so, wie sie im Spiel heißen.
+1556	Füllt Öfen beim Öffnen mit Brennstoff und Zutaten aus deinem Inventar und nimmt das Fertige heraus.
+1557	Erze und Rohmetall
+1558	Sand, Bruchstein, Ton und Co.
+1559	Nur Kohle als Brennstoff
+1560	Der Schmelzofen bekommt nur Erze, der Räucherofen nur Essen. Ohne „Nur Kohle“ verbrennt er auch Bretter und Stöcke, aber nie Werkzeuge oder Eimer.
+1561	Schreibt beim Aufstellen eines Schilds sofort deinen Text drauf.
+1562	Zeile 1
+1563	Zeile 2
+1564	Zeile 3
+1565	Zeile 4
+1566	Nur leere Schilder
+1567	Pro Zeile passen etwa 15 Zeichen. Sind alle Zeilen leer, kannst du ganz normal schreiben.
+1568	Base Finder
+1569	Base Finder: viele Spuren in der Nähe
+1570	~bei 
+1571	Zuckerrohr
+1572	Amethyst
+1573	Seetang
+1574	~Zuckerrohr (3 hoch): 
+1575	~Amethyst-Cluster: 
+1576	~ (Knospen: 
+1577	~Seetang bis oben: 
+1578	Hier waren wohl Spieler!
+1579	Ein paar Spuren
+1580	Kaum Spuren
+1581	Zeigt Spuren, dass hier lange Spieler waren: Pflanzen und Kristalle wachsen nur, solange jemand in der Nähe ist. Viele davon = wahrscheinlich eine Base in der Nähe.
+1582	Spuren
+1583	Zuckerrohr, 3 Blöcke hoch (grün)
+1584	Amethyst-Cluster in Geoden (lila)
+1585	Seetang bis zur Oberfläche (türkis)
+1586	Kästen um die Spuren
+1587	Feld mit den Zahlen
+1588	Im Chat melden
+1589	Ab so vielen Spuren melden
+1590	Das sind Hinweise, keine Beweise: Zuckerrohr kann auch von selbst 3 hoch stehen, und frische Geoden haben schon ein paar Cluster (die zählen erst, wenn es mehr Cluster als Knospen sind). Erst viele Spuren auf einmal sagen wirklich etwas.

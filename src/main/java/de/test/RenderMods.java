@@ -244,8 +244,8 @@ public final class RenderMods {
 
     public static void rescan() {
         scanCooldown = 0;
-        SCAN_ESP.restart();
-        SCAN_ORES.restart();
+        FAST_ESP.restart();
+        FAST_ORES.restart();
     }
 
     // ---------- Tick: scannen, verfolgen, einfache Schalter ----------
@@ -258,12 +258,12 @@ public final class RenderMods {
             lastSeen.clear();
             logouts.clear();
             // Welt verlassen: Suchen von vorn beginnen (sonst zeigen sie kurz Bloecke der alten Welt)
-            SCAN_ESP.clear(espBlocks);
-            SCAN_STORAGE.clear(storages);
+            FAST_ESP.clear(espBlocks);
+            FAST_STORAGE.clear(storages);
             SCAN_HOLES.clear(holes);
             SCAN_LIGHT.clear(lights);
             SCAN_TUNNELS.clear(tunnels);
-            SCAN_ORES.clear(ores);
+            FAST_ORES.clear(ores);
             return;
         }
 
@@ -430,31 +430,54 @@ public final class RenderMods {
         return 0;
     }
 
-    // Grosse Suchen laufen verteilt ueber mehrere Ticks (siehe BlockScan), die kleinen alle SCAN_INTERVAL Ticks
-    private static final BlockScan SCAN_ESP = new BlockScan(MAX_DRAW);
-    private static final BlockScan SCAN_STORAGE = new BlockScan(MAX_DRAW);
+    // Suchen nur nach dem Blocktyp: Chunk fuer Chunk, sofort bei neuen Chunks und Blockaenderungen (ChunkScan)
+    private static final ChunkScan FAST_ESP = new ChunkScan(MAX_DRAW);
+    private static final ChunkScan FAST_STORAGE = new ChunkScan(MAX_DRAW);
+    private static final ChunkScan FAST_ORES = new ChunkScan(MAX_DRAW);
+    // Suchen, die Nachbarbloecke anschauen: verteilt ueber mehrere Ticks (BlockScan)
     private static final BlockScan SCAN_HOLES = new BlockScan(MAX_DRAW);
     private static final BlockScan SCAN_LIGHT = new BlockScan(MAX_DRAW);
     private static final BlockScan SCAN_TUNNELS = new BlockScan(MAX_DRAW);
-    private static final BlockScan SCAN_ORES = new BlockScan(MAX_DRAW);
     private static final BlockScan SCAN_VOID = new BlockScan(MAX_DRAW);
+
+    /** Fuer das Menue: Stand der Suche (und ob der Server Erze versteckt). */
+    static String blockEspStatus() {
+        return blockEsp && !blockEspBlocks.isEmpty() ? FAST_ESP.status(espBlocks) : Lang.t("Sucht, sobald es an ist.");
+    }
+
+    static String wallHackStatus() {
+        return wallHack ? FAST_ORES.status(ores) : Lang.t("Sucht, sobald es an ist.");
+    }
+
+    /** Aendert sich, sobald sich die Auswahl aendert (dann sucht die Chunk-Suche alles neu). */
+    private static Integer setKey(java.util.Set<?> set) {
+        return set.hashCode() * 31 + set.size();
+    }
+
+    private static Integer oreKey() {
+        boolean[] f = {wallDiamond, wallDebris, wallGold, wallIron, wallEmerald, wallRedstone, wallLapis, wallCoal,
+            wallCopper, wallQuartz};
+        int k = 0;
+        for (int i = 0; i < f.length; i++) if (f[i]) k |= 1 << i;
+        return k;
+    }
 
     /** Jeden Tick: ein Stueck der grossen Suchen. */
     private static void stepScans(Minecraft mc, Player self) {
         Level level = mc.level;
         BlockPos c = self.blockPosition();
+        var cl = mc.level;
         if (blockEsp && !blockEspBlocks.isEmpty()) {
-            SCAN_ESP.stepSphere(c, (blockEspChunks * 16), SCAN_INTERVAL,
-                    pos -> blockEspBlocks.contains(level.getBlockState(pos).getBlock()), espBlocks);
+            int r = blockEspChunks * 16;
+            FAST_ESP.tick(cl, c, r, r, r, true, st -> blockEspBlocks.contains(st.getBlock()), setKey(blockEspBlocks),
+                    espBlocks);
         } else {
-            SCAN_ESP.clear(espBlocks);
+            FAST_ESP.clear(espBlocks);
         }
         if (storageEsp) {
-            // erst den (billigen) Blocktyp pruefen, dann erst nach dem Block-Entity fragen
-            SCAN_STORAGE.stepBox(c, (storageEspChunks * 16), 8, 8, SCAN_INTERVAL,
-                    pos -> isStorage(level.getBlockState(pos)) && level.getBlockEntity(pos) != null, storages);
+            FAST_STORAGE.tick(cl, c, storageEspChunks * 16, 8, 8, false, RenderMods::isStorage, 1, storages);
         } else {
-            SCAN_STORAGE.clear(storages);
+            FAST_STORAGE.clear(storages);
         }
         if (holeEsp) {
             SCAN_HOLES.stepBox(c, holeEspChunks * 16, Math.min(24, holeEspChunks * 16), 4, SCAN_INTERVAL, pos -> isHole(level, pos), holes);
@@ -480,10 +503,10 @@ public final class RenderMods {
             SCAN_VOID.clear(voids);
         }
         if (wallHack) {
-            SCAN_ORES.stepSphere(c, (wallHackChunks * 16), SCAN_INTERVAL,
-                    pos -> oreColor(level.getBlockState(pos).getBlock()) != 0, ores);
+            int r = wallHackChunks * 16;
+            FAST_ORES.tick(cl, c, r, r, r, true, st -> oreColor(st.getBlock()) != 0, oreKey(), ores);
         } else {
-            SCAN_ORES.clear(ores);
+            FAST_ORES.clear(ores);
         }
     }
 

@@ -35,9 +35,6 @@ final class Theme {
     static int collapsed = 0;  // Bitmaske: Bit i gesetzt = Spalte i eingeklappt
     /** GUI-Groesse der Menues: 0 = Auto (alles passt), 1 = wie im Spiel, 2 = eine Stufe kleiner, 3 = zwei Stufen. */
     static int menuScale = 0;
-    static final String[] MODE_NAMES = {"Standard", "Experte"};
-    /** 0 = Standard (nur die einfachen Module), 1 = Experte (alle Module). */
-    static int menuMode = 0;
     /** Liste der aktiven Module oben links im Spiel. */
     static boolean hudList = true;
     /** Weniger Effekte im Menue-Hintergrund (fuer schwache PCs). */
@@ -74,7 +71,6 @@ final class Theme {
         logoSize = 0;
         colWidth = 1;
         menuScale = 0;
-        menuMode = 0;
         hudList = true;
         hudListSize = 1;
         hudCorner = 0;

@@ -4,15 +4,21 @@
   "package": "de.test.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "AbstractBoatMixin",
     "CameraMixin",
+    "ClientLevelMixin",
     "ClientPacketListenerMixin",
     "ConnectionMixin",
+    "EntityMixin",
     "GameRendererMixin",
+    "HudMixin",
     "ItemEntityRendererMixin",
     "ItemInHandRendererMixin",
     "LocalPlayerMixin",
     "MinecraftMixin",
-    "MultiPlayerGameModeMixin"
+    "MouseHandlerMixin",
+    "MultiPlayerGameModeMixin",
+    "SignEditAccessor"
   ],
   "injectors": {
     "defaultRequire": 0

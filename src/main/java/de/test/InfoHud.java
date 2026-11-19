@@ -187,8 +187,9 @@ public final class InfoHud {
         int sh = mc.getWindow().getGuiScaledHeight();
         boolean right = corner == 1 || corner == 3;
         boolean bottom = corner >= 2;
+        int off = Extras.infoOffset(mc, corner); // Minimap / Tasten-Anzeige in derselben Ecke
         float x = right ? sw - 3 - w * scale : 3;
-        float y = bottom ? sh - 3 - h * scale : 3;
+        float y = bottom ? sh - 3 - h * scale - off : 3 + off;
         if (!right && !bottom && Theme.hudList && Theme.hudCorner == 0) y += 2; // neben der Modul-Liste
 
         float old = Ui.alpha;
