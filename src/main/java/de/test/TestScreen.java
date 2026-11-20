@@ -12,6 +12,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -113,6 +114,17 @@ public class TestScreen extends Screen {
     private java.util.Set<Integer> waitHeld = new java.util.HashSet<>();
     private Button bindBtn;
 
+    // Menue anpassen: Module ein-/ausblenden (alle Module zu sehen), Spalten an der Ueberschrift verschieben
+    private boolean editMode;    // gilt, bis das Menue geschlossen wird
+    /** Reihenfolge der Spalten (ihre Bits), vom Spieler verschoben; leer = wie vorgegeben. Wird gespeichert. */
+    static final List<Integer> ORDER = new ArrayList<>();
+    private Column dragCol;      // Spalte, deren Ueberschrift gerade gedrueckt ist
+    private boolean dragging;    // ... und schon ein Stueck gezogen wurde
+    private double dragX0;
+    private double dragY0;
+    private double dragX;
+    private double dragY;
+
     public TestScreen(Screen parent) {
         super(Component.literal("1912"));
         this.parent = parent;
@@ -163,8 +175,6 @@ public class TestScreen extends Screen {
                 () -> TestClient.walking = !TestClient.walking, () -> Movement.autoWalkScreen(this)));
         move.entries.add(module("Auto Wasp", () -> Movement2.autoWasp,
                 () -> Movement2.autoWasp = !Movement2.autoWasp, () -> Movement2.autoWaspScreen(this)));
-        move.entries.add(module("Blink", () -> Movement2.blink,
-                () -> Movement2.blink = !Movement2.blink, () -> Movement2.blinkScreen(this)));
         move.entries.add(module("Click Tp", () -> Movement2.clickTp,
                 () -> Movement2.clickTp = !Movement2.clickTp, () -> Movement2.clickTpScreen(this)));
         move.entries.add(module("Elytra Boost", () -> Movement2.elytraBoost,
@@ -191,8 +201,6 @@ public class TestScreen extends Screen {
                 () -> Movement.noSlow = !Movement.noSlow, () -> Movement.noSlowScreen(this)));
         move.entries.add(module("Parkour", () -> Movement.parkour,
                 () -> Movement.parkour = !Movement.parkour, () -> Movement.parkourScreen(this)));
-        move.entries.add(module("Reverse Step", () -> Movement.reverseStep,
-                () -> Movement.reverseStep = !Movement.reverseStep, () -> Movement.reverseStepScreen(this)));
         move.entries.add(module("Safe Walk", () -> Movement.safeWalk,
                 () -> Movement.safeWalk = !Movement.safeWalk, () -> Movement.safeWalkScreen(this)));
         move.entries.add(module("Scaffold", () -> Movement.scaffold,
@@ -211,8 +219,6 @@ public class TestScreen extends Screen {
                 () -> Movement.step = !Movement.step, () -> Movement.stepScreen(this)));
         move.entries.add(module("Trident Boost", () -> Movement.trident,
                 () -> Movement.trident = !Movement.trident, () -> Movement.tridentScreen(this)));
-        move.entries.add(module("Velocity", () -> Movement.velocity,
-                () -> Movement.velocity = !Movement.velocity, () -> Movement.velocityScreen(this)));
 
         Column player = new Column("Spieler");
         player.entries.add(module("Air Place", () -> PlayerMods.airPlace,
@@ -241,8 +247,6 @@ public class TestScreen extends Screen {
                 () -> Survival.autoTotem = !Survival.autoTotem, () -> Survival.totemScreen(this)));
         player.entries.add(module("Auto Tool", () -> PlayerMods.autoTool,
                 () -> PlayerMods.autoTool = !PlayerMods.autoTool, () -> PlayerMods.screen("Auto Tool", this)));
-        player.entries.add(module("Break Delay", () -> PlayerMods.breakDelay,
-                () -> PlayerMods.breakDelay = !PlayerMods.breakDelay, () -> PlayerMods.screen("Break Delay", this)));
         player.entries.add(module("Chest Swap", () -> PlayerMods.chestSwap,
                 () -> PlayerMods.chestSwap = !PlayerMods.chestSwap, () -> PlayerMods.screen("Chest Swap", this)));
         player.entries.add(module("Exp Thrower", () -> PlayerMods.expThrower,
@@ -255,12 +259,8 @@ public class TestScreen extends Screen {
                 () -> PlayerMods.ghostHand = !PlayerMods.ghostHand, () -> PlayerMods.screen("Ghost Hand", this)));
         player.entries.add(module("Haltbarkeit", () -> Extras.durability,
                 () -> Extras.durability = !Extras.durability, () -> Extras.screen("Haltbarkeit", this)));
-        player.entries.add(module("Instant Rebreak", () -> PlayerMods.instantRebreak,
-                () -> PlayerMods.instantRebreak = !PlayerMods.instantRebreak, () -> PlayerMods.screen("Instant Rebreak", this)));
         player.entries.add(module("Kill Aura", () -> KillAura.enabled, KillAura::toggle,
                 () -> new KillAuraScreen(this)));
-        player.entries.add(module("Liquid Interact", () -> PlayerMods.liquidInteract,
-                () -> PlayerMods.liquidInteract = !PlayerMods.liquidInteract, () -> PlayerMods.screen("Liquid Interact", this)));
         player.entries.add(module("Middle Click Extra", () -> PlayerMods.middleClickExtra,
                 () -> PlayerMods.middleClickExtra = !PlayerMods.middleClickExtra, () -> PlayerMods.screen("Middle Click Extra", this)));
         player.entries.add(module("Multitask", () -> PlayerMods.multitask,
@@ -297,8 +297,6 @@ public class TestScreen extends Screen {
                 () -> RenderMods.blockSelection = !RenderMods.blockSelection, () -> RenderMods.screen("Block Selection", this)));
         render.entries.add(module("Blur", () -> RenderMods.blur,
                 () -> RenderMods.blur = !RenderMods.blur, () -> RenderMods.screen("Blur", this)));
-        render.entries.add(module("Boss Stack", () -> RenderMods.bossStack,
-                () -> RenderMods.bossStack = !RenderMods.bossStack, () -> RenderMods.screen("Boss Stack", this)));
         render.entries.add(module("Breadcrumbs", () -> RenderMods.breadcrumbs,
                 () -> RenderMods.breadcrumbs = !RenderMods.breadcrumbs, () -> RenderMods.screen("Breadcrumbs", this)));
         render.entries.add(module("Break Indicators", () -> RenderMods.breakIndicators,
@@ -359,10 +357,10 @@ public class TestScreen extends Screen {
                 () -> RenderMods.voidEsp = !RenderMods.voidEsp, () -> RenderMods.screen("Void Esp", this)));
         render.entries.add(module("Wall Hack", () -> RenderMods.wallHack,
                 () -> RenderMods.wallHack = !RenderMods.wallHack, () -> RenderMods.screen("Wall Hack", this)));
+        render.entries.add(module("X-Ray", () -> RenderMods.xray,
+                () -> RenderMods.xray = !RenderMods.xray, () -> RenderMods.screen("X-Ray", this)));
         render.entries.add(module("Waypoints", () -> RenderMods.waypoints,
                 () -> RenderMods.waypoints = !RenderMods.waypoints, () -> RenderMods.screen("Waypoints", this)));
-        render.entries.add(module("Zoom", () -> Extras.zoom,
-                () -> Extras.zoom = !Extras.zoom, () -> Extras.screen("Zoom", this)));
         render.entries.add(module("Fadenkreuz", () -> Extras.crosshair,
                 () -> Extras.crosshair = !Extras.crosshair, () -> Extras.screen("Fadenkreuz", this)));
         render.entries.add(module("Boat Fly", () -> Extras.boatFly,
@@ -405,8 +403,6 @@ public class TestScreen extends Screen {
                 () -> CombatMods.autoPot = !CombatMods.autoPot, () -> CombatMods.screen("Auto Pot", this)));
         player.entries.add(module("Auto Web", () -> CombatMods.autoWeb,
                 () -> CombatMods.autoWeb = !CombatMods.autoWeb, () -> CombatMods.screen("Auto Web", this)));
-        player.entries.add(module("Arrow Dodge", () -> CombatMods.arrowDodge,
-                () -> CombatMods.arrowDodge = !CombatMods.arrowDodge, () -> CombatMods.screen("Arrow Dodge", this)));
         player.entries.add(module("Hole Filler", () -> CombatMods.holeFiller,
                 () -> CombatMods.holeFiller = !CombatMods.holeFiller, () -> CombatMods.screen("Hole Filler", this)));
         player.entries.add(module("Villager Roller", () -> WorldMods.roller,
@@ -417,12 +413,6 @@ public class TestScreen extends Screen {
                 () -> WorldMods.autoSign = !WorldMods.autoSign, () -> WorldMods.screen("Auto Sign", this)));
         player.entries.add(module("Spieler-Radar", () -> HudMods.radar,
                 () -> HudMods.radar = !HudMods.radar, () -> HudMods.screen("Spieler-Radar", this)));
-        player.entries.add(module("Schadenszahlen", () -> HudMods.damage,
-                () -> HudMods.damage = !HudMods.damage, () -> HudMods.screen("Schadenszahlen", this)));
-        player.entries.add(module("Kompass-Leiste", () -> HudMods.compass,
-                () -> HudMods.compass = !HudMods.compass, () -> HudMods.screen("Kompass-Leiste", this)));
-        player.entries.add(module("Chunk-Grenzen", () -> HudMods.chunks,
-                () -> HudMods.chunks = !HudMods.chunks, () -> HudMods.screen("Chunk-Grenzen", this)));
         player.entries.add(module("Base Finder", () -> BaseFinder.enabled,
                 () -> BaseFinder.enabled = !BaseFinder.enabled, () -> BaseFinder.screen(this)));
         player.entries.add(module("Baum-F\u00e4ller", () -> WorldMods.tree,
@@ -440,10 +430,20 @@ public class TestScreen extends Screen {
                 () -> TestClient.autoLogout = !TestClient.autoLogout, () -> new Form(Component.literal("Auto-Logout"), this) {
                     @Override
                     protected void build() {
-                        description("Trennt die Verbindung, sobald dein Leben auf die eingestellten Herzen fällt – "
-                                + "immer, nicht nur, wenn ein Bot läuft.");
+                        description("Trennt die Verbindung, wenn es gefährlich wird – immer, nicht nur, wenn ein Bot "
+                                + "läuft.");
+                        section("Wenig Leben");
+                        toggle("Bei wenig Leben trennen", () -> TestClient.logoutOnHealth,
+                                v -> TestClient.logoutOnHealth = v, true);
                         slider("Bei Herzen (oder weniger)", 1, 10, () -> TestClient.logoutHearts,
                                 v -> TestClient.logoutHearts = v, 2);
+                        section("Fremde Spieler");
+                        toggle("Trennen, wenn ein Spieler in der Nähe ist, der kein Freund ist",
+                                () -> TestClient.logoutPlayers, v -> TestClient.logoutPlayers = v, false);
+                        slider("Abstand (Blöcke, 0 = egal wie weit)", 0, 256, () -> TestClient.logoutPlayerRange,
+                                v -> TestClient.logoutPlayerRange = v, 64);
+                        note("Freunde (Menü → Freunde) zählen nicht. Mit 0 reicht jeder Spieler, den dein Spiel sieht "
+                                + "(meist bis etwa 100 Blöcke). Danach verbindet Auto Reconnect nicht von selbst neu.");
                         note("Tunnel Miner und Debris Miner haben zusätzlich eigene Auto-Log-Einstellungen: Spieler "
                                 + "in der Nähe, nach einem Totem und eigene Herzen.");
                         footer(() -> TestClient.autoLogout, v -> TestClient.autoLogout = v);
@@ -457,8 +457,6 @@ public class TestScreen extends Screen {
                 () -> new DebrisScreen(this)));
         world.entries.add(module("Tunnel Miner", TunnelMiner::isRunning, TunnelMiner::toggle,
                 () -> new TunnelScreen(this)));
-        world.entries.add(module("Bot-Verteidigung", () -> BotGuard.enabled,
-                () -> BotGuard.enabled = !BotGuard.enabled, () -> new BotGuardScreen(this)));
 
         Column inv = new Column("Inventar");
         inv.entries.add(module("AutoDrop", () -> TestClient.autoDrop,
@@ -482,6 +480,8 @@ public class TestScreen extends Screen {
                 () -> MiscMods.discordPresence = !MiscMods.discordPresence, () -> MiscMods.screen("Discord Presence", this)));
         misc2.entries.add(module("Freunde", () -> Friends.enabled, () -> Friends.enabled = !Friends.enabled,
                 () -> new FriendsScreen(this)));
+        misc2.entries.add(module("Join-Schutz", () -> MiscMods.joinGuard,
+                () -> MiscMods.joinGuard = !MiscMods.joinGuard, () -> MiscMods.screen("Join-Schutz", this)));
         misc2.entries.add(module("Inventory Tweaks", () -> MiscMods.inventoryTweaks,
                 () -> MiscMods.inventoryTweaks = !MiscMods.inventoryTweaks, () -> MiscMods.screen("Inventory Tweaks", this)));
         misc2.entries.add(module("Message Aura", () -> MiscMods.messageAura,
@@ -511,12 +511,33 @@ public class TestScreen extends Screen {
                 () -> new KeyBindsScreen(this, this.minecraft.options)));
         misc.entries.add(open("Profile", () -> new ProfileScreen(this)));
         misc.entries.add(open("Tasten-\u00dcbersicht", () -> new BindsScreen(this)));
+        misc.entries.add(new Entry(editMode ? "Anpassen fertig" : "Men\u00fc anpassen", null, () -> {
+            editMode = !editMode;
+            bindMode = false;
+            waiting = null;
+            pendingRebuild = true;
+        }));
+        if (editMode) {
+            misc.entries.add(new Entry("Anpassen zur\u00fccksetzen", null, () -> {
+                Levels.resetCustom();
+                ORDER.clear();
+                TestConfig.save();
+                pendingRebuild = true;
+            }));
+        }
         misc.entries.add(new Entry(Keybinds.PANIC_NAME, null, Keybinds::panic));
         misc.entries.add(new Entry("Schlie\u00dfen", null, this::onClose));
 
         regroup(List.of(move, player, render, world, inv, misc2));
         misc.bit = GROUPS.length;
         columns.add(misc);
+        if (!ORDER.isEmpty()) { // vom Spieler verschobene Spalten
+            List<Column> def = new ArrayList<>(columns);
+            columns.sort(java.util.Comparator.comparingInt(c -> {
+                int i = ORDER.indexOf(c.bit);
+                return i >= 0 ? i : 1000 + def.indexOf(c);
+            }));
+        }
         for (int i = 0; i < columns.size(); i++) columns.get(i).index = i;
 
         // Was jede Taste ausloesen darf (alles ausser der Menue-Spalte)
@@ -531,31 +552,30 @@ public class TestScreen extends Screen {
     /** Spalten des Menues und was hineingehoert (Reihenfolge wie hier). */
     private static final String[][] GROUPS = {
         {"Bewegung", "Anti Void", "Auto Jump", "Auto Walk", "Fast Climb", "Gui Move", "No Fall", "No Slow", "Parkour",
-            "Reverse Step", "Safe Walk", "Scaffold", "Slippy", "Sneak", "Speed", "Spider", "Sprint", "Step", "Velocity"},
-        {"Fliegen", "Air Jump", "Auto Wasp", "Blink", "Boat Fly", "Click Tp", "Elytra-Autopilot", "Elytra-Tausch", "Elytra Boost", "Elytra Fly", "Entity Control",
-            "Flight", "High Jump", "Jesus", "Long Jump", "Trident Boost"},
-        {"Kampf", "Aim Assist", "Anchor", "Arrow Dodge", "Auto Armor", "Auto Clicker", "Auto Gap", "Auto Mend",
-            "Auto Pot", "Auto Totem", "Auto Trap", "Auto Weapon", "Auto Web", "Bot-Verteidigung", "Bow Aimbot",
-            "Crystal Aura", "Exp Thrower", "Fake Player", "Hitboxes", "Hole Filler", "Kill Aura", "No Rotate",
-            "Potion Saver", "Reach", "Rotation", "Surround", "Trigger Bot"},
+            "Safe Walk", "Scaffold", "Slippy", "Sneak", "Speed", "Spider", "Sprint", "Step"},
+        {"Fliegen", "Air Jump", "Auto Wasp", "Boat Fly", "Click Tp", "Elytra-Autopilot", "Elytra-Tausch",
+            "Elytra Boost", "Elytra Fly", "Entity Control", "Flight", "High Jump", "Jesus", "Long Jump",
+            "Trident Boost"},
+        {"Kampf", "Aim Assist", "Anchor", "Auto Armor", "Auto Clicker", "Auto Gap", "Auto Mend", "Auto Pot",
+            "Auto Totem", "Auto Trap", "Auto Weapon", "Auto Web", "Bow Aimbot", "Crystal Aura", "Exp Thrower",
+            "Fake Player", "Hitboxes", "Hole Filler", "Kill Aura", "No Rotate", "Potion Saver", "Reach", "Rotation",
+            "Surround", "Trigger Bot"},
         {"Spieler", "Anti Afk", "Anti Hunger", "Auto Eat", "Auto Fish", "Auto Respawn", "Fast Use", "Haltbarkeit",
-            "Middle Click Extra", "Multitask", "Name Protect", "No Interact", "No Status Effects", "Portals", "Todespunkt"},
+            "Middle Click Extra", "Multitask", "Name Protect", "No Interact", "No Status Effects", "Portals",
+            "Todespunkt"},
         {"Welt", "Air Place", "Auto Farm", "Auto Light", "Auto Sign", "Auto Tool", "Auto-Logout", "Baum-F\u00e4ller",
-            "Bereich",
-            "Block", "Bl\u00f6cke abbauen", "Bonemeal Aura", "Break Delay", "Debris Miner", "Ghost Hand",
-            "Instant Rebreak", "Koordinaten", "Liquid Interact", "No Mining Trace", "Nuker", "Speed Mine",
-            "Tier-Automatik", "Tunnel Miner", "Villager Roller"},
-        {"Anzeige", "Better Tab", "Better Tooltips", "Block Selection", "Blur", "Boss Stack", "Breadcrumbs",
-            "Camera Tweaks", "Chunk-Grenzen", "Entity Owner", "Fadenkreuz", "Free Look", "Fullbright", "Hand View",
-            "Info-Anzeige", "Item Physics", "Kompass-Leiste", "Light Overlay", "Marker", "Minimap", "No Render",
-            "Schadenszahlen", "Tasten-Anzeige", "Time Changer", "Trail", "Waypoints", "Zoom"},
-        {"ESP", "Base Finder", "Block Esp", "Break Indicators", "Chams", "City Esp", "ESP", "Freecam", "Hole Esp", "Item Highlight",
-            "Logout Spots", "Nametags", "Pop Chams", "Spieler-Radar", "Storage Esp", "Tracers", "Trajectories", "Tunnel Esp",
-            "Void Esp", "Wall Hack"},
+            "Bereich", "Block", "Bl\u00f6cke abbauen", "Bonemeal Aura", "Debris Miner", "Ghost Hand", "Koordinaten",
+            "No Mining Trace", "Nuker", "Speed Mine", "Tier-Automatik", "Tunnel Miner", "Villager Roller"},
+        {"Anzeige", "Better Tab", "Better Tooltips", "Block Selection", "Blur", "Breadcrumbs", "Camera Tweaks",
+            "Entity Owner", "Fadenkreuz", "Free Look", "Fullbright", "Hand View", "Info-Anzeige", "Item Physics",
+            "Light Overlay", "Marker", "Minimap", "No Render", "Tasten-Anzeige", "Time Changer", "Trail", "Waypoints"},
+        {"ESP", "Base Finder", "Block Esp", "Break Indicators", "Chams", "City Esp", "ESP", "Freecam", "Hole Esp",
+            "Item Highlight", "Logout Spots", "Nametags", "Pop Chams", "Spieler-Radar", "Storage Esp", "Tracers",
+            "Trajectories", "Tunnel Esp", "Void Esp", "Wall Hack", "X-Ray"},
         {"Inventar", "AutoDrop", "Auto Replenish", "Auto Smelt", "Chest Stealer", "Chest Swap", "Inventory Tweaks"},
-        {"Misc", "Anti Packet Kick", "Auto Reconnect", "Better Beacons", "Better Chat", "Book Bot", "Discord Presence",
-            "Freunde", "Message Aura", "Notebot", "Notifier", "Packet Canceller", "Server Spoof", "Server-Schutz",
-            "Sound Blocker", "Spam", "Swarm"}
+        {"Misc", "Anti Packet Kick", "Auto Reconnect", "Better Beacons", "Better Chat", "Book Bot",
+            "Discord Presence", "Freunde", "Join-Schutz", "Message Aura", "Notebot", "Notifier", "Packet Canceller", "Server Spoof",
+            "Server-Schutz", "Sound Blocker", "Spam", "Swarm"}
     };
 
     /**
@@ -607,15 +627,28 @@ public class TestScreen extends Screen {
         }
     }
 
-    /** Ob ein Eintrag im gewaehlten Modus (Anfänger / Standard / Experte) zu sehen ist; das Menue immer. */
+    /** Die Spalte "Menü" (Modus, Design ...). */
+    private static boolean isMenu(Column col) {
+        return col.bit == GROUPS.length;
+    }
+
+    /**
+     * Ob ein Eintrag zu sehen ist: im gewaehlten Modus (Anfänger / Standard / Experte) bzw. vom Spieler dazugeholt;
+     * das Menue immer. Beim Anpassen sind alle zu sehen.
+     */
     private boolean inMode(Column col, Entry e) {
-        if (col.index == columns.size() - 1) return true;
+        if (isMenu(col) || editMode) return true;
         return Levels.visible(e.name);
+    }
+
+    /** Steht das Modul (ohne Anpassen) im Menue? */
+    private static boolean inMenu(Column col, Entry e) {
+        return isMenu(col) || Levels.visible(e.name);
     }
 
     /** Die Menue-Spalte bekommt keine Tasten - ausser "Alle Module aus / an". */
     private boolean bindable(Column col, Entry en) {
-        return col.index != columns.size() - 1 || en.name.equals(Keybinds.PANIC_NAME);
+        return !isMenu(col) || en.name.equals(Keybinds.PANIC_NAME);
     }
 
     private void initLayout() {
@@ -731,8 +764,8 @@ public class TestScreen extends Screen {
             col.matches.clear();
             boolean titleHit = !q.isEmpty() && col.title.toLowerCase(Locale.ROOT).contains(q);
             for (Entry e : col.entries) {
-                // auch die Suche findet nur Module des gewaehlten Modus
-                boolean hit = inMode(col, e) && (q.isEmpty() || titleHit
+                // ohne Suche: was im Menue steht; die Suche findet alle Module (auch ausgeblendete)
+                boolean hit = q.isEmpty() ? inMode(col, e) : (titleHit
                         || e.label.toLowerCase(Locale.ROOT).contains(q) || e.name.toLowerCase(Locale.ROOT).contains(q));
                 if (hit) col.matches.add(e);
             }
@@ -846,7 +879,7 @@ public class TestScreen extends Screen {
             if (list.isEmpty()) continue;
             boolean shut = !search && Theme.isCollapsed(col.bit) || search && collapsed(col);
             int n = shut ? 0 : list.size();
-            boolean menu = col.index == columns.size() - 1; // die Menue-Spalte wird nie geteilt
+            boolean menu = isMenu(col); // die Menue-Spalte wird nie geteilt
 
             if (pack == 0) {
                 int need = HEADER_H + n * entryH;
@@ -1037,13 +1070,7 @@ public class TestScreen extends Screen {
     /** Legt die unsichtbaren Klick-Bereiche einer Spalte an. */
     private void place(Column col) {
         col.open = collapsed(col) ? 0f : 1f;
-        // Klick auf die Kopfzeile klappt die Spalte ein bzw. aus (nicht waehrend der Suche)
-        addWidget(Button.builder(Component.empty(), b -> {
-            if (searching()) return;
-            Theme.toggleCollapsed(col.bit);
-            TestConfig.save();
-            if (fitMode) pendingRebuild = true; // die Stapel neu packen
-        }).bounds(col.x, col.y, col.w, HEADER_H).build());
+        // Kopfzeile: Klick klappt ein/aus, Ziehen verschiebt die Spalte (siehe mouseClicked / mouseReleased)
         buildVisible(col);
         for (int e = 0; e < col.visible.size(); e++) {
             Entry en = col.visible.get(e);
@@ -1057,6 +1084,10 @@ public class TestScreen extends Screen {
             boolean canBind = bindable(col, en);
             addWidget(Button.builder(Component.empty(), b -> {
                 if (collapsed(col)) return;
+                if (editMode && !isMenu(col)) { // Anpassen: ins Menue holen / ausblenden
+                    Levels.setVisible(en.name, !Levels.visible(en.name));
+                    return;
+                }
                 if (bindMode && canBind) {
                     if (!en.name.equals(waiting)) {
                         waiting = en.name;
@@ -1065,6 +1096,11 @@ public class TestScreen extends Screen {
                     return;
                 }
                 en.action.run();
+                // ueber die Suche ein ausgeblendetes Modul eingeschaltet: dann gehoert es ab jetzt ins Menue
+                if (!isMenu(col) && en.state != null && en.state.getAsBoolean() && !Levels.visible(en.name)) {
+                    Levels.setVisible(en.name, true);
+                    Keybinds.message("\u201e" + en.label + "\u201c " + Lang.t("steht jetzt im Men\u00fc"), "");
+                }
             }).bounds(en.x, en.y, toggleW, ENTRY_H).build());
             if (en.settings != null) {
                 Supplier<Screen> s = en.settings;
@@ -1131,6 +1167,102 @@ public class TestScreen extends Screen {
         boolean focused = searchBox != null && searchBox.isFocused();
         this.rebuildWidgets();
         if (focused && searchBox != null) this.setFocused(searchBox);
+    }
+
+    /** Kopfzeile unter der Maus (Stueck einer Spalte) oder null. */
+    private Column headerAt(double mx, double my) {
+        for (Column c : shown) {
+            if (mx >= c.x && mx < c.x + c.w && my >= c.y && my < c.y + HEADER_H) return c;
+        }
+        return null;
+    }
+
+    /** Spalte (Stueck), die der Maus am naechsten ist - dorthin wird eine gezogene Spalte gelegt. */
+    private Column dropTarget(double mx, double my) {
+        Column best = null;
+        double bestD = Double.MAX_VALUE;
+        for (Column c : shown) {
+            int h = HEADER_H + (collapsed(c) ? 0 : c.visible.size() * ENTRY_H);
+            double dx = mx < c.x ? c.x - mx : mx > c.x + c.w ? mx - (c.x + c.w) : 0;
+            double dy = my < c.y ? c.y - my : my > c.y + h ? my - (c.y + h) : 0;
+            double d = dx * dx + dy * dy;
+            if (d < bestD) {
+                bestD = d;
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    private static Column whole(Column part) {
+        return part.parent != null ? part.parent : part;
+    }
+
+    /** Gezogene Spalte an die Stelle der Ziel-Spalte legen (nach rechts gezogen: dahinter, sonst davor). */
+    private void dropColumn(Column part, double mx, double my) {
+        Column target = dropTarget(mx, my);
+        if (target == null) return;
+        int src = whole(part).bit;
+        int dst = whole(target).bit;
+        if (src == dst) return;
+        List<Integer> order = new ArrayList<>();
+        for (Column c : columns) order.add(c.bit);
+        int from = order.indexOf(src);
+        int to = order.indexOf(dst);
+        if (from < 0 || to < 0) return;
+        order.remove(from);
+        int at = order.indexOf(dst);
+        order.add(from < to ? at + 1 : at, src);
+        // Spalten, die es in diesem Modus nicht gibt (zusammengelegt), behalten ihre Reihenfolge dahinter
+        for (int bit : ORDER) if (!order.contains(bit)) order.add(bit);
+        ORDER.clear();
+        ORDER.addAll(order);
+        TestConfig.save();
+        pendingRebuild = true;
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 0) {
+            Column c = headerAt(event.x(), event.y());
+            if (c != null) {
+                dragCol = c;
+                dragging = false;
+                dragX0 = dragX = event.x();
+                dragY0 = dragY = event.y();
+                return true;
+            }
+        }
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+        if (dragCol != null) {
+            dragX = event.x();
+            dragY = event.y();
+            if (!dragging && !searching() && Math.abs(dragX - dragX0) + Math.abs(dragY - dragY0) > 5) dragging = true;
+            return true;
+        }
+        return super.mouseDragged(event, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (dragCol != null) {
+            Column c = dragCol;
+            dragCol = null;
+            if (dragging) {
+                dragging = false;
+                dropColumn(c, event.x(), event.y());
+            } else if (!searching()) { // nur geklickt: ein-/ausklappen
+                Theme.toggleCollapsed(c.bit);
+                TestConfig.save();
+                if (fitMode) pendingRebuild = true; // die Stapel neu packen
+            }
+            return true;
+        }
+        return super.mouseReleased(event);
     }
 
     /** Mausrad ueber einer Spalte scrollt sie. */
@@ -1214,6 +1346,7 @@ public class TestScreen extends Screen {
         }
 
         for (Column col : shown) drawColumn(g, col, mouseX, mouseY, dy, ease);
+        if (dragging && dragCol != null) drawDrag(g);
 
         // Fusszeile: weicher Uebergang nach unten, darin eine kurze Bedienhilfe
         Ui.alpha = ga;
@@ -1222,7 +1355,7 @@ public class TestScreen extends Screen {
         String sep = "   ·   ";
         String[] hints = {
             "Klick: an/aus" + sep + "Punkte: Einstellungen" + sep + (fitMode ? "" : "Mausrad: scrollen" + sep)
-                + "Tasten: " + keys,
+                + "\u00dcberschrift ziehen: verschieben" + sep + "Tasten: " + keys,
             "Klick: an/aus" + sep + "Punkte: Einstellungen" + sep + "Tasten: " + keys,
             "Klick: an/aus" + sep + "Punkte: Einstellungen",
             "Klick: an/aus"
@@ -1235,7 +1368,14 @@ public class TestScreen extends Screen {
                 hints[2], hints[3]
             };
         }
-        if (bindMode) {
+        if (editMode) {
+            hints = new String[] {
+                "Anpassen: Klick holt ein Modul ins Men\u00fc oder blendet es aus" + sep
+                    + "\u00dcberschrift ziehen: Spalte verschieben",
+                "Klick: ein-/ausblenden" + sep + "\u00dcberschrift ziehen: verschieben",
+                "Klick: ein-/ausblenden"
+            };
+        } else if (bindMode) {
             hints = waiting != null
                     ? new String[] {"Dr\u00fccke jetzt eine Taste f\u00fcr " + Lang.t(waiting) + sep
                             + "R\u00fccktaste oder Entf: Taste entfernen", "Dr\u00fccke jetzt eine Taste", "Taste dr\u00fccken"}
@@ -1251,6 +1391,26 @@ public class TestScreen extends Screen {
             }
         }
         Ui.alpha = 1f;
+    }
+
+    /** Beim Ziehen: Ziel umrahmen, die Ueberschrift haengt an der Maus. */
+    private void drawDrag(GuiGraphicsExtractor g) {
+        int accent = Theme.accent();
+        Column target = dropTarget(dragX, dragY);
+        if (target != null && whole(target) != whole(dragCol)) {
+            for (Column c : shown) {
+                if (whole(c) != whole(target)) continue;
+                int h = HEADER_H + (collapsed(c) ? 0 : c.visible.size() * ENTRY_H);
+                Ui.roundRect(g, c.x - 3, c.y - 3, c.w + 6, h + 6, R + 3, Ui.withA(accent, 0x60));
+            }
+        }
+        Column src = whole(dragCol);
+        int w = dragCol.w;
+        int x = (int) Math.round(dragX - (dragX0 - dragCol.x));
+        int y = (int) Math.round(dragY - (dragY0 - dragCol.y));
+        Fx.shadow(g, x, y, w, HEADER_H);
+        Ui.roundRect(g, x, y, w, HEADER_H, R, Ui.withA(accent, 0xE0));
+        name(g, src.title, x + 8, y + 7, w - 16, 0xFFFFFFFF);
     }
 
     private void drawColumn(GuiGraphicsExtractor g, Column col, int mouseX, int mouseY, int dy, float ease) {
@@ -1320,6 +1480,8 @@ public class TestScreen extends Screen {
             }
 
             int textColor = Ui.lerp(Ui.lerp(TEXT, TEXT_ON, en.anim), 0xFFFFFFFF, en.hover * 0.6f);
+            boolean listed = inMenu(col, en);
+            if (!listed) textColor = Ui.lerp(Ui.withA(MUTED, 0x90), TEXT, en.hover * 0.5f); // nicht im Menue
             int nameX = x + 8 + Math.round(2f * en.anim);
             int nameEnd = en.state != null ? dotsX - 2 - 16 - 4 : (en.settings != null ? dotsX - 4 : right - 4);
             // Tasten-Schild: zeigt die zugewiesene Taste (im Zuweisen-Modus auch freie Plaetze)
@@ -1349,7 +1511,22 @@ public class TestScreen extends Screen {
                     Ui.fill(g, dx, dy0, dx + 2, dy0 + 2, dc);
                 }
             }
-            if (en.state != null) Ui.switchPill(g, dotsX - 2 - 16, ey + (ENTRY_H - 8) / 2, en.anim);
+            if (editMode && !isMenu(col)) {
+                // Anpassen: Haekchen = steht im Menue
+                int bx = dotsX - 2 - 12;
+                int by = ey + (ENTRY_H - 10) / 2;
+                Ui.roundRect(g, bx, by, 10, 10, 2, listed ? Ui.withA(accent, 0xFF) : Ui.withA(0xFFFFFF, 0x30));
+                if (listed) {
+                    Ui.fill(g, bx + 2, by + 5, bx + 4, by + 7, 0xFFFFFFFF);
+                    Ui.fill(g, bx + 4, by + 6, bx + 5, by + 8, 0xFFFFFFFF);
+                    Ui.fill(g, bx + 5, by + 3, bx + 7, by + 6, 0xFFFFFFFF);
+                    Ui.fill(g, bx + 7, by + 2, bx + 8, by + 4, 0xFFFFFFFF);
+                } else {
+                    Ui.roundRect(g, bx + 1, by + 1, 8, 8, 2, Ui.withA(0x000000, 0xA0));
+                }
+            } else if (en.state != null) {
+                Ui.switchPill(g, dotsX - 2 - 16, ey + (ENTRY_H - 8) / 2, en.anim);
+            }
         }
 
         // Scrollbalken fuer lange Spalten

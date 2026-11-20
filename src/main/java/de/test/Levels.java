@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
  * <li>Experte: alle Module.</li>
  * </ul>
  * Was im gewaehlten Modus nicht dabei ist, wird ausgeschaltet und reagiert auch nicht auf seine Taste.
+ * Dazu kann man im Menue ("Menü anpassen") einzelne Module dazuholen oder ausblenden.
  */
 final class Levels {
     private Levels() {
@@ -29,17 +30,17 @@ final class Levels {
     private static final Set<String> SIMPLE = Set.of(
             "Sprint", "Sneak", "Auto Jump", "Auto Respawn",
             "Fullbright", "Info-Anzeige", "Waypoints", "Marker", "Better Tooltips", "Blur", "Time Changer",
-            "Name Protect", "Better Chat", "Auto Reconnect", "Discord Presence", "Freunde", "Server-Schutz",
-            "Zoom", "Haltbarkeit", "Tasten-Anzeige", "Fadenkreuz", "Todespunkt", "Kompass-Leiste", "Chunk-Grenzen",
+            "Name Protect", "Better Chat", "Auto Reconnect", "Discord Presence", "Freunde", "Server-Schutz", "Join-Schutz",
+            "Haltbarkeit", "Tasten-Anzeige", "Fadenkreuz", "Todespunkt",
             Keybinds.PANIC_NAME);
 
     /** Zusaetzlich im Standardmodus: Anzeige und Komfort, kein unfairer Vorteil. */
     private static final Set<String> NORMAL = Set.of(
             "Auto Walk",
             "Anti Afk", "Auto Eat", "Auto Replenish", "Auto Tool", "Chest Swap", "No Interact", "Portals",
-            "Better Tab", "Block Selection", "Boss Stack", "Breadcrumbs", "Entity Owner", "Free Look", "Hand View",
+            "Better Tab", "Block Selection", "Breadcrumbs", "Entity Owner", "Free Look", "Hand View",
             "Item Physics", "Light Overlay", "No Render", "Trail", "Minimap",
-            "AutoDrop", "Elytra-Tausch", "Schadenszahlen", "Auto Sign", "Auto Smelt",
+            "AutoDrop", "Elytra-Tausch", "Auto Sign", "Auto Smelt",
             "Inventory Tweaks", "Notifier", "Sound Blocker");
 
     /** Ab welchem Modus ein Modul zu sehen ist. */
@@ -49,8 +50,42 @@ final class Levels {
         return EXPERT;
     }
 
+    /** Vom Spieler ins Menue geholt, obwohl der Modus sie nicht zeigt. */
+    static final Set<String> shown = new java.util.LinkedHashSet<>();
+    /** Vom Spieler ausgeblendet, obwohl der Modus sie zeigt. */
+    static final Set<String> hidden = new java.util.LinkedHashSet<>();
+
     static boolean visible(String name) {
+        if (hidden.contains(name)) return false;
+        if (shown.contains(name)) return true;
         return of(name) <= level;
+    }
+
+    /** Modul ins Menue holen oder ausblenden. Ausgeblendete Module werden ausgeschaltet. */
+    static void setVisible(String name, boolean v) {
+        boolean byMode = of(name) <= level;
+        shown.remove(name);
+        hidden.remove(name);
+        if (v && !byMode) shown.add(name);
+        if (!v && byMode) hidden.add(name);
+        if (!v) {
+            if (Keybinds.ACTIONS.isEmpty()) TestScreen.registerActions();
+            Keybinds.Action a = Keybinds.ACTIONS.get(name);
+            if (a != null && a.state() != null && a.state().getAsBoolean()) {
+                try {
+                    a.run().run();
+                } catch (RuntimeException | LinkageError ex) {
+                    Safe.report("Menü anpassen", ex);
+                }
+            }
+        }
+        TestConfig.save();
+    }
+
+    /** Alle eigenen Aenderungen am Menue zuruecknehmen. */
+    static void resetCustom() {
+        shown.clear();
+        hidden.clear();
     }
 
     /** Anzahl der Module, die im Modus zu sehen sind (fuer die Beschreibung). */

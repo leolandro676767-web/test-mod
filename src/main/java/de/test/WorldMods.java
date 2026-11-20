@@ -80,6 +80,10 @@ public final class WorldMods {
     public static boolean farmCocoa = true;
     public static boolean farmBerries = true;
     public static boolean farmCollect = false;
+    public static boolean farmPauseStranger = false;
+
+    // --- Pause bei Fremden (Nuker, Auto Farm, Baum-Faeller) ---
+    public static int strangerRange = 32;          // Bloecke
 
     // --- Nuker ---
     public static boolean nuker = false;
@@ -89,6 +93,7 @@ public final class WorldMods {
     public static boolean nukerKeepFloor = true;
     public static boolean nukerTopDown = true;
     public static boolean nukerTool = true;
+    public static boolean nukerPauseStranger = false;
     public static final Set<Block> nukerBlocks = new LinkedHashSet<>();
 
     // --- Chest Stealer ---
@@ -97,6 +102,11 @@ public final class WorldMods {
     public static boolean stealRandom = true;
     public static boolean stealClose = true;
     public static boolean stealOnlyChests = true;
+    public static int stealMode = 0;               // 0 herausnehmen, 1 einlagern
+    public static int stealFilter = 0;             // 0 alle, 1 nur ausgewaehlte, 2 alle ausser ausgewaehlten
+    public static final Set<net.minecraft.world.item.Item> stealItems = new LinkedHashSet<>();
+    public static final String[] STEAL_MODES = {"Herausnehmen", "Einlagern"};
+    public static final String[] STEAL_FILTERS = {"Alle", "Nur ausgewählte", "Alle außer ausgewählten"};
 
     // --- Baum-Faeller ---
     public static boolean tree = false;
@@ -105,12 +115,14 @@ public final class WorldMods {
     public static boolean treeCollect = true;
     public static boolean treePlant = true;
     public static boolean treeTool = true;
+    public static boolean treePauseStranger = false;
 
     // --- Auto Light ---
     public static boolean autoLight = false;
     public static int lightRadius = 4;
     public static int lightDelay = 5;              // Ticks zwischen zwei Fackeln
     public static boolean lightOutside = false;
+    public static int lightLevel = 0;              // Fackel, wenn das Blocklicht hoechstens so hell ist
 
     // --- Bonemeal Aura ---
     public static boolean bonemeal = false;
@@ -182,12 +194,27 @@ public final class WorldMods {
             stopDig(mc, p);
             return;
         }
+        // Pause, solange ein Spieler in der Naehe ist, der kein Freund ist
+        boolean stranger = (tree && treePauseStranger || farm && farmPauseStranger || nuker && nukerPauseStranger)
+                && TestClient.strangerNear(mc, strangerRange) != null;
+        boolean treeWait = stranger && treePauseStranger;
+        boolean farmWait = stranger && farmPauseStranger;
+        boolean nukerWait = stranger && nukerPauseStranger;
+        if (dig != null && (owner == TREE && treeWait || owner == FARM && farmWait || owner == NUKER && nukerWait)) {
+            stopDig(mc, p);
+        }
+        if (stranger && !strangerShown) {
+            strangerShown = true;
+            Keybinds.message("Pause: Spieler in der Nähe", "");
+        } else if (!stranger) {
+            strangerShown = false;
+        }
         // nur ein Modul baut gleichzeitig ab: erst der Baum, dann das Feld, dann der Nuker
-        Safe.run("Baum-Fäller", () -> treeTick(mc, p));
+        if (!treeWait) Safe.run("Baum-Fäller", () -> treeTick(mc, p));
         if (owner == TREE && dig != null || treeStage != 0) return;
-        Safe.run("Auto Farm", () -> farmTick(mc, p));
+        if (!farmWait) Safe.run("Auto Farm", () -> farmTick(mc, p));
         if (owner == FARM && dig != null) return;
-        Safe.run("Nuker", () -> nukerTick(mc, p));
+        if (!nukerWait) Safe.run("Nuker", () -> nukerTick(mc, p));
         if (dig != null) return; // beim Abbauen nicht dazwischen den Platz wechseln
         restoreTool(p);
         Safe.run("Auto Light", () -> lightTick(mc, p));
@@ -198,6 +225,8 @@ public final class WorldMods {
     // =====================================================================================
     // Abbauen (gemeinsam fuer Baum, Feld und Nuker)
     // =====================================================================================
+
+    private static boolean strangerShown;
 
     private static final int TREE = 1;
     private static final int FARM = 2;
@@ -598,9 +627,13 @@ public final class WorldMods {
             return;
         }
         if (!menu.getCarried().isEmpty()) return; // haelt etwas am Mauszeiger
+        boolean store = stealMode == 1;
         Slot next = null;
         for (Slot s : menu.slots) {
-            if (s.container instanceof Inventory || !s.hasItem()) continue;
+            boolean mine = s.container instanceof Inventory;
+            if (mine != store || !s.hasItem() || !stealWanted(s.getItem())) continue;
+            // beim Einlagern bleibt die Hotbar, wie sie ist
+            if (store && s.getContainerSlot() < 9) continue;
             next = s;
             break;
         }
@@ -609,16 +642,34 @@ public final class WorldMods {
             stealTaken = 0;
             return;
         }
-        if (!hasRoom(p, next.getItem())) {
+        if (store ? !containerRoom(menu, next.getItem()) : !hasRoom(p, next.getItem())) {
             if (!stealFullWarned) {
                 stealFullWarned = true;
-                Keybinds.message(Lang.t("Chest Stealer: Inventar voll"), "");
+                Keybinds.message(Lang.t(store ? "Chest Stealer: Truhe voll" : "Chest Stealer: Inventar voll"), "");
             }
             return;
         }
         mc.gameMode.handleContainerInput(menu.containerId, next.index, 0, ContainerInput.QUICK_MOVE, p);
         stealTaken++;
         stealWait = stealDelay + (stealRandom && stealDelay > 0 ? RNG.nextInt(2) : 0);
+    }
+
+    /** Passt dieses Item zum Filter des Chest Stealers? */
+    private static boolean stealWanted(ItemStack st) {
+        if (stealFilter == 0) return true;
+        boolean listed = stealItems.contains(st.getItem());
+        return stealFilter == 1 ? listed : !listed;
+    }
+
+    /** Ist im Behaelter (nicht im eigenen Inventar) noch Platz fuer dieses Item? */
+    private static boolean containerRoom(AbstractContainerMenu menu, ItemStack want) {
+        for (Slot s : menu.slots) {
+            if (s.container instanceof Inventory || !s.mayPlace(want)) continue;
+            ItemStack st = s.getItem();
+            if (st.isEmpty()) return true;
+            if (ItemStack.isSameItemSameComponents(st, want) && st.getCount() < s.getMaxStackSize(st)) return true;
+        }
+        return false;
     }
 
     private static boolean hasRoom(LocalPlayer p, ItemStack want) {
@@ -838,7 +889,7 @@ public final class WorldMods {
                     BlockPos floor = pos.below();
                     BlockState fs = level.getBlockState(floor);
                     if (!fs.isFaceSturdy(level, floor, Direction.UP) || fs.is(Blocks.BEDROCK)) continue;
-                    if (level.getBrightness(LightLayer.BLOCK, pos) > 0) continue;
+                    if (level.getBrightness(LightLayer.BLOCK, pos) > Math.max(0, lightLevel)) continue;
                     if (!lightOutside && level.getBrightness(LightLayer.SKY, pos) > 7) continue;
                     if (!inReach(p, floor)) continue;
                     double d = eye.distanceToSqr(Vec3.atCenterOf(pos));
@@ -1272,6 +1323,16 @@ public final class WorldMods {
     // Einstellungen
     // =====================================================================================
 
+    /** Gemeinsame Zeilen „Pause bei Fremden“ fuer Nuker, Auto Farm und Baum-Faeller. */
+    private static void strangerRows(ModuleScreen f, java.util.function.BooleanSupplier get,
+            java.util.function.Consumer<Boolean> set) {
+        f.section("Fremde Spieler");
+        f.toggle("Pause, wenn ein Spieler in der Nähe ist, der kein Freund ist", get, set, false);
+        f.slider("Abstand (Blöcke)", 8, 128, () -> strangerRange, v -> strangerRange = v, 32);
+        f.note("Freunde (Menü → Freunde) zählen nicht. Der Abstand gilt für Nuker, Auto Farm und Baum-Fäller "
+                + "zusammen.");
+    }
+
     static Screen screen(String module, Screen parent) {
         return switch (module) {
             case "Auto Farm" -> new ModuleScreen(parent, module, f -> {
@@ -1288,6 +1349,7 @@ public final class WorldMods {
                 f.toggle("Süßbeeren pflücken", () -> farmBerries, v -> farmBerries = v, true);
                 f.section("Einsammeln");
                 f.toggle("Ernte einsammeln (läuft hin)", () -> farmCollect, v -> farmCollect = v, false);
+                strangerRows(f, () -> farmPauseStranger, v -> farmPauseStranger = v);
                 f.note("Die Saat muss in der Hotbar sein. Weizen, Karotten, Kartoffeln, Rote Bete, Fackellilien und "
                         + "Netherwarzen pflanzt er dorthin, wo er sie geerntet hat.");
                 f.footer(() -> farm, v -> farm = v);
@@ -1303,18 +1365,26 @@ public final class WorldMods {
                 f.toggle("Nichts unter deinen Füßen", () -> nukerKeepFloor, v -> nukerKeepFloor = v, true);
                 f.toggle("Von oben nach unten", () -> nukerTopDown, v -> nukerTopDown = v, true);
                 f.toggle("Bestes Werkzeug nehmen", () -> nukerTool, v -> nukerTool = v, true);
+                strangerRows(f, () -> nukerPauseStranger, v -> nukerPauseStranger = v);
                 f.note("„Nur ausgewählte Blöcke“ nimmt die Liste unter „Blöcke wählen“. Truhen und andere Blöcke "
                         + "mit Inhalt baut er sonst nie ab, Grundgestein sowieso nicht.");
                 f.footer(() -> nuker, v -> nuker = v);
             });
             case "Chest Stealer" -> new ModuleScreen(parent, module, f -> {
-                f.description("Nimmt beim Öffnen einer Truhe automatisch alles heraus.");
+                f.description("Nimmt beim Öffnen einer Truhe automatisch alles heraus - oder lagert alles ein.");
+                f.choice("Modus", STEAL_MODES, () -> stealMode, v -> stealMode = v, 0);
+                f.choice("Welche Items", STEAL_FILTERS, () -> stealFilter, v -> stealFilter = v, 0);
+                f.wideButton("Items wählen (" + stealItems.size() + ")", false,
+                        () -> Minecraft.getInstance().gui.setScreen(new PickerScreen(Minecraft.getInstance().gui.screen(),
+                                "Chest Stealer: Items", PickerScreen.Kind.ITEM, PickerScreen.ofSet(stealItems), null,
+                                null)));
                 f.slider("Pause zwischen zwei Griffen (Ticks)", 0, 10, () -> stealDelay, v -> stealDelay = v, 2);
                 f.toggle("Etwas zufällig (wirkt menschlicher)", () -> stealRandom, v -> stealRandom = v, true);
                 f.toggle("Danach schließen", () -> stealClose, v -> stealClose = v, true);
                 f.toggle("Nur Truhen, Fässer und Shulker-Kisten", () -> stealOnlyChests, v -> stealOnlyChests = v, true);
-                f.note("Ist dein Inventar voll, hört er auf. Ohne „Nur Truhen, Fässer und Shulker-Kisten“ leert er "
-                        + "auch Öfen, Trichter und Werfer.");
+                f.note("Ist dein Inventar (oder beim Einlagern die Truhe) voll, hört er auf. Beim Einlagern bleibt "
+                        + "deine Hotbar, wie sie ist. Ohne „Nur Truhen, Fässer und Shulker-Kisten“ nimmt er auch Öfen, "
+                        + "Trichter und Werfer.");
                 f.footer(() -> stealer, v -> stealer = v);
             });
             case "Baum-Fäller" -> new ModuleScreen(parent, module, f -> {
@@ -1325,6 +1395,7 @@ public final class WorldMods {
                 f.toggle("Holz einsammeln", () -> treeCollect, v -> treeCollect = v, true);
                 f.toggle("Setzling pflanzen", () -> treePlant, v -> treePlant = v, true);
                 f.toggle("Beste Axt nehmen", () -> treeTool, v -> treeTool = v, true);
+                strangerRows(f, () -> treePauseStranger, v -> treePauseStranger = v);
                 f.note("Er kommt nur so hoch, wie du reichst - bei großen Fichten und Dschungelbäumen bleibt oben "
                         + "etwas stehen. „Nur echte Bäume“ schützt Holzhäuser.");
                 f.footer(() -> tree, v -> tree = v);
@@ -1334,8 +1405,10 @@ public final class WorldMods {
                 f.slider("Umkreis (Blöcke)", 1, 5, () -> lightRadius, v -> lightRadius = v, 4);
                 f.slider("Pause zwischen zwei Fackeln (Ticks)", 1, 20, () -> lightDelay, v -> lightDelay = v, 5);
                 f.toggle("Auch draußen (nachts)", () -> lightOutside, v -> lightOutside = v, false);
-                f.note("Fackeln müssen in der Hotbar sein. Er setzt nur dort eine, wo noch gar kein Licht ist - so "
-                        + "reichen wenige Fackeln für eine ganze Höhle.");
+                f.slider("Fackel bis Lichtstufe", 0, 11, () -> lightLevel, v -> lightLevel = v, 0);
+                f.note("Fackeln müssen in der Hotbar sein. Bei Lichtstufe 0 setzt er nur dort eine, wo noch gar kein "
+                        + "Licht ist - so reichen wenige Fackeln für eine ganze Höhle, und Monster entstehen nur dort. "
+                        + "Höher = mehr Fackeln, zum Beispiel für hellere Gänge.");
                 f.footer(() -> autoLight, v -> autoLight = v);
             });
             case "Bonemeal Aura" -> new ModuleScreen(parent, module, f -> {

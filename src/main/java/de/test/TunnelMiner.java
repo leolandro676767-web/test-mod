@@ -312,11 +312,6 @@ public final class TunnelMiner {
         }
         try {
             if (guard(mc, p)) return;
-            if (BotGuard.fighting()) {
-                pause(mc);
-                action = "Wehrt einen Mob ab";
-                return;
-            }
             if (mc.gui.screen() != null) {
                 pause(mc);
                 return;

@@ -315,6 +315,8 @@ public final class TravelMods {
         if (list.length() > 0) list.append(';');
         list.append(name.replaceAll("[,;]", " ")).append(',').append(b.getX()).append(',').append(b.getY())
                 .append(',').append(b.getZ());
+        var level = net.minecraft.client.Minecraft.getInstance().level;
+        if (level != null) list.append(',').append(RenderMods.dimId(level));
         RenderMods.waypointList = list.toString();
         RenderMods.waypoints = true; // sonst sieht man ihn nicht
         TestConfig.save();

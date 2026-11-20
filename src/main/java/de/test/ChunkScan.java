@@ -260,7 +260,7 @@ final class ChunkScan {
         int newDone = 0;
         if (n > 0) {
             Arrays.sort(todo, 0, n);
-            long deadline = System.nanoTime() + BUDGET_NS;
+            long deadline = System.nanoTime() + (RenderMods.perfMode ? BUDGET_NS / 4 : BUDGET_NS); // Leistungs-Modus: langsamer suchen
             for (int i = 0; i < n; i++) {
                 if (i > 0 && System.nanoTime() > deadline) break;
                 if ((todo[i] >>> 62) == 0) newDone++;
@@ -511,7 +511,7 @@ final class BlockScan {
         // Zeilen (eine Zeile = alle z bei festem x und dy) gleichmaessig auf ticksPerPass Ticks verteilen
         long rows = (long) (2 * r + 1) * (yDown + yUp + 1);
         long perTick = Math.max(1L, (rows + Math.max(1, ticksPerPass) - 1) / Math.max(1, ticksPerPass));
-        long deadline = System.nanoTime() + BUDGET_NS;
+        long deadline = System.nanoTime() + (RenderMods.perfMode ? BUDGET_NS / 4 : BUDGET_NS); // Leistungs-Modus: langsamer suchen
         long r2 = (long) r * r;
         BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
         int cap = maxResults * 4;

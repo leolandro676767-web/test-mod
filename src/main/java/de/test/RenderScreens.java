@@ -31,6 +31,7 @@ final class RenderScreens {
                 f.choice("Stil", Render3D.STYLES, () -> outlineStyle, v -> outlineStyle = v, 2);
                 f.slider("Scan-Tempo", 1, 10, () -> outlineScanSpeed, v -> outlineScanSpeed = v, 4);
                 f.toggle("Welle", () -> outlineWave, v -> outlineWave = v, true);
+                f.toggle("Leistungs-Modus (für schwache PCs)", () -> perfMode, v -> perfMode = v, false);
                 f.hex("Farbe (RRGGBB)", () -> Esp.colBlock, v -> Esp.colBlock = v);
                 f.footer(() -> blockEsp, v -> {
                     blockEsp = v;
@@ -41,12 +42,25 @@ final class RenderScreens {
                 f.description("Hebt Kisten, Fässer, Öfen usw. hervor.");
                 f.section("Allgemein");
                 f.slider("Reichweite (Chunks)", 1, 12, () -> storageEspChunks, v -> storageEspChunks = v, 6);
+                f.toggle("Schon geöffnete grau", () -> storGrayOpened, v -> storGrayOpened = v, false);
+                f.section("Was");
+                f.toggle("Truhen und Fässer", () -> storChests, v -> storChests = v, true);
+                f.toggle("Shulker-Kisten", () -> storShulkers, v -> storShulkers = v, true);
+                f.toggle("Endertruhen", () -> storEnder, v -> storEnder = v, true);
+                f.toggle("Öfen, Schmelzöfen und Räucheröfen", () -> storFurnaces, v -> storFurnaces = v, true);
+                f.toggle("Trichter, Werfer und Spender", () -> storHoppers, v -> storHoppers = v, true);
+                f.toggle("Braustände", () -> storBrewing, v -> storBrewing = v, true);
+                f.toggle("Spawner", () -> storSpawners, v -> storSpawners = v, false);
+                f.note("Spawner sind rot. Welche du schon geöffnet hast, merkt er sich, bis du die Welt verlässt.");
                 f.footer(() -> storageEsp, v -> storageEsp = v);
             });
             case "Hole Esp" -> new ModuleScreen(parent, module, f -> {
                 f.description("Zeigt sichere 1x1-Löcher zum Hineinstellen.");
                 f.section("Allgemein");
                 f.slider("Reichweite (Chunks)", 1, 12, () -> holeEspChunks, v -> holeEspChunks = v, 6);
+                f.toggle("Nur Löcher aus Obsidian und Grundgestein", () -> holeOnlySafe, v -> holeOnlySafe = v, false);
+                f.note("Grün = ganz aus Grundgestein (am sichersten), gelb = Obsidian oder ähnlich fest, blau = andere "
+                        + "Blöcke, die Explosionen nicht standhalten.");
                 f.footer(() -> holeEsp, v -> holeEsp = v);
             });
             case "Void Esp" -> new ModuleScreen(parent, module, f -> {
@@ -74,12 +88,19 @@ final class RenderScreens {
                 f.toggle("Mobs", () -> tracersMobs, v -> tracersMobs = v, false);
                 f.toggle("Items", () -> tracersItems, v -> tracersItems = v, false);
                 f.slider("Reichweite (Chunks)", 1, 32, () -> tracersChunks, v -> tracersChunks = v, 6);
+                f.section("Aussehen");
+                f.toggle("Farbe nach Entfernung (rot = nah)", () -> tracersByDistance, v -> tracersByDistance = v, false);
+                f.toggle("Freunde ausblenden", () -> tracersNoFriends, v -> tracersNoFriends = v, false);
                 f.footer(() -> tracers, v -> tracers = v);
             });
             case "Nametags" -> new ModuleScreen(parent, module, f -> {
                 f.description("Namen über Spielern und Mobs, durch Wände.");
                 f.section("Allgemein");
                 f.toggle("Leben zeigen", () -> nametagsHealth, v -> nametagsHealth = v, true);
+                f.toggle("Rüstung und Items in den Händen", () -> nametagsArmor, v -> nametagsArmor = v, true);
+                f.toggle("Entfernung zeigen", () -> nametagsDistance, v -> nametagsDistance = v, false);
+                f.toggle("Ping zeigen", () -> nametagsPing, v -> nametagsPing = v, false);
+                f.slider("Größe (%)", 50, 200, () -> nametagsSize, v -> nametagsSize = v, 100);
                 f.slider("Reichweite (Chunks)", 1, 32, () -> nametagsChunks, v -> nametagsChunks = v, 6);
                 f.footer(() -> nametags, v -> nametags = v);
             });
@@ -95,6 +116,10 @@ final class RenderScreens {
                 f.description("Rahmt am Boden liegende Items ein.");
                 f.section("Allgemein");
                 f.slider("Reichweite (Chunks)", 1, 32, () -> itemHighlightChunks, v -> itemHighlightChunks = v, 6);
+                f.toggle("Nur wertvolle Items", () -> itemValuable, v -> itemValuable = v, false);
+                f.toggle("Name und Anzahl zeigen", () -> itemNames, v -> itemNames = v, true);
+                f.note("Wertvoll: alles Verzauberte, Diamant- und Netherit-Sachen, Antiker Schrott, Totems, Elytren, "
+                        + "Goldäpfel, Shulker-Kisten, Smaragde, Endkristalle und Ähnliches.");
                 f.footer(() -> itemHighlight, v -> itemHighlight = v);
             });
             case "Marker" -> pointScreen(parent, module, false, () -> marker, v -> marker = v);
@@ -102,6 +127,9 @@ final class RenderScreens {
                 f.description("Gespeicherte Orte im Spiel anzeigen.");
                 f.section("Allgemein");
                 f.toggle("Lichtstrahl", () -> waypointsBeam, v -> waypointsBeam = v, true);
+                f.toggle("Entfernung zeigen", () -> waypointsDistance, v -> waypointsDistance = v, true);
+                f.toggle("Nur Wegpunkte dieser Dimension", () -> waypointsDimOnly, v -> waypointsDimOnly = v, true);
+                f.note("Wegpunkte von früher kennen ihre Dimension nicht - die zeigt er überall.");
                 f.text("Neuer Name", () -> "", v -> {
                     if (!v.isBlank()) addPoint(true, v);
                 }, "");
@@ -161,6 +189,8 @@ final class RenderScreens {
                 f.description("Ändert die Tageszeit (nur bei dir).\nServer setzt sie oft zurück.");
                 f.section("Allgemein");
                 f.slider("Zeit", 0, 23000, () -> timeChangerValue, v -> timeChangerValue = v, 6000);
+                f.toggle("Wetter immer klar", () -> timeClearWeather, v -> timeClearWeather = v, false);
+                f.note("Regen und Gewitter siehst nur du nicht mehr - auf dem Server regnet es trotzdem.");
                 f.footer(() -> timeChanger, v -> timeChanger = v);
             });
             case "Camera Tweaks" -> new ModuleScreen(parent, module, f -> {
@@ -252,7 +282,28 @@ final class RenderScreens {
                 f.toggle("Netherquarz", () -> wallQuartz, v -> wallQuartz = v, false);
                 f.section("Suche");
                 f.slider("Reichweite (Chunks)", 1, 12, () -> wallHackChunks, v -> wallHackChunks = v, 6);
+                f.toggle("Leistungs-Modus (für schwache PCs)", () -> perfMode, v -> perfMode = v, false);
+                f.note("Leistungs-Modus: Erze, die zusammenliegen, werden ein großer Kasten - viel weniger zu "
+                        + "zeichnen. Er gilt für alle Block-Anzeigen (auch unter Menü → Design anpassen).");
                 f.footer(() -> wallHack, v -> wallHack = v);
+            });
+            case "X-Ray" -> new ModuleScreen(parent, module, f -> {
+                f.description("Klassisches X-Ray: Alles außer den gewählten Blöcken wird unsichtbar - du schaust durch "
+                        + "Stein und Erde direkt auf die Erze.");
+                f.wideButton("Blöcke wählen (" + xrayBlocks.size() + ")", false,
+                        () -> Minecraft.getInstance().gui.setScreen(new PickerScreen(f, "X-Ray",
+                                PickerScreen.Kind.BLOCK, PickerScreen.ofSet(xrayBlocks), null, null)));
+                f.wideButton("Nur Erze (Standard)", false, () -> {
+                    xrayBlocks.clear();
+                    xrayDefaults();
+                    f.refresh();
+                });
+                f.toggle("Hell machen (Nachtsicht)", () -> xrayBright, v -> xrayBright = v, true);
+                f.toggle("Wasser ausblenden", () -> xrayHideWater, v -> xrayHideWater = v, true);
+                f.note("Standard: alle Erze, Antiker Schrott und Spawner. Truhen, Shulker-Kisten und Lava siehst du "
+                        + "immer. Durch die unsichtbaren Blöcke laufen kannst du nicht. Auf Servern mit Anti-Xray "
+                        + "tauchen Erze oft erst auf, wenn du nah dran bist.");
+                f.footer(() -> xray, v -> xray = v);
             });
             case "Item Physics" -> flagScreen(parent, module, "Items am Boden liegen flach, statt sich zu drehen und zu h\u00fcpfen.",
                     () -> itemPhysics, v -> itemPhysics = v);
@@ -262,8 +313,6 @@ final class RenderScreens {
                 f.slider("St\u00e4rke", 0, 200, () -> blurStrength, v -> blurStrength = v, 100);
                 f.footer(() -> blur, v -> blur = v);
             });
-            case "Boss Stack" -> flagScreen(parent, module, "Fasst gleiche Bossleisten zu einer zusammen (mit Anzahl).\nGilt f\u00fcr Leisten, die nach dem Einschalten erscheinen.",
-                    () -> bossStack, v -> bossStack = v);
             case "Better Tab" -> flagScreen(parent, module, "Eigene Spielerliste beim Halten von Tab:\nalle Namen mit Ping in Millisekunden.",
                     () -> betterTab, v -> betterTab = v);
             case "Pop Chams" -> new ModuleScreen(parent, module, f -> {
@@ -344,18 +393,30 @@ final class PlayerScreens {
                 f.section("Allgemein");
                 f.slider("Essen bei Hunger ≤", 1, 19, () -> autoEatHunger, v -> autoEatHunger = v, 14);
                 f.toggle("Goldäpfel erlauben", () -> autoEatGapples, v -> autoEatGapples = v, false);
+                f.slider("Auch essen bei Leben ≤ (0 = aus)", 0, 19, () -> autoEatHealth, v -> autoEatHealth = v, 0);
+                f.toggle("Nicht im Kampf essen", () -> autoEatNoCombat, v -> autoEatNoCombat = v, false);
+                f.note("Mit fast vollem Hunger heilt man schneller - deshalb kann er auch bei wenig Leben essen. "
+                        + "Kampf heißt: du hast in den letzten 5 Sekunden geschlagen oder Schaden bekommen. "
+                        + "Schlechtes Essen wie verrottetes Fleisch lässt er immer liegen.");
                 f.footer(() -> autoEat, v -> autoEat = v);
             });
             case "Auto Fish" -> new ModuleScreen(parent, module, f -> {
                 f.description("Holt die Angel bei einem Biss ein\nund wirft sie neu aus.");
                 f.section("Allgemein");
                 f.slider("Neu auswerfen nach (Ticks)", 1, 40, () -> autoFishDelay, v -> autoFishDelay = v, 10);
+                f.toggle("Angel wechseln, bevor sie kaputtgeht", () -> autoFishSwap, v -> autoFishSwap = v, true);
+                f.note("Bei nur noch 5 Einsätzen nimmt er eine andere Angel aus dem Inventar. Gibt es keine, hört er "
+                        + "auf, statt sie kaputt zu machen.");
                 f.footer(() -> autoFish, v -> autoFish = v);
             });
             case "Auto Gap" -> new ModuleScreen(parent, module, f -> {
-                f.description("Isst einen Goldapfel, wenn das Leben\nniedrig ist (verzauberte zuerst).");
+                f.description("Isst einen Goldapfel, wenn das Leben\nniedrig ist.");
                 f.section("Allgemein");
                 f.slider("Leben ≤ (2 = 1 Herz)", 2, 19, () -> autoGapHealth, v -> autoGapHealth = v, 10);
+                f.choice("Reihenfolge", GAP_ORDER, () -> autoGapOrder, v -> autoGapOrder = v, 0);
+                f.toggle("Beim Brennen verzauberten Goldapfel essen", () -> autoGapFire, v -> autoGapFire = v, false);
+                f.note("Nur verzauberte Goldäpfel geben Feuerschutz - deshalb isst er beim Brennen nur die, und nur, "
+                        + "wenn du noch keinen Feuerschutz hast.");
                 f.footer(() -> autoGap, v -> autoGap = v);
             });
             case "Auto Mend" -> new ModuleScreen(parent, module, f -> {
@@ -369,12 +430,15 @@ final class PlayerScreens {
                 f.description("Füllt Hotbar-Stapel aus dem Inventar auf.");
                 f.section("Allgemein");
                 f.slider("Auffüllen ab (Stück)", 1, 63, () -> autoReplenishMin, v -> autoReplenishMin = v, 8);
+                f.toggle("Auch die zweite Hand", () -> autoReplenishOffhand, v -> autoReplenishOffhand = v, false);
                 f.footer(() -> autoReplenish, v -> autoReplenish = v);
             });
             case "Auto Respawn" -> new ModuleScreen(parent, module, f -> {
                 f.description("Klickt nach dem Tod automatisch auf\n„Wiederbeleben“.");
                 f.section("Allgemein");
                 f.slider("Verzögerung (Ticks)", 0, 100, () -> autoRespawnDelay, v -> autoRespawnDelay = v, 10);
+                f.text("Danach senden", () -> autoRespawnCommand, v -> autoRespawnCommand = v, "", 120, () -> "/home");
+                f.note("Zum Beispiel /home oder /kit. Er sendet es 2 Sekunden nach dem Wiederbeleben. Leer = nichts.");
                 f.footer(() -> autoRespawn, v -> autoRespawn = v);
             });
             case "Auto Tool" -> new ModuleScreen(parent, module, f -> {
@@ -382,13 +446,11 @@ final class PlayerScreens {
                 f.section("Allgemein");
                 f.toggle("Zurückwechseln", () -> autoToolSwitchBack, v -> autoToolSwitchBack = v, true);
                 f.toggle("Fast kaputte schonen", () -> autoToolSave, v -> autoToolSave = v, true);
+                f.choice("Behutsamkeit für", TOOL_SILK, () -> autoToolSilk, v -> autoToolSilk = v, 0);
+                f.toggle("Spinnweben mit dem Schwert", () -> autoToolWebSword, v -> autoToolWebSword = v, false);
+                f.note("Behutsamkeit: Glas und Eis gehen dann nicht kaputt, Erze bleiben ganz (ohne Glück-Bonus). "
+                        + "Spinnweben gibt das Schwert als Faden, die Schere als Netz.");
                 f.footer(() -> autoTool, v -> autoTool = v);
-            });
-            case "Break Delay" -> new ModuleScreen(parent, module, f -> {
-                f.description("Wartezeit zwischen zwei abgebauten\nBlöcken (normal 5 Ticks).");
-                f.section("Allgemein");
-                f.slider("Wartezeit (Ticks)", 0, 5, () -> breakDelayTicks, v -> breakDelayTicks = v, 0);
-                f.footer(() -> breakDelay, v -> breakDelay = v);
             });
             case "Chest Swap" -> new ModuleScreen(parent, module, f -> {
                 f.description("Tauscht einmal Elytra \u2194 Brustpanzer\nund schaltet sich wieder aus.");
@@ -421,19 +483,6 @@ final class PlayerScreens {
                 f.section("Allgemein");
                 f.slider("Reichweite (Bl\u00f6cke)", 2, 6, () -> ghostHandRange, v -> ghostHandRange = v, 4);
                 f.footer(() -> ghostHand, v -> ghostHand = v);
-            });
-            case "Instant Rebreak" -> new ModuleScreen(parent, module, f -> {
-                f.description("Baut einen gerade abgebauten Block sofort\nwieder ab, wenn er neu gesetzt wird.");
-                f.section("Allgemein");
-                f.slider("Pause (Ticks)", 0, 20, () -> instantRebreakDelay, v -> instantRebreakDelay = v, 0);
-                f.footer(() -> instantRebreak, v -> instantRebreak = v);
-            });
-            case "Liquid Interact" -> new ModuleScreen(parent, module, f -> {
-                f.description("Bl\u00f6cke direkt auf Wasser oder Lava\nsetzen.");
-                f.section("Allgemein");
-                f.toggle("Auch Lava", () -> liquidLava, v -> liquidLava = v, true);
-                f.slider("Reichweite (Bl\u00f6cke)", 2, 6, () -> liquidRange, v -> liquidRange = v, 4);
-                f.footer(() -> liquidInteract, v -> liquidInteract = v);
             });
             case "Middle Click Extra" -> new ModuleScreen(parent, module, f -> {
                 f.description("Mittlere Maustaste benutzt ein Item aus\nder Hotbar, ohne zu wechseln.");

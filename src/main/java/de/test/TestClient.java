@@ -16,6 +16,8 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -43,6 +45,9 @@ public class TestClient implements ClientModInitializer {
     public static boolean autoMine = true;
     public static boolean autoLogout = true;
     public static int logoutHearts = 2;          // Auto-Logout bei so vielen Herzen (oder weniger)
+    public static boolean logoutOnHealth = true; // ... bei wenig Leben
+    public static boolean logoutPlayers = false; // ... wenn ein fremder Spieler (kein Freund) in der Naehe ist
+    public static int logoutPlayerRange = 64;    // Bloecke, 0 = egal wie weit (alle, die das Spiel sieht)
 
     // AutoClicker: schlaegt im Takt des Tool-Cooldowns, mit zufaelligem Abstand
     public static boolean autoClicker = false;
@@ -127,6 +132,27 @@ public class TestClient implements ClientModInitializer {
     // nach einem Auto-Logout ueber der Schwelle war.
     private static boolean logoutArmed = true;
 
+    /**
+     * Naechster Spieler in Reichweite (Bloecke, 0 = alle, die das Spiel sieht), der kein Freund ist (die
+     * Freundesliste zaehlt immer). Fuer Auto-Logout und die Pause von Nuker, Auto Farm und Baum-Faeller.
+     */
+    static Player strangerNear(Minecraft mc, int range) {
+        LocalPlayer self = mc.player;
+        Player best = null;
+        double bestD = Double.MAX_VALUE;
+        for (Player o : mc.level.players()) {
+            if (o == self || o.getId() < 0 || PlayerMods.isFake(o) || !o.isAlive()) continue;
+            if (Friends.listed(o.getGameProfile().name())) continue;
+            double d = o.distanceTo(self);
+            if (range > 0 && d > range) continue;
+            if (d < bestD) {
+                bestD = d;
+                best = o;
+            }
+        }
+        return best;
+    }
+
     /** Die einzige Taste in den Minecraft-Steuerungen: oeffnet das 1912-Menue. Alles andere wird im Menue zugewiesen. */
     public static KeyMapping guiKey;
 
@@ -146,9 +172,6 @@ public class TestClient implements ClientModInitializer {
         // Alle Module aus/an (J) und alle Module bekommen ihre Tasten im 1912-Menue ("Tasten zuweisen").
         guiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.test.gui", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, category));
-        // Zoom: gehalten zoomen (Standard C) - steht wie das Menue in den Minecraft-Steuerungen
-        Extras.zoomKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.test.zoom", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, category));
         Esp.register();
         KillAura.register();
         InfoHud.register();
@@ -459,15 +482,17 @@ public class TestClient implements ClientModInitializer {
 
         Entity player = mc.player;
         Level level = mc.level;
+        if (player != null && level != null) {
+            // gleich nach dem Betreten, noch bevor ein Modul etwas tut
+            Safe.run("Join-Schutz", () -> MiscMods.joinTick(mc));
+        }
         if (player == null || level == null) {
             DebrisMiner.reset();
             TunnelMiner.reset();
-            BotGuard.reset();
             KillAura.reset();
             CombatMods.reset();
             WorldMods.reset();
             TravelMods.reset();
-            HudMods.reset();
             BaseFinder.reset();
             Safe.run("Misc", () -> MiscMods.tickOffline(mc));
             Walker.reset();
@@ -486,7 +511,9 @@ public class TestClient implements ClientModInitializer {
         if (health > logoutHealth) {
             logoutArmed = true;
         }
-        if (autoLogout && logoutArmed && health > 0.0f && health <= logoutHealth) {
+        Player stranger = autoLogout && logoutPlayers && mc.player.tickCount > 20 ? strangerNear(mc, logoutPlayerRange) : null;
+        boolean lowHealth = autoLogout && logoutOnHealth && logoutArmed && health > 0.0f && health <= logoutHealth;
+        if (lowHealth || stranger != null) {
             TunnelMiner.stop(mc, null);
             DebrisMiner.stop(mc, null);
             logoutArmed = false;
@@ -501,16 +528,16 @@ public class TestClient implements ClientModInitializer {
             var connection = mc.getConnection();
             if (connection != null) {
                 MiscMods.holdReconnect = true; // nicht gleich wieder verbinden
-                connection.getConnection().disconnect(
-                        Lang.literal("1912: " + Lang.t("Auto-Logout bei ") + Math.max(1, Math.min(10, logoutHearts))
-                                + Lang.t(" Herzen")));
+                String reason = stranger != null
+                        ? Lang.t("Auto-Logout – Spieler in der Nähe: ") + stranger.getName().getString()
+                        : Lang.t("Auto-Logout bei ") + Math.max(1, Math.min(10, logoutHearts)) + Lang.t(" Herzen");
+                connection.getConnection().disconnect(Lang.literal("1912: " + reason));
             }
             return;
         }
 
         runAutoDrop(mc);
         runAutoClicker(mc);
-        Safe.run("Bot-Verteidigung", () -> BotGuard.tick(mc));
         Safe.run("Auto Armor", () -> Survival.tick(mc));
         Safe.run("Info-Anzeige", () -> InfoHud.tick(mc));
         Safe.run("Extras", () -> Extras.tick(mc));
@@ -518,7 +545,6 @@ public class TestClient implements ClientModInitializer {
         Safe.run("Kampf", () -> CombatMods.tick(mc));
         Safe.run("Welt", () -> WorldMods.tick(mc));
         Safe.run("Reisen", () -> TravelMods.tick(mc));
-        Safe.run("Anzeige", () -> HudMods.tick(mc));
         Safe.run("Base Finder", () -> BaseFinder.tick(mc));
         Safe.run("Bewegung", () -> Movement.endTick(mc));
         Safe.run("Bewegung", () -> Movement2.endTick(mc));
@@ -552,10 +578,6 @@ public class TestClient implements ClientModInitializer {
             return;
         }
         applied = true;
-        if (BotGuard.fighting()) {
-            releaseAll(mc); // die Bot-Verteidigung kaempft: kurz stehen bleiben
-            return;
-        }
 
         switch (phase) {
             case WALK -> {
@@ -635,8 +657,8 @@ public class TestClient implements ClientModInitializer {
     /** Koordinaten-Modus: Wegsuche und Ablaufen uebernimmt {@link Walker} (wie Baritone). */
     private static void runGoto(Minecraft mc, Level level, Entity player) {
         applied = true;
-        if (mc.gui.screen() != null || mc.player == null || BotGuard.fighting()) {
-            releaseAll(mc); // Menue offen oder die Bot-Verteidigung kaempft: stehen bleiben
+        if (mc.gui.screen() != null || mc.player == null) {
+            releaseAll(mc); // Menue offen: stehen bleiben
             Walker.release(mc);
             return;
         }
@@ -661,8 +683,8 @@ public class TestClient implements ClientModInitializer {
             return;
         }
         applied = true;
-        if (mc.gui.screen() != null || mc.player == null || BotGuard.fighting()) {
-            releaseAll(mc); // Menue offen oder die Bot-Verteidigung kaempft: stehen bleiben
+        if (mc.gui.screen() != null || mc.player == null) {
+            releaseAll(mc); // Menue offen: stehen bleiben
             Walker.release(mc);
             return;
         }

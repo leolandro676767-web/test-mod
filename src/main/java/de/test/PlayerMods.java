@@ -80,12 +80,18 @@ public final class PlayerMods {
     public static boolean autoEat = false;
     public static int autoEatHunger = 14;       // essen, wenn Hunger <= Wert (20 = voll)
     public static boolean autoEatGapples = false;
+    public static int autoEatHealth = 0;        // auch essen bei Leben <= Wert (fuer Regeneration), 0 = aus
+    public static boolean autoEatNoCombat = false; // nicht im Kampf essen
 
     public static boolean autoFish = false;
     public static int autoFishDelay = 10;       // Ticks bis zum neuen Auswerfen
+    public static boolean autoFishSwap = true;  // fast kaputte Angel gegen eine andere tauschen
 
     public static boolean autoGap = false;
     public static int autoGapHealth = 10;       // Lebenspunkte (2 = 1 Herz)
+    public static int autoGapOrder = 0;         // 0 verzauberte zuerst, 1 normale zuerst
+    public static boolean autoGapFire = false;  // beim Brennen einen verzauberten Goldapfel (Feuerschutz)
+    public static final String[] GAP_ORDER = {"Verzauberte zuerst", "Normale zuerst"};
 
     public static boolean autoMend = false;
     public static int autoMendBelow = 100;     // nur Items unter dieser Haltbarkeit (%)
@@ -93,16 +99,18 @@ public final class PlayerMods {
 
     public static boolean autoReplenish = false;
     public static int autoReplenishMin = 8;
+    public static boolean autoReplenishOffhand = false; // auch die zweite Hand auffuellen
 
     public static boolean autoRespawn = false;
     public static int autoRespawnDelay = 10;    // Ticks
+    public static String autoRespawnCommand = "";  // danach senden, z.B. /home
 
     public static boolean autoTool = false;
     public static boolean autoToolSwitchBack = true;
     public static boolean autoToolSave = true;  // fast kaputte Werkzeuge nicht benutzen
-
-    public static boolean breakDelay = false;
-    public static int breakDelayTicks = 0;
+    public static int autoToolSilk = 0;         // Behutsamkeit: 0 nie, 1 Glas und Eis, 2 auch Erze
+    public static boolean autoToolWebSword = false; // Spinnweben mit dem Schwert (Faden statt Netz)
+    public static final String[] TOOL_SILK = {"Nie", "Glas und Eis", "Glas, Eis und Erze"};
 
     public static boolean chestSwap = false;    // einmalig: tauscht und schaltet sich wieder aus
     public static int chestSwapTarget = 0;
@@ -122,12 +130,6 @@ public final class PlayerMods {
     public static boolean ghostHand = false;
     public static int ghostHandRange = 4;
 
-    public static boolean instantRebreak = false;
-    public static int instantRebreakDelay = 0;
-
-    public static boolean liquidInteract = false;
-    public static boolean liquidLava = true;
-    public static int liquidRange = 4;
 
     public static boolean middleClickExtra = false;
     public static int middleClickMode = 0;
@@ -247,7 +249,6 @@ public final class PlayerMods {
         }
         if (potionSaver && holdForPotions(out)) return true;
         if (MiscMods.onSend(out)) return true;
-        if (Movement2.intercept(out)) return true;
         if (out != packet) {
             sendRaw(out);
             return true;
@@ -419,11 +420,6 @@ public final class PlayerMods {
         return e != null && e == fake;
     }
 
-    private static BlockPos miningPos = null;
-    private static Direction miningDir = Direction.UP;
-    private static BlockPos rebreakPos = null;
-    private static Direction rebreakDir = Direction.UP;
-    private static int rebreakTicks = 0;
 
     private static float lastProgress = -1f;
     private static boolean reachApplied = false;
@@ -447,15 +443,6 @@ public final class PlayerMods {
                 if (rightClickDelayField.getInt(mc) > fastUseDelay) rightClickDelayField.setInt(mc, fastUseDelay);
             } catch (ReflectiveOperationException | RuntimeException ignored) {
                 // Feld nicht nutzbar: Fast Use wirkt dann nicht
-            }
-        }
-        if (breakDelay && destroyDelayField != null) {
-            try {
-                if (destroyDelayField.getInt(mc.gameMode) > breakDelayTicks) {
-                    destroyDelayField.setInt(mc.gameMode, breakDelayTicks);
-                }
-            } catch (ReflectiveOperationException | RuntimeException ignored) {
-                // Feld nicht nutzbar
             }
         }
         if (autoTool) runAutoTool(mc, p);
@@ -483,9 +470,7 @@ public final class PlayerMods {
 
         if (!screen) {
             if (usePressed) {
-                if (liquidInteract && runLiquidInteract(mc, p)) {
-                    // erledigt
-                } else if (airPlace && runAirPlace(mc, p)) {
+                if (airPlace && runAirPlace(mc, p)) {
                     // erledigt
                 } else if (ghostHand) {
                     runGhostHand(mc, p);
@@ -503,8 +488,6 @@ public final class PlayerMods {
                 chestSwap = false;
             }
         }
-        trackMining(mc, attackDown);
-        if (instantRebreak) runInstantRebreak(mc, p);
         if (speedMine) runSpeedMine(mc);
         else lastProgress = -1f;
 
@@ -522,23 +505,6 @@ public final class PlayerMods {
         if (!mc.level.getBlockState(pos).canBeReplaced()) return false;
         mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND,
                 new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
-        p.swing(InteractionHand.MAIN_HAND);
-        return true;
-    }
-
-    private static boolean runLiquidInteract(Minecraft mc, LocalPlayer p) {
-        if (!(p.getMainHandItem().getItem() instanceof BlockItem)) return false;
-        if (mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.BLOCK) return false;
-        Vec3 eye = p.getEyePosition();
-        Vec3 end = eye.add(p.getLookAngle().scale(liquidRange + 0.5));
-        BlockHitResult hit = mc.level.clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.ANY, p));
-        if (hit.getType() != HitResult.Type.BLOCK) return false;
-        BlockPos pos = hit.getBlockPos();
-        var fluid = mc.level.getFluidState(pos);
-        if (fluid.isEmpty()) return false;
-        if (!liquidLava && fluid.is(net.minecraft.tags.FluidTags.LAVA)) return false;
-        mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND,
-                new BlockHitResult(hit.getLocation(), hit.getDirection(), pos, false));
         p.swing(InteractionHand.MAIN_HAND);
         return true;
     }
@@ -588,7 +554,26 @@ public final class PlayerMods {
         return st.is(Items.GOLDEN_APPLE) || st.is(Items.ENCHANTED_GOLDEN_APPLE);
     }
 
-    private static int bestFoodSlot(LocalPlayer p, boolean gapple) {
+    /** Zuletzt geschlagen (tickCount); fuer „nicht im Kampf essen“. */
+    private static int lastAttackTick = -1000;
+
+    static void markAttack(net.minecraft.world.entity.player.Player player) {
+        Minecraft mc = Minecraft.getInstance();
+        if (player == mc.player) lastAttackTick = player.tickCount;
+    }
+
+    private static int lastHurtTick = -1000;
+
+    /** Kampf = in den letzten 5 Sekunden geschlagen oder getroffen worden. */
+    private static boolean inCombat(LocalPlayer p) {
+        if (p.hurtTime > 0) lastHurtTick = p.tickCount;
+        if (lastAttackTick > p.tickCount) lastAttackTick = -1000; // neue Welt
+        if (lastHurtTick > p.tickCount) lastHurtTick = -1000;
+        return p.tickCount - lastAttackTick < 100 || p.tickCount - lastHurtTick < 100;
+    }
+
+    /** gapple: 0 = Essen, 1 = Goldapfel nach Einstellung, 2 = nur verzauberter Goldapfel. */
+    private static int bestFoodSlot(LocalPlayer p, int gapple) {
         var inv = p.getInventory();
         int best = -1;
         int bestScore = -1;
@@ -596,9 +581,11 @@ public final class PlayerMods {
             ItemStack st = inv.getItem(i);
             if (st.isEmpty()) continue;
             int score;
-            if (gapple) {
+            if (gapple > 0) {
                 if (!isGapple(st)) continue;
-                score = st.is(Items.ENCHANTED_GOLDEN_APPLE) ? 2 : 1;
+                boolean ench = st.is(Items.ENCHANTED_GOLDEN_APPLE);
+                if (gapple == 2 && !ench) continue;
+                score = ench == (autoGapOrder == 0) ? 2 : 1;
             } else {
                 FoodProperties food = st.get(DataComponents.FOOD);
                 if (food == null || badFood(st)) continue;
@@ -628,10 +615,19 @@ public final class PlayerMods {
             }
             return;
         }
+        boolean fight = inCombat(p);
         if (p.isUsingItem() || p.isCreative()) return;
         int slot = -1;
-        if (autoGap && p.getHealth() <= autoGapHealth) slot = bestFoodSlot(p, true);
-        if (slot < 0 && autoEat && p.getFoodData().getFoodLevel() <= autoEatHunger) slot = bestFoodSlot(p, false);
+        if (autoGap && p.getHealth() <= autoGapHealth) slot = bestFoodSlot(p, 1);
+        if (slot < 0 && autoGap && autoGapFire && p.isOnFire() && !p.hasEffect(MobEffects.FIRE_RESISTANCE)) {
+            slot = bestFoodSlot(p, 2);
+        }
+        if (slot < 0 && autoEat && !(autoEatNoCombat && fight)) {
+            int food = p.getFoodData().getFoodLevel();
+            boolean hungry = food <= autoEatHunger;
+            boolean heal = autoEatHealth > 0 && p.getHealth() <= autoEatHealth && food < 20;
+            if (hungry || heal) slot = bestFoodSlot(p, 0);
+        }
         if (slot < 0) return;
         eatPrevSlot = inv.getSelectedSlot();
         inv.setSelectedSlot(slot);
@@ -640,11 +636,49 @@ public final class PlayerMods {
         eatTicks = 0;
     }
 
+    private static boolean fishWarned;
+
+    /** Angel hat nur noch wenige Einsaetze? */
+    private static boolean rodLow(ItemStack st) {
+        return st.isDamageableItem() && st.getMaxDamage() - st.getDamageValue() <= 5;
+    }
+
+    /** Legt eine andere, heile Angel in die Hand. false = keine da. */
+    private static boolean swapRod(LocalPlayer p) {
+        var inv = p.getInventory();
+        int sel = inv.getSelectedSlot();
+        for (int i = 0; i < 36; i++) {
+            ItemStack st = inv.getItem(i);
+            if (i == sel || !st.is(Items.FISHING_ROD) || rodLow(st)) continue;
+            if (i < 9) {
+                inv.setSelectedSlot(i);
+            } else {
+                click(p, menuSlot(i), sel, "SWAP");
+            }
+            return true;
+        }
+        return false;
+    }
+
     private static void runAutoFish(Minecraft mc, LocalPlayer p) {
         if (!p.getMainHandItem().is(Items.FISHING_ROD)) return;
         FishingHook hook = p.fishing;
         if (hook == null) {
             if (fishCooldown > 0 && --fishCooldown == 0) {
+                if (autoFishSwap && rodLow(p.getMainHandItem())) {
+                    if (swapRod(p)) {
+                        fishCooldown = 3; // kurz warten, dann mit der neuen Angel auswerfen
+                    } else {
+                        fishCooldown = -1; // lieber aufhoeren, als die Angel kaputt zu machen
+                        if (!fishWarned) {
+                            fishWarned = true;
+                            p.sendSystemMessage(Lang.literal("§e1912: "
+                                    + Lang.t("Auto Fish: Die Angel ist fast kaputt und es gibt keine andere.")));
+                        }
+                    }
+                    return;
+                }
+                fishWarned = false;
                 mc.gameMode.useItem(p, InteractionHand.MAIN_HAND); // neu auswerfen
                 fishCooldown = -1;
             }
@@ -696,17 +730,79 @@ public final class PlayerMods {
                 return; // ein Nachfuellen pro Tick reicht
             }
         }
+        // zweite Hand (Menue-Slot 45), nur aus dem Inventar, nicht aus der Hotbar
+        ItemStack off = p.getOffhandItem();
+        if (!autoReplenishOffhand || off.isEmpty() || !off.isStackable() || off.getCount() > autoReplenishMin) return;
+        for (int i = 9; i < 36; i++) {
+            ItemStack st = inv.getItem(i);
+            if (st.isEmpty() || !ItemStack.isSameItemSameComponents(st, off)) continue;
+            click(p, menuSlot(i), 0, "PICKUP");
+            click(p, 45, 0, "PICKUP");
+            if (!p.inventoryMenu.getCarried().isEmpty()) click(p, menuSlot(i), 0, "PICKUP");
+            return;
+        }
     }
+
+    private static int respawnCmdWait = 0;
 
     private static void runAutoRespawn(Minecraft mc, LocalPlayer p) {
         if (!(mc.gui.screen() instanceof DeathScreen)) {
             respawnTicks = 0;
+            // Befehl erst, wenn man wieder in der Welt steht
+            if (respawnCmdWait > 0 && p.isAlive() && --respawnCmdWait == 0) {
+                MiscMods.sendChat(mc, autoRespawnCommand);
+            }
             return;
         }
+        respawnCmdWait = 0;
         if (++respawnTicks < autoRespawnDelay) return;
         respawnTicks = 0;
         p.respawn();
         mc.gui.setScreen(null);
+        if (!autoRespawnCommand.isBlank()) respawnCmdWait = 40; // 2 Sekunden nach dem Wiederbeleben
+    }
+
+    private static boolean hasSilk(ItemStack st) {
+        for (var holder : st.getEnchantments().keySet()) {
+            if (holder.is(Enchantments.SILK_TOUCH)) return true;
+        }
+        return false;
+    }
+
+    /** Bloecke, fuer die Behutsamkeit gewuenscht ist (nach Einstellung). */
+    private static boolean silkBlock(BlockState state) {
+        String path = BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+        if (path.contains("glass") || path.equals("ice") || path.endsWith("_ice")) return true;
+        return autoToolSilk >= 2 && path.endsWith("_ore");
+    }
+
+    /** Werkzeug fuer Sonderfaelle (Behutsamkeit, Schwert fuer Spinnweben); -1 = wie immer das schnellste. */
+    private static int specialTool(LocalPlayer p, BlockState state) {
+        var inv = p.getInventory();
+        if (autoToolWebSword && state.is(net.minecraft.world.level.block.Blocks.COBWEB)) {
+            for (int i = 0; i < 9; i++) {
+                ItemStack st = inv.getItem(i);
+                if (usableTool(st) && BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().endsWith("_sword")) {
+                    return i;
+                }
+            }
+        }
+        if (autoToolSilk > 0 && silkBlock(state)) {
+            int bestSlot = -1;
+            float best = -1f;
+            for (int i = 0; i < 9; i++) {
+                ItemStack st = inv.getItem(i);
+                if (!usableTool(st) || !hasSilk(st)) continue;
+                if (state.requiresCorrectToolForDrops() && !st.isCorrectToolForDrops(state)) continue;
+                float s = st.getDestroySpeed(state);
+                if (s > best) {
+                    best = s;
+                    bestSlot = i;
+                }
+            }
+            return bestSlot;
+        }
+        return -1;
     }
 
     private static boolean usableTool(ItemStack st) {
@@ -729,13 +825,18 @@ public final class PlayerMods {
         int cur = inv.getSelectedSlot();
         float best = usableTool(inv.getItem(cur)) ? inv.getItem(cur).getDestroySpeed(state) : 0f;
         int bestSlot = cur;
-        for (int i = 0; i < 9; i++) {
-            ItemStack st = inv.getItem(i);
-            if (!usableTool(st)) continue;
-            float s = st.getDestroySpeed(state);
-            if (s > best + 0.01f) {
-                best = s;
-                bestSlot = i;
+        int special = specialTool(p, state);
+        if (special >= 0) {
+            bestSlot = special;
+        } else {
+            for (int i = 0; i < 9; i++) {
+                ItemStack st = inv.getItem(i);
+                if (!usableTool(st)) continue;
+                float s = st.getDestroySpeed(state);
+                if (s > best + 0.01f) {
+                    best = s;
+                    bestSlot = i;
+                }
             }
         }
         if (bestSlot != cur) {
@@ -875,36 +976,6 @@ public final class PlayerMods {
             p.setYRot(Math.round(p.getYRot() / 45f) * 45f);
         }
         if (rotPitchMode == 1) p.setXRot(rotPitch);
-    }
-
-    /** Merkt sich den Block, der gerade abgebaut wird, und ob er weg ist (fuer Instant Rebreak). */
-    private static void trackMining(Minecraft mc, boolean attackDown) {
-        if (attackDown && mc.hitResult instanceof BlockHitResult bh && bh.getType() == HitResult.Type.BLOCK) {
-            if (!bh.getBlockPos().equals(miningPos)) {
-                miningPos = bh.getBlockPos();
-                miningDir = bh.getDirection();
-                if (!miningPos.equals(rebreakPos)) rebreakPos = null;
-            }
-        }
-        if (miningPos != null && mc.level.getBlockState(miningPos).isAir()) {
-            rebreakPos = miningPos;
-            rebreakDir = miningDir;
-            miningPos = null;
-        }
-    }
-
-    private static void runInstantRebreak(Minecraft mc, LocalPlayer p) {
-        if (rebreakPos == null) return;
-        if (mc.level.getBlockState(rebreakPos).isAir()) return;
-        if (p.getEyePosition().distanceToSqr(Vec3.atCenterOf(rebreakPos)) > 30) {
-            rebreakPos = null;
-            return;
-        }
-        if (++rebreakTicks < instantRebreakDelay) return;
-        rebreakTicks = 0;
-        sendRaw(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
-                rebreakPos, rebreakDir));
-        p.swing(InteractionHand.MAIN_HAND);
     }
 
     private static void runSpeedMine(Minecraft mc) {

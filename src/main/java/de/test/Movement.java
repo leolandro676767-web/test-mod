@@ -46,6 +46,8 @@ public final class Movement {
     public static int speedBps = 9;             // Bloecke pro Sekunde
     public static boolean speedGroundOnly = true;
     public static boolean speedAutoJump = false;
+    public static boolean speedPauseLiquid = true;  // aus in Wasser, Lava und Spinnweben
+    public static boolean speedSprintOnly = false;  // nur beim Sprinten
 
     public static boolean spider = false;
     public static int spiderSpeed = 4;          // x 0,05 Bloecke pro Tick
@@ -55,13 +57,10 @@ public final class Movement {
 
     public static boolean step = false;
     public static int stepHeight = 1;           // Bloecke
+    public static boolean stepSneakOff = true;  // beim Schleichen aus
 
     public static boolean trident = false;
     public static int tridentPower = 200;       // Prozent
-
-    public static boolean velocity = false;
-    public static int velocityH = 0;            // Prozent des Rueckstosses, der bleibt
-    public static int velocityV = 0;
 
     public static boolean highJump = false;
     public static int highJumpHeight = 3;       // Bloecke
@@ -86,9 +85,6 @@ public final class Movement {
     public static int parkourLead = 1;           // Vorlauf in Ticks
     public static boolean parkourSprintOnly = false;
 
-    public static boolean reverseStep = false;
-    public static int reverseStepHeight = 3;    // Bloecke
-
     public static boolean safeWalk = false;
     public static int safeWalkDist = 4;          // Abstand zur Kante x 0,1 Bloecke
     public static boolean safeWalkNotJumping = true;
@@ -96,6 +92,8 @@ public final class Movement {
     public static boolean scaffold = false;
     public static boolean scaffoldLook = true;  // zum Platzieren nach unten schauen
     public static int scaffoldPerTick = 1;
+    public static boolean scaffoldTower = false; // Leertaste: gerade nach oben bauen
+    public static final java.util.Set<Block> scaffoldSkip = new java.util.LinkedHashSet<>(); // nie benutzen
 
     private static final double VANILLA_STEP = 0.6;
     private static final double VANILLA_JUMP = 0.42;
@@ -122,15 +120,6 @@ public final class Movement {
             lastHurtTime = 0;
             return;
         }
-        // Velocity: frischen Treffer erkennen (hurtTime springt hoch) und den Rueckstoss abschwaechen
-        int ht = p.hurtTime;
-        if (velocity && ht > lastHurtTime && ht > 0) {
-            Vec3 v = p.getDeltaMovement();
-            double h = velocityH / 100.0;
-            double vy = v.y > 0 ? v.y * (velocityV / 100.0) : v.y;
-            p.setDeltaMovement(v.x * h, vy, v.z * h);
-        }
-        lastHurtTime = ht;
     }
 
     // ---------- Tick-Ende: nach der Bewegung, Werte gelten fuer den naechsten Tick ----------
@@ -162,9 +151,10 @@ public final class Movement {
             if (autoSprint) runSprint(p, fwd, moving);
             if (slippy) runSlippy(mc, p);
             if (noSlow && moving) runNoSlow(p, fwd, back, left, right);
-            if (speed && moving) runSpeed(p, fwd, back, left, right);
+            if (speed && moving && (!speedSprintOnly || p.isSprinting() || mc.options.keySprint.isDown())) {
+                runSpeed(mc, p, fwd, back, left, right);
+            }
             if (longJump && jumpedNow && moving) runLongJump(p);
-            if (reverseStep && droppedNow) runReverseStep(mc, p);
             if (spider && moving) runSpider(p);
             if (parkour) runParkour(mc, p, moving);
         }
@@ -190,7 +180,7 @@ public final class Movement {
     private static void runStep(LocalPlayer p) {
         AttributeInstance attr = p.getAttribute(Attributes.STEP_HEIGHT);
         if (attr == null) return;
-        if (step && !p.isShiftKeyDown()) {
+        if (step && !(stepSneakOff && p.isShiftKeyDown())) {
             if (attr.getBaseValue() != stepHeight) attr.setBaseValue(stepHeight);
             stepApplied = true;
         } else if (stepApplied) {
@@ -237,8 +227,9 @@ public final class Movement {
         p.setDeltaMovement(nx, v.y, nz);
     }
 
-    private static void runSpeed(LocalPlayer p, boolean fwd, boolean back, boolean left, boolean right) {
-        if (p.isInWater() || p.isInLava() || p.isFallFlying() || p.getAbilities().flying || p.isPassenger()) return;
+    private static void runSpeed(Minecraft mc, LocalPlayer p, boolean fwd, boolean back, boolean left, boolean right) {
+        if (p.isFallFlying() || p.getAbilities().flying || p.isPassenger()) return;
+        if (speedPauseLiquid && (p.isInWater() || p.isInLava() || inCobweb(mc.level, p))) return;
         if (speedGroundOnly && !p.onGround()) return;
         double f = (fwd ? 1 : 0) - (back ? 1 : 0);
         double s = (left ? 1 : 0) - (right ? 1 : 0);
@@ -345,6 +336,19 @@ public final class Movement {
         p.setDeltaMovement(v.x / h * nh, v.y, v.z / h * nh);
     }
 
+    /** Steckt der Spieler in einem Spinnennetz (Fuesse oder Kopf)? */
+    private static boolean inCobweb(Level level, LocalPlayer p) {
+        AABB bb = p.getBoundingBox();
+        for (int x = (int) Math.floor(bb.minX); x <= (int) Math.floor(bb.maxX); x++) {
+            for (int y = (int) Math.floor(bb.minY); y <= (int) Math.floor(bb.maxY); y++) {
+                for (int z = (int) Math.floor(bb.minZ); z <= (int) Math.floor(bb.maxZ); z++) {
+                    if (level.getBlockState(new BlockPos(x, y, z)).is(Blocks.COBWEB)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /** Meldet dem Server beim Fallen "am Boden", damit kein Fallschaden entsteht. */
     private static void runNoFall(Minecraft mc, LocalPlayer p) {
         if (p.isFallFlying() || p.getAbilities().flying || p.isCreative()) return;
@@ -400,19 +404,6 @@ public final class Movement {
         }
     }
 
-    /** Von kleinen Kanten sofort herunterfallen statt zu schweben. */
-    private static void runReverseStep(Minecraft mc, LocalPlayer p) {
-        if (p.isInWater() || p.isInLava() || p.isFallFlying() || p.getAbilities().flying) return;
-        BlockPos feet = p.blockPosition();
-        for (int i = 1; i <= reverseStepHeight; i++) {
-            if (solid(mc.level, feet.below(i))) {
-                Vec3 v = p.getDeltaMovement();
-                p.setDeltaMovement(v.x, -3.0, v.z);
-                return;
-            }
-        }
-    }
-
     // ---------- Scaffold ----------
 
     private static boolean scaffoldBlock(ItemStack st) {
@@ -420,6 +411,7 @@ public final class Movement {
         Block b = bi.getBlock();
         // Keine Kisten/Truhen usw., nichts was herunterfaellt, kein TNT
         if (b instanceof EntityBlock || b instanceof FallingBlock || b == Blocks.TNT) return false;
+        if (scaffoldSkip.contains(b)) return false;
         return b.defaultBlockState().canOcclude();
     }
 
@@ -471,7 +463,9 @@ public final class Movement {
             return;
         }
         Vec3 v = p.getDeltaMovement();
-        int y = (int) Math.floor(p.getY() - 0.01) - 1;
+        boolean tower = scaffoldTower && mc.options.keyJump.isDown();
+        // der Block direkt unter den Fuessen (beim Stehen der, auf dem man steht)
+        int y = (int) Math.floor(p.getY() - 0.01);
         // Unter den Fuessen jetzt und dort, wo man im naechsten Tick steht
         BlockPos[] targets = {
                 BlockPos.containing(p.getX(), y, p.getZ()),
@@ -480,8 +474,13 @@ public final class Movement {
         for (BlockPos pos : targets) {
             if (placed >= scaffoldPerTick) break;
             if (!mc.level.getBlockState(pos).canBeReplaced()) continue;
+            if (p.getBoundingBox().intersects(new AABB(pos))) continue; // man steckt noch drin
             if (placeAt(mc, p, pos, slot)) {
                 placed++;
+                // Turm: gleich wieder hochspringen, statt erst zu landen
+                if (tower && pos.getY() == y && Math.abs(v.x) < 0.3 && Math.abs(v.z) < 0.3) {
+                    p.setDeltaMovement(v.x, 0.42, v.z);
+                }
                 continue;
             }
             // Kein Nachbar zum Anklicken: erst einen Block daneben setzen, der als Stuetze dient
@@ -520,10 +519,6 @@ public final class Movement {
             f.toggle("Sprinten", () -> TestClient.sprint, v -> TestClient.sprint = v, false);
             f.toggle("Sprint-Jump", () -> TestClient.sprintJump, v -> TestClient.sprintJump = v, false);
             f.toggle("Hindernisse abbauen", () -> TestClient.autoMine, v -> TestClient.autoMine = v, true);
-            f.toggle("Mobs abwehren", () -> BotGuard.forWalk, v -> BotGuard.forWalk = v, true);
-            f.wideButton("Einstellungen der Bot-Verteidigung", false,
-                    () -> Minecraft.getInstance().gui.setScreen(new BotGuardScreen(Minecraft.getInstance().gui.screen())),
-                    true);
             f.footer(() -> TestClient.walking, v -> TestClient.walking = v);
         });
     }
@@ -553,6 +548,8 @@ public final class Movement {
             f.slider("Tempo (Blöcke/s)", 4, 30, () -> speedBps, v -> speedBps = v, 9);
             f.toggle("Nur am Boden", () -> speedGroundOnly, v -> speedGroundOnly = v, true);
             f.toggle("Auto-Springen", () -> speedAutoJump, v -> speedAutoJump = v, false);
+            f.toggle("Aus in Wasser, Lava und Spinnweben", () -> speedPauseLiquid, v -> speedPauseLiquid = v, true);
+            f.toggle("Nur beim Sprinten", () -> speedSprintOnly, v -> speedSprintOnly = v, false);
             f.footer(() -> speed, v -> speed = v);
         });
     }
@@ -577,9 +574,10 @@ public final class Movement {
 
     public static Screen stepScreen(Screen parent) {
         return new ModuleScreen(parent, "Step", f -> {
-            f.description("Steigt höhere Stufen ohne Springen hoch.\nBeim Schleichen aus.");
+            f.description("Steigt höhere Stufen ohne Springen hoch.");
             f.section("Allgemein");
             f.slider("Höhe (Blöcke)", 1, 5, () -> stepHeight, v -> stepHeight = v, 1);
+            f.toggle("Beim Schleichen aus", () -> stepSneakOff, v -> stepSneakOff = v, true);
             f.footer(() -> step, v -> step = v);
         });
     }
@@ -653,15 +651,6 @@ public final class Movement {
         });
     }
 
-    public static Screen reverseStepScreen(Screen parent) {
-        return new ModuleScreen(parent, "Reverse Step", f -> {
-            f.description("F\u00e4llt von Kanten sofort herunter\nstatt langsam zu sinken.");
-            f.section("Allgemein");
-            f.slider("H\u00f6he (Bl\u00f6cke)", 1, 5, () -> reverseStepHeight, v -> reverseStepHeight = v, 3);
-            f.footer(() -> reverseStep, v -> reverseStep = v);
-        });
-    }
-
     public static Screen safeWalkScreen(Screen parent) {
         return new ModuleScreen(parent, "Safe Walk", f -> {
             f.description("Schleicht automatisch an Kanten,\ndamit man nicht herunterf\u00e4llt.");
@@ -678,17 +667,16 @@ public final class Movement {
             f.section("Allgemein");
             f.toggle("Nach unten schauen", () -> scaffoldLook, v -> scaffoldLook = v, true);
             f.slider("Bl\u00f6cke pro Tick", 1, 3, () -> scaffoldPerTick, v -> scaffoldPerTick = v, 1);
+            f.toggle("Turm (Leertaste halten: gerade nach oben bauen)", () -> scaffoldTower,
+                    v -> scaffoldTower = v, false);
+            f.wideButton("Nie benutzen (" + scaffoldSkip.size() + ")", false,
+                    () -> Minecraft.getInstance().gui.setScreen(new PickerScreen(Minecraft.getInstance().gui.screen(),
+                            "Scaffold: nie benutzen", PickerScreen.Kind.BLOCK, PickerScreen.ofSet(scaffoldSkip), null,
+                            null)));
+            f.note("Truhen, Shulker-Kisten, Sand, Kies und TNT nimmt er nie. Unter „Nie benutzen“ kannst du "
+                    + "weitere Blöcke sperren, z. B. Obsidian oder Diamantblöcke.");
             f.footer(() -> scaffold, v -> scaffold = v);
         });
     }
 
-    public static Screen velocityScreen(Screen parent) {
-        return new ModuleScreen(parent, "Velocity", f -> {
-            f.description("Schwächt den Rückstoß ab, wenn man\ngetroffen wird. 0 % = kein Rückstoß.");
-            f.section("Allgemein");
-            f.slider("Horizontal (%)", 0, 100, () -> velocityH, v -> velocityH = v, 0);
-            f.slider("Vertikal (%)", 0, 100, () -> velocityV, v -> velocityV = v, 0);
-            f.footer(() -> velocity, v -> velocity = v);
-        });
-    }
 }

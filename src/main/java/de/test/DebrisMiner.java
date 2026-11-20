@@ -455,12 +455,6 @@ public final class DebrisMiner {
         }
         try {
             if (guard(mc, p)) return;
-            if (BotGuard.fighting()) {
-                // die Bot-Verteidigung kaempft: stehen bleiben, danach geht es hier weiter
-                pause(mc);
-                action = "Wehrt einen Mob ab";
-                return;
-            }
             boolean boxOpen = phase == Phase.CONTAINER && box != null
                     && (box == Box.WAIT_OPEN || box == Box.TAKE || box == Box.CLOSE);
             if (mc.gui.screen() != null && !boxOpen) {
@@ -518,7 +512,7 @@ public final class DebrisMiner {
         if (--glanceTimer > 0) return false;
         // nur mitten im Tunnel, auf festem Boden, ohne Gefahr und ohne angefangenen Block
         boolean calm = phase == Phase.TUNNEL && !sprintRun && p.onGround() && digPos == null && !Walker.isActive() && wait == 0
-                && sideLeft == 0 && !BotGuard.fighting()
+                && sideLeft == 0
                 && lavaAhead(level, feet(p), curX, curZ, Math.max(2, lavaDistance), true) == 0;
         if (!calm) {
             glanceTimer = 40; // gleich nochmal versuchen

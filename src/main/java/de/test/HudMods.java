@@ -20,7 +20,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 
-/** Spieler-Radar, Schadenszahlen, Kompass-Leiste und Chunk-Grenzen. */
+/** Spieler-Radar. */
 public final class HudMods {
     private HudMods() {
     }
@@ -37,42 +37,9 @@ public final class HudMods {
     public static boolean radarHealth = true;
     public static boolean radarArrow = true;
 
-    // --- Schadenszahlen ---
-    public static boolean damage = false;
-    public static boolean dmgOnlyOwn = true;
-    public static boolean dmgHearts = true;
-    public static int dmgSize = 1;             // Extras.SIZES
-
-    // --- Kompass-Leiste ---
-    public static boolean compass = false;
-    public static int compassWidth = 220;
-    public static int compassY = 4;
-    public static boolean compassWaypoints = true;
-    public static boolean compassDegrees = true;
-
-    // --- Chunk-Grenzen ---
-    public static boolean chunks = false;
-    public static boolean chunksNeighbors = true;
-    public static int chunksHeight = 16;       // Bloecke ueber und unter dir
-
     static void register() {
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("test", "hud_mods"),
                 Safe.hud("Anzeige", HudMods::render));
-    }
-
-    static void reset() {
-        lastHealth.clear();
-        numbers.clear();
-        lastHits.clear();
-    }
-
-    static void tick(Minecraft mc) {
-        LocalPlayer p = mc.player;
-        if (p == null || mc.level == null) {
-            reset();
-            return;
-        }
-        Safe.run("Schadenszahlen", () -> damageTick(mc, p));
     }
 
     private static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
@@ -81,10 +48,6 @@ public final class HudMods {
         float old = Ui.alpha;
         Ui.alpha = 1f;
         try {
-            boolean world = (chunks || damage) && Render3D.begin(mc, delta.getGameTimeDeltaPartialTick(true));
-            if (chunks && world) Safe.run("Chunk-Grenzen", () -> drawChunks(g, mc));
-            if (damage && world) Safe.run("Schadenszahlen", () -> drawNumbers(g, mc));
-            if (compass) Safe.run("Kompass-Leiste", () -> drawCompass(g, mc));
             if (radar) Safe.run("Spieler-Radar", () -> drawRadar(g, mc));
         } finally {
             Ui.alpha = old;
@@ -184,190 +147,6 @@ public final class HudMods {
     }
 
     // =====================================================================================
-    // Schadenszahlen
-    // =====================================================================================
-
-    private record Popup(double x, double y, double z, String text, int color, long born) {
-    }
-
-    private static final Map<Integer, Float> lastHealth = new HashMap<>();
-    private static final Map<Integer, Long> lastHits = new HashMap<>();
-    private static final List<Popup> numbers = new ArrayList<>();
-    private static final java.util.Random RNG = new java.util.Random();
-    private static int dmgNow;
-
-    /** Vom MultiPlayerGameModeMixin bei jedem eigenen Schlag. */
-    public static void noteAttack(Entity target) {
-        if (target != null) lastHits.put(target.getId(), System.currentTimeMillis());
-    }
-
-    private static void damageTick(Minecraft mc, LocalPlayer p) {
-        if (!damage) {
-            if (!lastHealth.isEmpty()) reset();
-            return;
-        }
-        long now = System.currentTimeMillis();
-        Map<Integer, Float> seen = new HashMap<>();
-        for (Entity e : mc.level.getEntities(p, p.getBoundingBox().inflate(32))) {
-            if (!(e instanceof LivingEntity le)) continue;
-            float hp = le.getHealth() + le.getAbsorptionAmount();
-            seen.put(le.getId(), hp);
-            Float before = lastHealth.get(le.getId());
-            if (before == null || hp >= before - 0.01f) continue;
-            if (dmgOnlyOwn) {
-                Long hit = lastHits.get(le.getId());
-                if (hit == null || now - hit > 1500) continue;
-            }
-            float d = before - hp;
-            String text = dmgHearts
-                    ? String.format(Locale.ROOT, "%.1f", d / 2f).replace(".0", "") + " ❤"
-                    : String.format(Locale.ROOT, "%.1f", d).replace(".0", "");
-            int color = !le.isAlive() || hp <= 0 ? 0xFFFFD84D : d >= 8 ? 0xFFFF4D4D : 0xFFFF8A8A;
-            double jx = (RNG.nextDouble() - 0.5) * 0.6;
-            double jz = (RNG.nextDouble() - 0.5) * 0.6;
-            numbers.add(new Popup(le.getX() + jx, le.getY() + le.getBbHeight() + 0.2, le.getZ() + jz, "-" + text,
-                    color, now));
-        }
-        lastHealth.clear();
-        lastHealth.putAll(seen);
-        if (++dmgNow % 100 == 0) lastHits.values().removeIf(t -> now - t > 5000);
-        numbers.removeIf(nb -> now - nb.born() > 1200);
-        while (numbers.size() > 40) numbers.remove(0);
-    }
-
-    private static void drawNumbers(GuiGraphicsExtractor g, Minecraft mc) {
-        long now = System.currentTimeMillis();
-        float scale = new float[] {0.75f, 1f, 1.4f}[Math.max(0, Math.min(2, dmgSize))];
-        var pose = g.pose();
-        for (Iterator<Popup> it = numbers.iterator(); it.hasNext(); ) {
-            Popup nb = it.next();
-            float age = (now - nb.born()) / 1200f;
-            if (age >= 1f) continue;
-            double[] s = Render3D.project(nb.x(), nb.y() + age * 0.8, nb.z());
-            if (s[2] <= 0.05) continue; // hinter der Kamera
-            float alpha = age < 0.7f ? 1f : 1f - (age - 0.7f) / 0.3f;
-            Ui.alpha = alpha;
-            int tw = mc.font.width(nb.text());
-            pose.pushMatrix();
-            pose.translate((float) s[0], (float) s[1]);
-            pose.scale(scale, scale);
-            Ui.text(g, mc.font, nb.text(), -tw / 2, -4, nb.color(), true);
-            pose.popMatrix();
-        }
-        Ui.alpha = 1f;
-    }
-
-    // =====================================================================================
-    // Kompass-Leiste
-    // =====================================================================================
-
-    /** Himmelsrichtungen je Sprache (einzelne Buchstaben laufen nicht durch die Uebersetzung). */
-    private static String[] dirs() {
-        return switch (Lang.code()) {
-            case "en" -> new String[] {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
-            case "es" -> new String[] {"N", "NE", "E", "SE", "S", "SO", "O", "NO"};
-            case "fr" -> new String[] {"N", "NE", "E", "SE", "S", "SO", "O", "NO"};
-            default -> new String[] {"N", "NO", "O", "SO", "S", "SW", "W", "NW"};
-        };
-    }
-
-    private static void drawCompass(GuiGraphicsExtractor g, Minecraft mc) {
-        LocalPlayer p = mc.player;
-        var font = mc.font;
-        int sw = mc.getWindow().getGuiScaledWidth();
-        int w = Math.min(sw - 20, Math.max(100, compassWidth));
-        int x0 = (sw - w) / 2;
-        int y0 = Math.max(0, compassY);
-        int h = 16;
-        float fov = 180f; // so viel Grad zeigt die Leiste
-        float bearing = Mth.wrapDegrees(p.getYRot() + 180f); // 0 = Norden, 90 = Osten
-        if (bearing < 0) bearing += 360f;
-        Ui.roundRect(g, x0, y0, w, h, 4, 0x90101018);
-        int cx = x0 + w / 2;
-        String[] dirs = dirs();
-        // Striche alle 15 Grad, Buchstaben alle 45 Grad
-        for (int a = 0; a < 360; a += 15) {
-            float d = Mth.wrapDegrees(a - bearing);
-            if (Math.abs(d) > fov / 2f) continue;
-            int x = Math.round(cx + d * w / fov);
-            if (x < x0 + 3 || x > x0 + w - 3) continue;
-            float fade = 1f - Math.abs(d) / (fov / 2f) * 0.7f;
-            Ui.alpha = fade;
-            if (a % 45 == 0) {
-                String lbl = dirs[a / 45];
-                int c = a == 0 ? 0xFFFF5C5C : 0xFFFFFFFF;
-                Ui.text(g, font, lbl, x - font.width(lbl) / 2, y0 + 4, c, true);
-            } else {
-                Ui.fill(g, x, y0 + 6, x + 1, y0 + 10, 0xFFB0B8C8);
-            }
-        }
-        Ui.alpha = 1f;
-        // Wegpunkte als kleine Rauten
-        if (compassWaypoints && RenderMods.waypointList != null && !RenderMods.waypointList.isEmpty()) {
-            for (String entry : RenderMods.waypointList.split(";")) {
-                String[] f = entry.split(",");
-                if (f.length < 4) continue;
-                try {
-                    double wx = Integer.parseInt(f[1].trim()) + 0.5;
-                    double wz = Integer.parseInt(f[3].trim()) + 0.5;
-                    double dx = wx - p.getX();
-                    double dz = wz - p.getZ();
-                    float wb = Mth.wrapDegrees((float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0) + 180f);
-                    float d = Mth.wrapDegrees(wb - bearing);
-                    if (Math.abs(d) > fov / 2f) continue;
-                    int x = Math.round(cx + d * w / fov);
-                    int c = 0xFF000000 | Theme.accent();
-                    Ui.fill(g, x - 1, y0 + h - 5, x + 2, y0 + h - 2, c);
-                    Ui.fill(g, x, y0 + h - 6, x + 1, y0 + h - 1, c);
-                    if (Math.abs(d) < 6f) { // fast genau vor dir: Name und Entfernung darunter
-                        String t = f[0].trim() + "  " + Math.round(Math.sqrt(dx * dx + dz * dz)) + "m";
-                        Ui.text(g, font, t, cx - font.width(t) / 2, y0 + h + 2, c, true);
-                    }
-                } catch (NumberFormatException ignored) {
-                    // kaputter Eintrag
-                }
-            }
-        }
-        // Mitte
-        Ui.fill(g, cx, y0 - 1, cx + 1, y0 + 3, 0xFFFFFFFF);
-        if (compassDegrees) {
-            String deg = Math.round(bearing) % 360 + "°";
-            int ty = y0 + h + 2 + (compassWaypoints ? 10 : 0);
-            Ui.text(g, font, deg, cx - font.width(deg) / 2, ty, 0xFFDDE3F0, true);
-        }
-    }
-
-    // =====================================================================================
-    // Chunk-Grenzen
-    // =====================================================================================
-
-    private static void drawChunks(GuiGraphicsExtractor g, Minecraft mc) {
-        LocalPlayer p = mc.player;
-        int cx = Mth.floor(p.getX()) >> 4;
-        int cz = Mth.floor(p.getZ()) >> 4;
-        double y = Math.floor(p.getY());
-        int hh = Math.max(2, chunksHeight);
-        int r = chunksNeighbors ? 1 : 0;
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dz = -r; dz <= r; dz++) {
-                if (dx == 0 && dz == 0) continue;
-                double x0 = (cx + dx) << 4;
-                double z0 = (cz + dz) << 4;
-                Render3D.wire(g, new AABB(x0, y - hh, z0, x0 + 16, y + hh, z0 + 16), 0x904D9DFF);
-            }
-        }
-        double x0 = cx << 4;
-        double z0 = cz << 4;
-        int c = 0xFFFFD84D;
-        Render3D.wire(g, new AABB(x0, y - hh, z0, x0 + 16, y + hh, z0 + 16), c);
-        // Linie am Boden (auf deiner Hoehe), damit man die Grenze beim Gehen sieht
-        Render3D.worldLine(g, x0, y + 0.02, z0, x0 + 16, y + 0.02, z0, c);
-        Render3D.worldLine(g, x0 + 16, y + 0.02, z0, x0 + 16, y + 0.02, z0 + 16, c);
-        Render3D.worldLine(g, x0 + 16, y + 0.02, z0 + 16, x0, y + 0.02, z0 + 16, c);
-        Render3D.worldLine(g, x0, y + 0.02, z0 + 16, x0, y + 0.02, z0, c);
-    }
-
-    // =====================================================================================
     // Einstellungen
     // =====================================================================================
 
@@ -384,30 +163,6 @@ public final class HudMods {
                 f.note("Man sieht nur Spieler, die dein Spiel geladen hat (meist bis etwa 100 Blöcke). Freunde "
                         + "stehen in ihrer Farbe da.");
                 f.footer(() -> radar, v -> radar = v);
-            });
-            case "Schadenszahlen" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zeigt beim Treffen kurz an, wie viel Schaden du gemacht hast.");
-                f.toggle("Nur eigene Treffer", () -> dmgOnlyOwn, v -> dmgOnlyOwn = v, true);
-                f.toggle("In Herzen (sonst Lebenspunkte)", () -> dmgHearts, v -> dmgHearts = v, true);
-                f.choice("Größe", Extras.SIZES, () -> dmgSize, v -> dmgSize = v, 1);
-                f.note("Gelb: der Treffer war tödlich. Ohne „Nur eigene Treffer“ siehst du jeden Schaden in der "
-                        + "Nähe, auch von Fallschaden oder anderen Spielern.");
-                f.footer(() -> damage, v -> damage = v);
-            });
-            case "Kompass-Leiste" -> new ModuleScreen(parent, module, f -> {
-                f.description("Ein Kompass oben am Bildschirm: Himmelsrichtungen, Gradzahl und deine Wegpunkte.");
-                f.slider("Breite", 100, 400, () -> compassWidth, v -> compassWidth = v, 220);
-                f.slider("Abstand von oben", 0, 80, () -> compassY, v -> compassY = v, 4);
-                f.toggle("Wegpunkte zeigen", () -> compassWaypoints, v -> compassWaypoints = v, true);
-                f.toggle("Gradzahl zeigen", () -> compassDegrees, v -> compassDegrees = v, true);
-                f.note("Stehen oben Bossleisten, schieb den Kompass mit „Abstand von oben“ darunter.");
-                f.footer(() -> compass, v -> compass = v);
-            });
-            case "Chunk-Grenzen" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zeigt die Grenzen des Chunks, in dem du stehst, als gelbe Linien.");
-                f.toggle("Auch die Nachbar-Chunks (blau)", () -> chunksNeighbors, v -> chunksNeighbors = v, true);
-                f.slider("Höhe über und unter dir", 2, 64, () -> chunksHeight, v -> chunksHeight = v, 16);
-                f.footer(() -> chunks, v -> chunks = v);
             });
             default -> null;
         };

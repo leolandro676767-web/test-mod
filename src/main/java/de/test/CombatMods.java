@@ -29,7 +29,6 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.alchemy.PotionContents;
@@ -46,7 +45,7 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Trigger Bot, Auto Weapon, Crystal Aura, Surround, Aim Assist, Bow Aimbot, Auto Trap, Hitboxes, Auto Pot,
- * Auto Web, Arrow Dodge und Hole Filler.
+ * Auto Web und Hole Filler.
  */
 public final class CombatMods {
     private CombatMods() {
@@ -95,6 +94,8 @@ public final class CombatMods {
     public static boolean surFloor = true;
     public static boolean surDisableMove = true;
     public static int surPerTick = 4;
+    public static boolean surOnlyEnemy = false; // nur bauen, wenn ein Gegner nah ist
+    public static int surEnemyRange = 8;        // Bloecke
 
     // --- Aim Assist ---
     public static boolean aimAssist = false;
@@ -138,6 +139,7 @@ public final class CombatMods {
     public static boolean autoPot = false;
     public static int potHealth = 10;          // Lebenspunkte (2 = 1 Herz)
     public static int potDelay = 10;           // Ticks zwischen zwei Traenken
+    public static boolean potBuffs = false;    // Staerke, Tempo und Feuerschutz erneuern
 
     // --- Auto Web ---
     public static boolean autoWeb = false;
@@ -145,12 +147,6 @@ public final class CombatMods {
     public static boolean webHead = false;
     public static int webDelay = 10;
     public static boolean webMonsters = false;
-
-    // --- Arrow Dodge ---
-    public static boolean arrowDodge = false;
-    public static int dodgeSpeed = 6;          // Zehntel-Bloecke pro Tick zur Seite
-    public static int dodgeTicks = 10;         // so frueh ausweichen
-    public static boolean dodgeJump = false;
 
     // --- Hole Filler ---
     public static boolean holeFiller = false;
@@ -194,7 +190,6 @@ public final class CombatMods {
         Safe.run("Auto Trap", () -> trapTick(mc, p));
         Safe.run("Auto Pot", () -> potTick(mc, p));
         Safe.run("Auto Web", () -> webTick(mc, p));
-        Safe.run("Arrow Dodge", () -> dodgeTick(mc, p));
         Safe.run("Hole Filler", () -> holeTick(mc, p));
     }
 
@@ -445,30 +440,41 @@ public final class CombatMods {
 
     private static int potTimer;
 
-    /** Heil-Wurftrank (Sofortheilung, auch Stufe II)? */
-    private static boolean healPotion(ItemStack st) {
+    /** Wurftrank mit dieser Wirkung (z.B. Sofortheilung, auch Stufe II)? */
+    private static boolean splashWith(ItemStack st, net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> eff) {
         if (st.isEmpty() || !BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().equals("splash_potion")) return false;
         PotionContents pc = st.get(DataComponents.POTION_CONTENTS);
         if (pc == null) return false;
         for (MobEffectInstance e : pc.getAllEffects()) {
-            if (e.getEffect().value() == MobEffects.INSTANT_HEALTH.value()) return true;
+            if (e.getEffect().value() == eff.value()) return true;
         }
         return false;
+    }
+
+    private static int potSlot(LocalPlayer p, net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> eff) {
+        var inv = p.getInventory();
+        for (int i = 0; i < 9; i++) {
+            if (splashWith(inv.getItem(i), eff)) return i;
+        }
+        return -1;
     }
 
     private static void potTick(Minecraft mc, LocalPlayer p) {
         if (potTimer > 0) potTimer--;
         if (!autoPot || potTimer > 0 || mc.gui.screen() != null || p.isSpectator() || p.isCreative()) return;
-        if (p.getHealth() > potHealth || p.isUsingItem()) return;
-        var inv = p.getInventory();
-        int slot = -1;
-        for (int i = 0; i < 9; i++) {
-            if (healPotion(inv.getItem(i))) {
-                slot = i;
-                break;
+        if (p.isUsingItem()) return;
+        int slot = p.getHealth() <= potHealth ? potSlot(p, MobEffects.INSTANT_HEALTH) : -1;
+        if (slot < 0 && potBuffs) {
+            // Staerke, Tempo und Feuerschutz neu werfen, wenn sie fehlen oder in 3 s ablaufen
+            for (var eff : List.of(MobEffects.STRENGTH, MobEffects.SPEED, MobEffects.FIRE_RESISTANCE)) {
+                MobEffectInstance cur = p.getEffect(eff);
+                if (cur != null && !cur.endsWithin(60)) continue;
+                slot = potSlot(p, eff);
+                if (slot >= 0) break;
             }
         }
         if (slot < 0) return;
+        var inv = p.getInventory();
         // senkrecht nach unten werfen: der Trank zerplatzt direkt unter einem
         int prev = inv.getSelectedSlot();
         float pitch = p.getXRot();
@@ -521,62 +527,6 @@ public final class CombatMods {
                     return;
                 }
             }
-        }
-    }
-
-    // =====================================================================================
-    // Arrow Dodge
-    // =====================================================================================
-
-    private static final java.util.Map<Integer, Integer> dodged = new java.util.HashMap<>();
-    private static int dodgeNow;
-
-    private static void dodgeTick(Minecraft mc, LocalPlayer p) {
-        dodgeNow++;
-        if (!arrowDodge || p.isSpectator() || p.isPassenger()) return;
-        if (dodgeNow % 100 == 0) dodged.values().removeIf(t -> dodgeNow - t > 100);
-        AABB me = p.getBoundingBox().inflate(0.35);
-        for (Entity e : mc.level.getEntities(p, p.getBoundingBox().inflate(40))) {
-            if (!(e instanceof AbstractArrow a) || !a.isAlive() || a.getOwner() == p) continue;
-            if (dodged.containsKey(a.getId())) continue;
-            Vec3 v = a.getDeltaMovement();
-            if (v.lengthSqr() < 0.04) continue; // steckt fest
-            // Flugbahn ein paar Ticks voraus rechnen (wie Minecraft: bewegen, bremsen, fallen)
-            Vec3 pos = a.position();
-            boolean hit = false;
-            for (int t = 0; t < Math.max(2, dodgeTicks); t++) {
-                Vec3 next = pos.add(v);
-                if (Combat.rayHit(pos, next, me) >= 0) {
-                    hit = true;
-                    break;
-                }
-                pos = next;
-                v = v.scale(0.99).subtract(0, 0.05, 0);
-            }
-            if (!hit) continue;
-            dodged.put(a.getId(), dodgeNow);
-            Vec3 av = a.getDeltaMovement();
-            double len = Math.sqrt(av.x * av.x + av.z * av.z);
-            double sx;
-            double sz;
-            if (len < 1e-3) { // kommt senkrecht von oben: einfach in Blickrichtung weg
-                sx = -Math.sin(Math.toRadians(p.getYRot()));
-                sz = Math.cos(Math.toRadians(p.getYRot()));
-            } else {
-                sx = -av.z / len; // quer zur Flugrichtung
-                sz = av.x / len;
-                double rx = p.getX() - a.getX();
-                double rz = p.getZ() - a.getZ();
-                if (rx * sx + rz * sz < 0) { // auf der Seite bleiben, auf der man schon ist
-                    sx = -sx;
-                    sz = -sz;
-                }
-            }
-            double speed = dodgeSpeed / 10.0;
-            Vec3 cur = p.getDeltaMovement();
-            double vy = dodgeJump && p.onGround() ? 0.42 : cur.y;
-            p.setDeltaMovement(cur.x + sx * speed, vy, cur.z + sz * speed);
-            return;
         }
     }
 
@@ -689,6 +639,7 @@ public final class CombatMods {
 
     /** Vom MultiPlayerGameModeMixin direkt vor jedem Schlag (auch von Kill Aura und Trigger Bot). */
     public static void beforeAttack(Player player, Entity target) {
+        PlayerMods.markAttack(player);
         if (!autoWeapon) return;
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
@@ -929,6 +880,7 @@ public final class CombatMods {
             Keybinds.message(Lang.t("Surround aus: du hast dich bewegt"), "");
             return;
         }
+        if (surOnlyEnemy && !enemyNear(mc, p, surEnemyRange)) return;
         int slot = surroundSlot(p);
         if (slot < 0) {
             if (!surWarned) {
@@ -971,6 +923,14 @@ public final class CombatMods {
             }
             if (placeBlock(mc, p, pos, slot)) placed++;
         }
+    }
+
+    /** Ein Spieler, der kein Freund ist, naeher als r Bloecke? */
+    private static boolean enemyNear(Minecraft mc, LocalPlayer p, int r) {
+        for (Player o : mc.level.players()) {
+            if (o != p && valid(o, true, false, false) && p.distanceTo(o) <= r) return true;
+        }
+        return false;
     }
 
     private static int surroundSlot(LocalPlayer p) {
@@ -1105,6 +1065,8 @@ public final class CombatMods {
                 f.toggle("In die Blockmitte stellen", () -> surCenter, v -> surCenter = v, true);
                 f.toggle("Auch unter die Füße", () -> surFloor, v -> surFloor = v, true);
                 f.toggle("Ausschalten, wenn du dich bewegst", () -> surDisableMove, v -> surDisableMove = v, true);
+                f.toggle("Nur, wenn ein Gegner in der Nähe ist", () -> surOnlyEnemy, v -> surOnlyEnemy = v, false);
+                f.slider("Gegner bis (Blöcke)", 3, 16, () -> surEnemyRange, v -> surEnemyRange = v, 8);
                 f.note("Die Blöcke müssen in der Hotbar sein; deine Auswahl bleibt, wie sie war.");
                 f.footer(() -> surround, v -> surround = v);
             });
@@ -1162,8 +1124,9 @@ public final class CombatMods {
                 f.description("Wirft bei wenig Leben einen Heil-Wurftrank aus der Hotbar unter dich.");
                 f.slider("Bei Leben unter (2 = 1 Herz)", 2, 19, () -> potHealth, v -> potHealth = v, 10);
                 f.slider("Pause zwischen zwei Tränken (Ticks)", 4, 40, () -> potDelay, v -> potDelay = v, 10);
-                f.note("Nur Wurftränke der Heilung (auch Stufe II). Dein Blick springt dafür nur ganz kurz nach "
-                        + "unten.");
+                f.toggle("Auch Stärke, Tempo und Feuerschutz erneuern", () -> potBuffs, v -> potBuffs = v, false);
+                f.note("Nur Wurftränke aus der Hotbar. Wirkungen wirft er neu, sobald sie fehlen oder in 3 Sekunden "
+                        + "ablaufen. Heilen geht immer vor. Dein Blick springt dafür nur ganz kurz nach unten.");
                 f.footer(() -> autoPot, v -> autoPot = v);
             });
             case "Auto Web" -> new ModuleScreen(parent, module, f -> {
@@ -1174,15 +1137,6 @@ public final class CombatMods {
                 f.toggle("Auch Monster", () -> webMonsters, v -> webMonsters = v, false);
                 f.note("Spinnennetze in die Hotbar. Freunde und dich selbst spinnt er nie ein.");
                 f.footer(() -> autoWeb, v -> autoWeb = v);
-            });
-            case "Arrow Dodge" -> new ModuleScreen(parent, module, f -> {
-                f.description("Rechnet aus, ob ein Pfeil (oder Dreizack) dich treffen wird, und springt rechtzeitig "
-                        + "zur Seite.");
-                f.slider("Ausweichen (Zehntel-Blöcke)", 3, 12, () -> dodgeSpeed, v -> dodgeSpeed = v, 6);
-                f.slider("So früh (Ticks vorher)", 2, 20, () -> dodgeTicks, v -> dodgeTicks = v, 10);
-                f.toggle("Dabei springen", () -> dodgeJump, v -> dodgeJump = v, false);
-                f.note("Eigene Pfeile und solche, die schon stecken, lässt er in Ruhe.");
-                f.footer(() -> arrowDodge, v -> arrowDodge = v);
             });
             case "Hole Filler" -> new ModuleScreen(parent, module, f -> {
                 f.description("Füllt Löcher (1x1, ringsum Obsidian) in deiner Nähe - Gegner können sich dann nicht "

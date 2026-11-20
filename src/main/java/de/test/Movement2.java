@@ -51,9 +51,6 @@ public final class Movement2 {
     public static int waspChunks = 6;           // Reichweite in Chunks
     public static int waspSpeed = 30;           // Bloecke pro Sekunde
 
-    public static boolean blink = false;
-    public static int blinkAuto = 0;            // Sekunden bis zum automatischen Senden, 0 = aus
-
     public static boolean clickTp = false;
     public static int clickTpRange = 5;
 
@@ -92,38 +89,6 @@ public final class Movement2 {
     private static int flightTicks = 0;
 
     // Blink: zurueckgehaltene Bewegungs-Pakete
-    private static final Deque<Packet<?>> HELD = new ArrayDeque<>();
-    private static boolean flushing = false;
-    private static boolean hookSeen = false;
-    private static boolean hookWarned = false;
-    private static int blinkTicks = 0;
-
-    // ---------- Blink: wird vom Mixin fuer jedes ausgehende Paket aufgerufen ----------
-
-    /** true = Paket zurueckhalten (das Mixin bricht das Senden dann ab). */
-    public static boolean intercept(Packet<?> packet) {
-        hookSeen = true;
-        if (!blink || flushing) return false;
-        if (!(packet instanceof ServerboundMovePlayerPacket)) return false;
-        HELD.add(packet);
-        return true;
-    }
-
-    private static void flush(Minecraft mc) {
-        flushing = true;
-        try {
-            while (!HELD.isEmpty()) {
-                PlayerMods.sendRaw(HELD.poll());
-            }
-        } finally {
-            flushing = false;
-        }
-        blinkTicks = 0;
-    }
-
-    public static int heldPackets() {
-        return HELD.size();
-    }
 
     // ---------- Tick-Anfang (vor der Spieler-Bewegung) ----------
 
@@ -162,23 +127,7 @@ public final class Movement2 {
 
     public static void endTick(Minecraft mc) {
         LocalPlayer p = mc.player;
-        if (p == null || mc.level == null) {
-            HELD.clear();
-            return;
-        }
-
-        // Blink
-        if (blink) {
-            if (!hookSeen && !hookWarned && p.tickCount > 40) {
-                hookWarned = true;
-                p.sendSystemMessage(Lang.literal(
-                        "1912: Blink funktioniert in dieser Version nicht (Paket-Hook fehlt)"));
-            }
-            blinkTicks++;
-            if (blinkAuto > 0 && blinkTicks >= blinkAuto * 20) flush(mc);
-        } else if (!HELD.isEmpty()) {
-            flush(mc);
-        }
+        if (p == null || mc.level == null) return;
 
         boolean bot = TestClient.areaActive;
         boolean canMove = screenAllowsMovement(mc);
@@ -442,16 +391,6 @@ public final class Movement2 {
             f.slider("Reichweite (Chunks)", 1, 32, () -> waspChunks, v -> waspChunks = v, 6);
             f.slider("Tempo (Blöcke/s)", 5, 80, () -> waspSpeed, v -> waspSpeed = v, 30);
             f.footer(() -> autoWasp, v -> autoWasp = v);
-        });
-    }
-
-    public static Screen blinkScreen(Screen parent) {
-        return new ModuleScreen(parent, "Blink", f -> {
-            f.description("Hält deine Bewegung zurück. Beim Ausschalten\nspringst du für andere zur neuen Stelle.");
-            f.section("Allgemein");
-            f.slider("Auto-Senden (s, 0=aus)", 0, 30, () -> blinkAuto, v -> blinkAuto = v, 0);
-            f.note(() -> "Zurückgehalten: " + heldPackets() + " Pakete");
-            f.footer(() -> blink, v -> blink = v);
         });
     }
 

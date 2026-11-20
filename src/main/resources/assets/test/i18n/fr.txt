@@ -1421,3 +1421,132 @@
 1588	Signaler dans le chat
 1589	Signaler à partir de tant de traces
 1590	Ce sont des indices, pas des preuves : la canne à sucre peut aussi faire 3 de haut toute seule, et les géodes neuves ont déjà quelques grappes (elles ne comptent que s'il y a plus de grappes que de bourgeons). Seules beaucoup de traces à la fois veulent vraiment dire quelque chose.
+1591	Personnaliser le menu
+1592	Terminer la personnalisation
+1593	Réinitialiser la personnalisation
+1594	est maintenant dans le menu
+1595	Glisser le titre : déplacer
+1596	Personnaliser : un clic ajoute un module au menu ou le masque
+1597	Glisser le titre : déplacer la colonne
+1598	Clic : afficher/masquer
+1599	Clic : afficher/masquer
+1600	Auto-Logout – joueur à proximité : 
+1601	Se déconnecte quand ça devient dangereux – toujours, pas seulement quand un bot tourne.
+1602	Autres joueurs
+1603	Se déconnecter si un joueur proche n'est pas un ami
+1604	Distance (blocs, 0 = n'importe laquelle)
+1605	Les amis (Menu → Amis) ne comptent pas. Avec 0, n'importe quel joueur visible par ton jeu suffit (généralement jusqu'à environ 100 blocs). Ensuite, Auto Reconnect ne se reconnecte pas tout seul.
+1606	Seulement si un ennemi est proche
+1607	Ennemi jusqu'à (blocs)
+1608	Renouveler aussi Force, Vitesse et Résistance au feu
+1609	Seulement des potions jetables de la barre d'action. Les effets sont relancés dès qu'ils manquent ou expirent dans 3 secondes. Le soin passe toujours en premier. Ta vue ne descend qu'un bref instant.
+1610	Joueur en vue : 
+1611	Tentatives max. (0 = toujours réessayer)
+1612	Attendre plus longtemps après chaque échec
+1613	Se reconnecter après Auto-Logout au bout de (minutes, 0 = jamais)
+1614	Attendre plus longtemps : deux fois plus à la 2e tentative, trois fois plus à la 3e et ainsi de suite (5 minutes au plus). Sinon, Auto-Logout et l'auto-log des mineurs ne se reconnectent jamais tout seuls.
+1615	Mettre en avant les messages des amis
+1616	Masquer si cela contient
+1617	Les amis reçoivent une étoile de leur couleur. Pour le filtre, sépare plusieurs mots par des virgules - majuscules et minuscules n'importent pas.
+1618	Joueurs en vue (pas les amis)
+1619	Les amis en vue sont déjà signalés par la liste d'amis (Menu → Amis).
+1620	Ignorer les invisibles
+1621	Ignorer les joueurs sans armure
+1622	Désactivé dans l'eau, la lave et les toiles d'araignée
+1623	Monte des marches plus hautes sans sauter.
+1624	Désactivé en se baissant
+1625	Tour (maintenir Espace : construire tout droit vers le haut)
+1626	Ne jamais utiliser (
+1627	Scaffold : ne jamais utiliser
+1628	Il ne prend jamais de coffres, boîtes de Shulker, sable, gravier ni TNT. Sous « Ne jamais utiliser », tu peux bloquer d'autres blocs, p. ex. l'obsidienne ou les blocs de diamant.
+1629	Enchantées d'abord
+1630	Normales d'abord
+1631	Jamais
+1632	Verre et glace
+1633	Verre, glace et minerais
+1634	Auto Fish : La canne est presque cassée et il n'y en a pas d'autre.
+1635	Ceux déjà ouverts en gris
+1636	Coffres et tonneaux
+1637	Boîtes de Shulker
+1638	Coffres de l'Ender
+1639	Fourneaux, hauts fourneaux et fumoirs
+1640	Entonnoirs, droppers et distributeurs
+1641	Alambics
+1642	Générateurs
+1643	Les générateurs sont rouges. Il retient ceux que tu as déjà ouverts jusqu'à ce que tu quittes le monde.
+1644	Seulement les trous en obsidienne et bedrock
+1645	Vert = tout en bedrock (le plus sûr), jaune = obsidienne ou aussi solide, bleu = autres blocs qui ne résistent pas aux explosions.
+1646	Apparence
+1647	Couleur selon la distance (rouge = proche)
+1648	Masquer les amis
+1649	Armure et objets en main
+1650	Afficher le ping
+1651	Seulement les objets précieux
+1652	Afficher nom et quantité
+1653	Précieux : tout ce qui est enchanté, objets en diamant et netherite, débris antiques, totems, élytres, pommes dorées, boîtes de Shulker, émeraudes, cristaux de l'End et ce genre de choses.
+1654	Seulement les points de passage de cette dimension
+1655	Les anciens points de passage ne connaissent pas leur dimension - ceux-là sont affichés partout.
+1656	Temps toujours clair
+1657	Toi seul ne vois plus la pluie et les orages - sur le serveur, il pleut quand même.
+1658	Manger aussi avec vie ≤ (0 = désactivé)
+1659	Ne pas manger en combat
+1660	Avec une barre de faim presque pleine, on guérit plus vite - c'est pourquoi il peut aussi manger avec peu de vie. Combat veut dire : tu as frappé ou subi des dégâts ces 5 dernières secondes. Il laisse toujours la mauvaise nourriture comme la chair putréfiée.
+1661	Changer de canne avant qu'elle casse
+1662	Avec seulement 5 utilisations restantes, il prend une autre canne dans l'inventaire. S'il n'y en a pas, il s'arrête au lieu de la casser.
+1663	Mange une pomme dorée quand la vie\nest basse.
+1664	Ordre
+1665	Manger une pomme dorée enchantée en brûlant
+1666	Seules les pommes dorées enchantées donnent Résistance au feu - c'est pourquoi il ne mange que celles-là en brûlant, et seulement si tu n'as pas encore Résistance au feu.
+1667	Aussi la main secondaire
+1668	Envoyer ensuite
+1669	Par exemple /home ou /kit. Il l'envoie 2 secondes après la réapparition. Vide = rien.
+1670	Toucher de soie pour
+1671	Toiles d'araignée avec l'épée
+1672	Toucher de soie : le verre et la glace ne cassent pas, les minerais restent entiers (sans bonus de Fortune). L'épée donne de la ficelle, la cisaille garde la toile d'araignée.
+1673	Retirer
+1674	Ranger
+1675	Seulement ceux choisis
+1676	Tous sauf ceux choisis
+1677	Pause : joueur à proximité
+1678	Chest Stealer : coffre plein
+1679	Pause si un joueur qui n'est pas un ami est proche
+1680	Les amis (Menu → Amis) ne comptent pas. La distance vaut pour Nuker, Auto Farm et Bûcheron ensemble.
+1681	Retire automatiquement tout à l'ouverture d'un coffre - ou range tout.
+1682	Quels objets
+1683	Chest Stealer : objets
+1684	Si ton inventaire (ou le coffre en rangeant) est plein, il s'arrête. En rangeant, ta barre d'action reste telle quelle. Sans « Seulement coffres, tonneaux et boîtes de Shulker », il prend aussi les fourneaux, entonnoirs et droppers.
+1685	Torche jusqu'au niveau de lumière
+1686	Les torches doivent être dans la barre d'action. Au niveau de lumière 0, il n'en pose que là où il n'y a aucune lumière - ainsi peu de torches suffisent pour toute une grotte, et les monstres n'apparaissent que là. Plus haut = plus de torches, par exemple pour des couloirs plus clairs.
+1687	Coupe les sons envoyés par le serveur\n(mobs, portails, orages, explosions et autres).
+1688	Protection à la connexion
+1689	Seulement sur les nouveaux serveurs
+1690	Sur chaque serveur
+1691	Protection à la connexion : tous les modules désactivés. 
+1692	Protection à la connexion : nouveau serveur - tous les modules désactivés. 
+1693	Réactiver avec : 
+1694	Désactive tous les modules quand tu rejoins un serveur - exactement comme si tu avais appuyé sur la touche « Tout désactiver / réactiver » (J). Avec J, ils se réactivent.
+1695	Quand
+1696	Serveurs connus : 
+1697	Oublier les serveurs connus
+1698	Nouveau veut dire : tu n'as jamais été sur ce serveur avec 1912 Utilities. Rien ne se passe en changeant de dimension ou de lobby. Amis, Protection serveur et Protection à la connexion restent actifs.
+1699	Partager en texte
+1700	Copier tous les réglages en texte
+1701	§cLa copie a échoué
+1702	Copié (
+1703	 caractères). Colle-le maintenant p. ex. dans un fichier texte ou envoie-le-toi.
+1704	Appliquer le texte du presse-papiers
+1705	Appliqué ! Tes anciens réglages sont dans le profil “
+1706	§cLe presse-papiers est vide. Copie d'abord le texte.
+1707	§cLe presse-papiers ne contient pas de texte de réglages 1912 Utilities.
+1708	§cLe texte est incomplet ou abîmé. Le mieux est de le recopier en entier.
+1709	Le texte contient tout : quels modules sont actifs, leurs réglages, les touches, le menu et le design. Il marche aussi dans les versions plus récentes - les nouveaux modules y gardent leur réglage par défaut. Appliquer remplace tes réglages actuels.
+1710	Performances
+1711	Mode performance
+1712	Pour les PC faibles : dans Wall Hack, Block Esp, Storage Esp, Hole Esp, Tunnel Esp, Void Esp, Base Finder et les blocs de l'ESP, les blocs reliés deviennent une seule grande boîte. 100 boîtes au plus sont dessinées, sans ligne de scan ni remplissage, et la recherche est plus lente.
+1713	Mode performance (pour PC faibles)
+1715	Mode performance : les minerais regroupés deviennent une grande boîte - beaucoup moins à dessiner. Il vaut pour tous les affichages de blocs (aussi dans Menu → Personnaliser le design).
+1716	X-Ray classique : tout sauf les blocs choisis devient invisible - tu vois à travers la pierre et la terre directement les minerais.
+1717	Seulement les minerais (par défaut)
+1718	Éclaircir (vision nocturne)
+1719	Masquer l'eau
+1720	Par défaut : tous les minerais, les débris antiques et les générateurs. Tu vois toujours les coffres, les boîtes de Shulker et la lave. Tu ne peux pas traverser les blocs invisibles. Sur les serveurs avec anti-xray, les minerais n'apparaissent souvent que quand tu es tout près.

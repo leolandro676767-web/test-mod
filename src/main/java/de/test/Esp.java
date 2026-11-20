@@ -126,7 +126,11 @@ public final class Esp {
         Ui.alpha = 1f;
         int drawn = 0;
         try {
-            if (blocks && !blockTypes.isEmpty()) {
+            if (blocks && !blockTypes.isEmpty() && RenderMods.perfMode) {
+                // Leistungs-Modus: zusammenhaengende Bloecke als ein Kasten, ohne Linien und Namen
+                Render3D.blocks(g, foundBlocks, foundBlocks,
+                        p -> blockTypes.contains(mc.level.getBlockState(p).getBlock()) ? blockColor() : 0, 1);
+            } else if (blocks && !blockTypes.isEmpty()) {
                 for (BlockPos pos : foundBlocks) {
                     if (drawn >= MAX_TARGETS) break;
                     Block b = mc.level.getBlockState(pos).getBlock();

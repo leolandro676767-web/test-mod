@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.MapColor;
 
-/** Zoom, Minimap, Tasten-Anzeige, Haltbarkeits-Warnung, Boat Fly und Fadenkreuz. */
+/** Minimap, Tasten-Anzeige, Haltbarkeits-Warnung, Boat Fly und Fadenkreuz. */
 public final class Extras {
     private Extras() {
     }
@@ -32,13 +32,6 @@ public final class Extras {
     // Einstellungen (werden mit dem Praefix "ex." gespeichert)
     // =====================================================================================
 
-    // --- Zoom ---
-    public static boolean zoom = true;
-    public static int zoomStrength = 4;        // 2..10-fach
-    public static boolean zoomScroll = true;   // Mausrad aendert die Staerke
-    public static boolean zoomSmooth = true;   // weich hinein- und herauszoomen
-    public static boolean zoomSlowMouse = true;
-    public static boolean zoomCinematic = false;
 
     // --- Minimap ---
     public static boolean minimap = false;
@@ -90,15 +83,11 @@ public final class Extras {
     static final String[] SIZES = {"Klein", "Mittel", "Groß"};
     static final String[] MAP_ZOOMS = {"Nah", "Mittel", "Weit"};
 
-    /** Taste fuer den Zoom (in den Minecraft-Steuerungen, Standard C). */
-    static KeyMapping zoomKey;
-
     static void register() {
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("test", "extras"), Safe.hud("Extras", Extras::render));
     }
 
     static void tick(Minecraft mc) {
-        Safe.run("Zoom", () -> zoomTick(mc));
         Safe.run("Minimap", () -> mapTick(mc));
         Safe.run("Haltbarkeit", () -> durabilityTick(mc));
     }
@@ -114,71 +103,6 @@ public final class Extras {
             if (durability && durScreen) Safe.run("Haltbarkeit", () -> drawDurability(g, mc));
         } finally {
             Ui.alpha = old;
-        }
-    }
-
-    // =====================================================================================
-    // Zoom
-    // =====================================================================================
-
-    private static float zoomNow = 1f;      // aktuelle Vergroesserung (weich)
-    private static float scrollMul = 1f;    // mit dem Mausrad dazu
-    private static long zoomLast;
-    private static boolean cineSet;
-    private static boolean cineBefore;
-
-    /** Gerade am Zoomen (Taste gehalten, kein Menue offen)? */
-    static boolean zooming() {
-        Minecraft mc = Minecraft.getInstance();
-        return zoom && zoomKey != null && mc.player != null && mc.gui.screen() == null && zoomKey.isDown();
-    }
-
-    private static float zoomTarget() {
-        return zooming() ? Math.max(1.5f, Math.min(50f, zoomStrength * scrollMul)) : 1f;
-    }
-
-    /** Vergroesserung fuer dieses Bild (vom CameraMixin): 1 = normal. */
-    public static float zoomFactor() {
-        long now = System.nanoTime();
-        float dt = zoomLast == 0 ? 0f : Math.min(0.1f, (now - zoomLast) / 1.0e9f);
-        zoomLast = now;
-        float target = zoomTarget();
-        if (!zoomSmooth) {
-            zoomNow = target;
-        } else {
-            zoomNow += (target - zoomNow) * (1f - (float) Math.exp(-dt * 14f));
-            if (Math.abs(target - zoomNow) < 0.002f) zoomNow = target;
-        }
-        return zoomNow;
-    }
-
-    /** Fuer die Maus (MouseHandlerMixin): beim Zoomen langsamer drehen. */
-    public static double mouseScale() {
-        if (!zoomSlowMouse || zoomNow <= 1.01f) return 1.0;
-        return 1.0 / zoomNow;
-    }
-
-    /** Mausrad beim Zoomen: Staerke aendern (true = verbraucht, Hotbar bleibt). */
-    public static boolean onScroll(double amount) {
-        if (!zoomScroll || !zooming() || amount == 0) return false;
-        scrollMul *= amount > 0 ? 1.2f : 1f / 1.2f;
-        float total = zoomStrength * scrollMul;
-        if (total > 50f) scrollMul = 50f / zoomStrength;
-        if (total < 1.5f) scrollMul = 1.5f / zoomStrength;
-        return true;
-    }
-
-    private static void zoomTick(Minecraft mc) {
-        boolean z = zooming();
-        if (!z) scrollMul = 1f;
-        // Kino-Kamera nur waehrend des Zooms
-        if (z && zoomCinematic && !cineSet) {
-            cineBefore = mc.options.smoothCamera;
-            mc.options.smoothCamera = true;
-            cineSet = true;
-        } else if ((!z || !zoomCinematic) && cineSet) {
-            mc.options.smoothCamera = cineBefore;
-            cineSet = false;
         }
     }
 
@@ -363,7 +287,7 @@ public final class Extras {
         if (mapWaypoints && RenderMods.waypointList != null && !RenderMods.waypointList.isEmpty()) {
             for (String part : RenderMods.waypointList.split(";")) {
                 String[] f = part.split(",");
-                if (f.length < 4) continue;
+                if (f.length < 4 || RenderMods.otherDim(f, mc.level)) continue;
                 try {
                     int wx = Integer.parseInt(f[1].trim());
                     int wz = Integer.parseInt(f[3].trim());
@@ -642,18 +566,6 @@ public final class Extras {
 
     static Screen screen(String module, Screen parent) {
         return switch (module) {
-            case "Zoom" -> new ModuleScreen(parent, module, f -> {
-                f.description("Zoomt heran, solange du die Zoom-Taste hältst (Standard: C, änderbar in den "
-                        + "Minecraft-Steuerungen unter „1912 Utilities“).");
-                f.slider("Stärke (fach)", 2, 10, () -> zoomStrength, v -> zoomStrength = v, 4);
-                f.toggle("Mit dem Mausrad stärker / schwächer", () -> zoomScroll, v -> zoomScroll = v, true);
-                f.toggle("Weich zoomen", () -> zoomSmooth, v -> zoomSmooth = v, true);
-                f.toggle("Maus beim Zoomen langsamer", () -> zoomSlowMouse, v -> zoomSlowMouse = v, true);
-                f.toggle("Kamera beim Zoomen glätten", () -> zoomCinematic, v -> zoomCinematic = v, false);
-                f.note("Das Mausrad wechselt beim Zoomen nicht den Hotbar-Platz. Beim Loslassen ist die Stärke "
-                        + "wieder wie eingestellt.");
-                f.footer(() -> zoom, v -> zoom = v);
-            });
             case "Minimap" -> new ModuleScreen(parent, module, f -> {
                 f.description("Kleine Karte in einer Ecke. Norden ist oben, der Pfeil zeigt deine Blickrichtung.");
                 f.choice("Größe", SIZES, () -> mapSize, v -> mapSize = v, 1);

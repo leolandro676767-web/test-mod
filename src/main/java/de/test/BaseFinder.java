@@ -182,7 +182,8 @@ public final class BaseFinder {
     }
 
     private static void draw(GuiGraphicsExtractor g, List<AABB> list, int color) {
-        int n = Math.min(list.size(), MAX_DRAW); // die Liste ist nach Entfernung sortiert: die naechsten zuerst
+        // die Liste ist nach Entfernung sortiert: die naechsten zuerst (Leistungs-Modus: weniger)
+        int n = Math.min(list.size(), RenderMods.perfMode ? Render3D.PERF_MAX / 2 : MAX_DRAW);
         for (int i = 0; i < n; i++) Render3D.outline(g, list.get(i), color, false);
     }
 

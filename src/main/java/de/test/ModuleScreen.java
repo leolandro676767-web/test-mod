@@ -24,6 +24,11 @@ public class ModuleScreen extends Form {
     protected void build() {
         builder.build(this);
     }
+
+    /** Alles neu aufbauen (z.B. wenn sich eine Zahl in einer Beschriftung geaendert hat). */
+    void refresh() {
+        this.rebuildWidgets();
+    }
 }
 
 /** AutoDrop: jedes Item des Spiels waehlbar, das automatisch aus dem Inventar gedroppt wird. */
@@ -181,6 +186,7 @@ class BindsScreen extends Form {
 class ProfileScreen extends Form {
     private static String name = "";
     private static String message = "";
+    private static String shareMessage = "";
 
     public ProfileScreen(Screen parent) {
         super(Component.literal("Profile"), parent);
@@ -190,6 +196,34 @@ class ProfileScreen extends Form {
     protected void build() {
         description("Speichert alle Einstellungen (Module, Design, Tasten) unter einem Namen, "
                 + "z.B. PvP, Bauen oder Farmen. Laden ersetzt die aktuellen Einstellungen.");
+
+        section("Als Text teilen");
+        wideButton("Alle Einstellungen als Text kopieren", true, () -> {
+            String s = TestConfig.exportText();
+            if (s == null) {
+                shareMessage = "§cKopieren fehlgeschlagen";
+            } else {
+                net.minecraft.client.Minecraft.getInstance().keyboardHandler.setClipboard(s);
+                shareMessage = "Kopiert (" + s.length() + " Zeichen). Jetzt z. B. in eine Textdatei oder an dich "
+                        + "selbst schicken.";
+            }
+            this.rebuildWidgets();
+        }, true);
+        wideButton("Text aus der Zwischenablage übernehmen", false, () -> {
+            int r = TestConfig.importText(net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard());
+            shareMessage = switch (r) {
+                case 0 -> "Übernommen! Deine Einstellungen von vorher liegen im Profil „" + TestConfig.BACKUP_PROFILE
+                        + "“.";
+                case 1 -> "§cDie Zwischenablage ist leer. Erst den Text kopieren.";
+                case 2 -> "§cIn der Zwischenablage ist kein Einstellungs-Text von 1912 Utilities.";
+                default -> "§cDer Text ist unvollständig oder kaputt. Am besten noch einmal ganz kopieren.";
+            };
+            this.rebuildWidgets();
+        }, true);
+        note(() -> shareMessage);
+        note("Der Text enthält alles: welche Module an sind, ihre Einstellungen, die Tasten, das Menü und das "
+                + "Design. Er funktioniert auch in neueren Versionen - neue Module behalten dort ihren Standard. "
+                + "Übernehmen ersetzt deine jetzigen Einstellungen.");
 
         section("Neues Profil");
         text("Name", () -> name, v -> name = v, "");
@@ -246,6 +280,8 @@ class KillAuraScreen extends Form {
         toggle("Neutrale Mobs nur, wenn sie angreifen", () -> KillAura.neutralOnlyAngry,
                 v -> KillAura.neutralOnlyAngry = v, true);
         toggle("Gezähmte und benannte Tiere auslassen", () -> KillAura.skipPets, v -> KillAura.skipPets = v, true);
+        toggle("Unsichtbare auslassen", () -> KillAura.skipInvisible, v -> KillAura.skipInvisible = v, false);
+        toggle("Spieler ohne Rüstung auslassen", () -> KillAura.skipNaked, v -> KillAura.skipNaked = v, false);
         sliderTenths("Reichweite (Blöcke)", 10, 60, () -> KillAura.range, v -> KillAura.range = v, 30);
         toggle("Durch Wände", () -> KillAura.throughWalls, v -> KillAura.throughWalls = v, false);
         slider("Blickfeld (°)", 30, 360, () -> KillAura.fov, v -> KillAura.fov = v, 360);
@@ -290,50 +326,3 @@ class KillAuraScreen extends Form {
     }
 }
 
-/** Einstellungen der Bot-Verteidigung. */
-class BotGuardScreen extends Form {
-    public BotGuardScreen(Screen parent) {
-        super(Component.literal("Bot-Verteidigung"), parent);
-    }
-
-    @Override
-    protected void build() {
-        description("Während ein Bot selbst läuft oder abbaut, wehrt er Monster in Reichweite ab. Tiere und "
-                + "neutrale Mobs nur, wenn sie dich gerade angreifen. Solange er kämpft, hält der Bot an und macht "
-                + "danach mit seinem Werkzeug weiter.");
-
-        section("Bots");
-        toggle("Debris Miner", () -> BotGuard.forDebris, v -> BotGuard.forDebris = v, true);
-        toggle("Tunnel Miner", () -> BotGuard.forTunnel, v -> BotGuard.forTunnel = v, true);
-        toggle("Bereich abbauen", () -> BotGuard.forArea, v -> BotGuard.forArea = v, true);
-        toggle("Block abbauen", () -> BotGuard.forBlock, v -> BotGuard.forBlock = v, true);
-        toggle("Zu Koordinaten gehen", () -> BotGuard.forGoto, v -> BotGuard.forGoto = v, true);
-        toggle("Auto Walk", () -> BotGuard.forWalk, v -> BotGuard.forWalk = v, true);
-
-        section("Ziele");
-        toggle("Monster", () -> BotGuard.hostile, v -> BotGuard.hostile = v, true);
-        toggle("Tiere und neutrale Mobs, wenn sie angreifen", () -> BotGuard.aggressive,
-                v -> BotGuard.aggressive = v, true);
-        toggle("Creeper sofort schlagen", () -> BotGuard.creeperFirst, v -> BotGuard.creeperFirst = v, true);
-        sliderTenths("Reichweite (Blöcke)", 10, 60, () -> BotGuard.range, v -> BotGuard.range = v, 30);
-        toggle("Durch Wände", () -> BotGuard.throughWalls, v -> BotGuard.throughWalls = v, false);
-        note("Spieler greift die Bot-Verteidigung nie an, gezähmte Tiere auch nicht. Zombie-Piglins, Endermen und "
-                + "Piglins zählen als neutral. Creeper werden zuerst und ohne volle Abklingzeit geschlagen, damit "
-                + "sie zurückfliegen, bevor sie explodieren.");
-
-        section("Kampf");
-        toggle("Beste Waffe nehmen, danach zurück zum Werkzeug", () -> BotGuard.useWeapon,
-                v -> BotGuard.useWeapon = v, true);
-        toggle("Auf die Abklingzeit warten", () -> BotGuard.waitCooldown, v -> BotGuard.waitCooldown = v, true);
-        choice("Blick", BotGuard.ROTATIONS, () -> BotGuard.rotation, v -> BotGuard.rotation = v, 0);
-        slider("Ziel aufgeben nach (s)", 5, 120, () -> BotGuard.giveUpSeconds, v -> BotGuard.giveUpSeconds = v, 30);
-        note("Ein Ziel, das in dieser Zeit nicht stirbt (z.B. weil die Schläge nicht treffen), lässt er "
-                + "30 Sekunden in Ruhe.");
-
-        section("Anzeige");
-        toggle("Ziel hervorheben", () -> BotGuard.highlight, v -> BotGuard.highlight = v, true);
-        toggle("Meldung im Chat", () -> BotGuard.chat, v -> BotGuard.chat = v, false);
-
-        footer(() -> BotGuard.enabled, v -> BotGuard.enabled = v);
-    }
-}

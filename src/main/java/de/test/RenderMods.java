@@ -38,7 +38,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Render-Module (Kategorie "Render"): Schalter, Tick (Scans) und HUD-Zeichnung. ESP, Tracer,
  * Nametags, Chams, Wall Hack usw. werden ueber {@link Render3D} selbst aufs HUD projiziert.
- * Eigene Dateien: Boss Stack ({@link BossStack}), Better Tab ({@link BetterTab}), Freecam/Free Look
+ * Eigene Dateien: Better Tab ({@link BetterTab}), Freecam/Free Look
  * ({@link CameraMods}); Hand View und Item Physics laufen ueber Mixins, die die Schalter hier lesen.
  * Die Einstellungs-Fenster stehen in {@link RenderScreens}.
  */
@@ -53,6 +53,15 @@ public final class RenderMods {
     public static int outlineScanSpeed = 4;
     public static boolean outlineWave = true;
 
+    // Leistungs-Modus fuer schwache PCs: Bloecke zusammenfassen, weniger zeichnen, langsamer suchen
+    public static boolean perfMode = false;
+
+    // X-Ray: alles ausser den gewaehlten Bloecken unsichtbar (siehe Xray und die Xray-Mixins)
+    public static boolean xray = false;
+    public static boolean xrayBright = true;        // Nachtsicht, sonst sind die Erze im Dunkeln schwarz
+    public static boolean xrayHideWater = true;
+    public static final Set<Block> xrayBlocks = new LinkedHashSet<>();
+
     // Abbau-Ziele des Block-/Bereich-/Koordinaten-Werkzeugs anzeigen
     public static boolean miningHighlight = true;
     public static boolean miningShowArea = true;
@@ -63,9 +72,18 @@ public final class RenderMods {
 
     public static boolean storageEsp = false;
     public static int storageEspChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
+    public static boolean storChests = true;    // Truhen und Faesser
+    public static boolean storShulkers = true;
+    public static boolean storEnder = true;
+    public static boolean storFurnaces = true;  // Oefen, Schmelzoefen, Raeucheroefen
+    public static boolean storHoppers = true;   // Trichter, Werfer, Spender
+    public static boolean storBrewing = true;
+    public static boolean storSpawners = false;
+    public static boolean storGrayOpened = false; // schon geoeffnete grau
 
     public static boolean holeEsp = false;
     public static int holeEspChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
+    public static boolean holeOnlySafe = false; // nur Loecher aus Obsidian und Grundgestein
 
     public static boolean voidEsp = false;
     public static int voidEspChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
@@ -81,10 +99,16 @@ public final class RenderMods {
     public static boolean tracersMobs = false;
     public static boolean tracersItems = false;
     public static int tracersChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
+    public static boolean tracersByDistance = false; // Farbe nach Entfernung (rot = nah)
+    public static boolean tracersNoFriends = false;
 
     public static boolean nametags = false;
     public static boolean nametagsHealth = true;
     public static int nametagsChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
+    public static boolean nametagsArmor = true;     // Ruestung und Items in den Haenden
+    public static boolean nametagsDistance = false;
+    public static boolean nametagsPing = false;
+    public static int nametagsSize = 100;           // Prozent
 
     public static boolean entityOwner = false;
     public static boolean ownerAnimals = true;
@@ -93,6 +117,8 @@ public final class RenderMods {
 
     public static boolean itemHighlight = false;
     public static int itemHighlightChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
+    public static boolean itemValuable = false;     // nur wertvolle Items
+    public static boolean itemNames = true;         // Name und Anzahl
 
     public static boolean marker = false;
     public static String markerList = "";           // "name,x,y,z;..."
@@ -100,6 +126,8 @@ public final class RenderMods {
     public static boolean waypoints = false;
     public static String waypointList = "";
     public static boolean waypointsBeam = true;
+    public static boolean waypointsDistance = true;
+    public static boolean waypointsDimOnly = true;  // nur Wegpunkte der aktuellen Dimension
 
     public static boolean logoutSpots = false;
     public static boolean logoutBox = true;
@@ -126,6 +154,7 @@ public final class RenderMods {
     public static boolean fullbright = false;
     public static boolean timeChanger = false;
     public static int timeChangerValue = 6000;      // 0=Morgen, 6000=Mittag, 18000=Mitternacht
+    public static boolean timeClearWeather = false; // Regen und Gewitter ausblenden
     public static boolean cameraTweaks = false;
     public static int cameraDistance = 4;
     public static boolean cameraNoClip = true;
@@ -189,7 +218,6 @@ public final class RenderMods {
     public static boolean itemPhysics = false;
     public static boolean blur = false;
     public static int blurStrength = 100;       // Abdunkelung (0..200)
-    public static boolean bossStack = false;
     public static boolean betterTab = false;
     public static boolean betterTooltips = false;
     public static boolean popChams = false;
@@ -236,10 +264,32 @@ public final class RenderMods {
     public static void register() {
         HudElementRegistry.addFirst(Identifier.fromNamespaceAndPath("test", "render"), Safe.hud("Render", RenderMods::render));
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("test", "better_tab"), Safe.hud("Better Tab", BetterTab::render));
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("test", "boss_stack"), Safe.hud("Boss Stack", BossStack::render));
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
             if (betterTooltips) BetterTooltips.append(stack, lines);
         });
+    }
+
+    /** Standard fuer X-Ray: alle Erze, Antiker Schrott und Spawner (nur wenn noch nichts gewaehlt ist). */
+    static void xrayDefaults() {
+        if (!xrayBlocks.isEmpty()) return;
+        for (Block b : net.minecraft.core.registries.BuiltInRegistries.BLOCK) {
+            String path = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(b).getPath();
+            if (path.endsWith("_ore")) xrayBlocks.add(b);
+        }
+        xrayBlocks.add(Blocks.ANCIENT_DEBRIS);
+        xrayBlocks.add(Blocks.SPAWNER);
+    }
+
+    private static int xrayKey = 0;
+
+    /** X-Ray an/aus oder andere Bloecke: Chunks neu bauen lassen. */
+    private static void syncXray(Minecraft mc) {
+        boolean on = xray && mc.level != null;
+        int key = on ? ((xrayBlocks.hashCode() * 31 + xrayBlocks.size()) * 2 + (xrayHideWater ? 1 : 0)) | 1 : 0;
+        if (key == xrayKey) return;
+        xrayKey = key;
+        Xray.set(on, xrayHideWater, xrayBlocks);
+        if (mc.level != null) mc.levelExtractor.allChanged();
     }
 
     public static void rescan() {
@@ -251,6 +301,7 @@ public final class RenderMods {
     // ---------- Tick: scannen, verfolgen, einfache Schalter ----------
 
     public static void tick(Minecraft mc) {
+        Safe.run("X-Ray", () -> syncXray(mc));
         Player self = mc.player;
         Level level = mc.level;
         if (self == null || level == null) {
@@ -267,7 +318,7 @@ public final class RenderMods {
             return;
         }
 
-        boolean nightVision = fullbright && fullbrightMode == 0;
+        boolean nightVision = fullbright && fullbrightMode == 0 || xray && xrayBright;
         boolean gamma = fullbright && fullbrightMode == 1;
         if (nightVision) {
             applyFullbright(self);
@@ -278,6 +329,11 @@ public final class RenderMods {
         if (gamma) setGamma(mc, fullbrightGamma / 100.0);
         else restoreGamma(mc);
         if (timeChanger) setClientDayTime(level, timeChangerValue);
+        if (timeChanger && timeClearWeather) {
+            level.setRainLevel(0f);
+            level.setThunderLevel(0f);
+        }
+        if (storageEsp && storGrayOpened) trackOpened(mc, level);
         if (noRender && noNausea) self.removeEffect(MobEffects.NAUSEA);
 
         // Trail / Breadcrumbs
@@ -475,7 +531,7 @@ public final class RenderMods {
             FAST_ESP.clear(espBlocks);
         }
         if (storageEsp) {
-            FAST_STORAGE.tick(cl, c, storageEspChunks * 16, 8, 8, false, RenderMods::isStorage, 1, storages);
+            FAST_STORAGE.tick(cl, c, storageEspChunks * 16, 8, 8, false, RenderMods::isStorage, storageKey(), storages);
         } else {
             FAST_STORAGE.clear(storages);
         }
@@ -520,10 +576,75 @@ public final class RenderMods {
 
     private static boolean isStorage(BlockState s) {
         Block b = s.getBlock();
-        return b == Blocks.CHEST || b == Blocks.TRAPPED_CHEST || b == Blocks.BARREL || b == Blocks.HOPPER
-                || b == Blocks.ENDER_CHEST || b == Blocks.FURNACE || b == Blocks.BLAST_FURNACE || b == Blocks.SMOKER
-                || b == Blocks.DISPENSER || b == Blocks.DROPPER || b == Blocks.BREWING_STAND
-                || b instanceof net.minecraft.world.level.block.ShulkerBoxBlock; // alle 17 Farben
+        if (b == Blocks.CHEST || b == Blocks.TRAPPED_CHEST || b == Blocks.BARREL) return storChests;
+        if (b instanceof net.minecraft.world.level.block.ShulkerBoxBlock) return storShulkers; // alle 17 Farben
+        if (b == Blocks.ENDER_CHEST) return storEnder;
+        if (b == Blocks.FURNACE || b == Blocks.BLAST_FURNACE || b == Blocks.SMOKER) return storFurnaces;
+        if (b == Blocks.HOPPER || b == Blocks.DISPENSER || b == Blocks.DROPPER) return storHoppers;
+        if (b == Blocks.BREWING_STAND) return storBrewing;
+        if (b == Blocks.SPAWNER) return storSpawners;
+        return false;
+    }
+
+    /** Schluessel fuer die Suche: aendert sich die Auswahl, sucht sie neu. */
+    private static Integer storageKey() {
+        boolean[] on = {storChests, storShulkers, storEnder, storFurnaces, storHoppers, storBrewing, storSpawners};
+        int k = 1;
+        for (int i = 0; i < on.length; i++) {
+            if (on[i]) k |= 2 << i;
+        }
+        return k;
+    }
+
+    // Storage Esp: schon geoeffnete Behaelter (nur fuer diese Sitzung)
+    private static final Set<Long> openedStorage = new java.util.HashSet<>();
+    private static Level openedLevel;
+    private static boolean containerWasOpen;
+
+    private static void trackOpened(Minecraft mc, Level level) {
+        if (level != openedLevel) {
+            openedStorage.clear();
+            openedLevel = level;
+        }
+        var screen = mc.gui.screen();
+        boolean open = screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>
+                && !(screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen)
+                && !(screen instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen);
+        if (open && !containerWasOpen && mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult bh
+                && bh.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            BlockPos pos = bh.getBlockPos();
+            BlockState st = level.getBlockState(pos);
+            openedStorage.add(pos.asLong());
+            // Doppeltruhe: die andere Haelfte gehoert dazu
+            if (st.getBlock() instanceof net.minecraft.world.level.block.ChestBlock
+                    && st.getValue(net.minecraft.world.level.block.ChestBlock.TYPE)
+                            != net.minecraft.world.level.block.state.properties.ChestType.SINGLE) {
+                openedStorage.add(pos.relative(net.minecraft.world.level.block.ChestBlock.getConnectedDirection(st)).asLong());
+            }
+        }
+        containerWasOpen = open;
+    }
+
+    /** Hole Esp: 2 = alles Grundgestein, 1 = alles mindestens so fest wie Obsidian, 0 = sonst. */
+    private static int holeGrade(Level level, BlockPos p) {
+        float min = Float.MAX_VALUE;
+        for (BlockPos n : new BlockPos[] {p.below(), p.north(), p.south(), p.east(), p.west()}) {
+            min = Math.min(min, level.getBlockState(n).getBlock().getExplosionResistance());
+        }
+        return min >= 3_000_000f ? 2 : min >= 600f ? 1 : 0;
+    }
+
+    /** Item Highlight: lohnt es sich, das aufzuheben? */
+    private static boolean valuable(ItemStack st) {
+        if (st.isEnchanted()) return true;
+        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath();
+        if (path.contains("diamond") || path.contains("netherite") || path.endsWith("shulker_box")) return true;
+        return switch (path) {
+            case "ancient_debris", "totem_of_undying", "elytra", "golden_apple", "enchanted_golden_apple",
+                    "nether_star", "beacon", "enchanted_book", "trident", "mace", "heavy_core", "dragon_egg",
+                    "emerald", "emerald_block", "end_crystal", "experience_bottle" -> true;
+            default -> false;
+        };
     }
 
     private static boolean solid(Level level, BlockPos pos) {
@@ -735,9 +856,13 @@ public final class RenderMods {
             drawLogouts(g, mc);
             drawTrail(g);
             if (trajectories) drawTrajectory(g, mc);
-            if (tunnelEsp) for (BlockPos p : tunnels) {
-                Render3D.outline(g, new AABB(p.getX(), p.getY(), p.getZ(), p.getX() + 1, p.getY() + 2, p.getZ() + 1),
-                        0xFFFFA64D, false);
+            if (tunnelEsp && perfMode) {
+                Render3D.blocks(g, tunnels, tunnels, p -> 0xFFFFA64D, 2);
+            } else if (tunnelEsp) {
+                for (BlockPos p : tunnels) {
+                    Render3D.outline(g, new AABB(p.getX(), p.getY(), p.getZ(), p.getX() + 1, p.getY() + 2,
+                            p.getZ() + 1), 0xFFFFA64D, false);
+                }
             }
             if (popChams) drawPops(g);
             if (breakIndicators) drawBreaking(g, mc);
@@ -770,6 +895,10 @@ public final class RenderMods {
     }
 
     private static void drawBlockLists(GuiGraphicsExtractor g) {
+        if (perfMode) {
+            drawBlockListsFast(g);
+            return;
+        }
         if (wallHack) {
             Level level = Minecraft.getInstance().level;
             for (BlockPos p : ores) {
@@ -780,12 +909,54 @@ public final class RenderMods {
             }
         }
         if (blockEsp) for (BlockPos p : espBlocks) Render3D.outline(g, cube(p), Esp.blockColor(), false);
-        if (storageEsp) for (BlockPos p : storages) Render3D.outline(g, cube(p), C_STORAGE, true);
-        if (holeEsp) for (BlockPos p : holes) Render3D.outline(g, new AABB(p), C_HOLE, false);
+        if (storageEsp) {
+            Level level = Minecraft.getInstance().level;
+            for (BlockPos p : storages) {
+                int col = storGrayOpened && openedStorage.contains(p.asLong()) ? 0xFF808080
+                        : level.getBlockState(p).is(Blocks.SPAWNER) ? 0xFFFF6E4D : C_STORAGE;
+                Render3D.outline(g, cube(p), col, true);
+            }
+        }
+        if (holeEsp) {
+            Level level = Minecraft.getInstance().level;
+            for (BlockPos p : holes) {
+                int grade = holeGrade(level, p);
+                if (holeOnlySafe && grade == 0) continue;
+                int col = grade == 2 ? 0xFF4DFF88 : grade == 1 ? 0xFFFFD24D : C_HOLE;
+                Render3D.outline(g, new AABB(p), col, false);
+            }
+        }
         if (voidEsp) for (BlockPos p : voids) Render3D.outline(g, new AABB(p).inflate(0, 0.2, 0), C_VOID, true);
         if (lightOverlay) for (BlockPos p : lights) {
             Vec3 ctr = new Vec3(p.getX() + 0.5, p.getY() + 0.02, p.getZ() + 0.5);
             Render3D.label(g, Minecraft.getInstance(), ctr, "x", 0xFFFF3030, 0);
+        }
+    }
+
+    /** Leistungs-Modus: zusammenhaengende Bloecke als ein Kasten, ohne Fuellung; Light Overlay hoechstens 100. */
+    private static void drawBlockListsFast(GuiGraphicsExtractor g) {
+        Level level = Minecraft.getInstance().level;
+        if (wallHack) Render3D.blocks(g, ores, ores, p -> oreColor(level.getBlockState(p).getBlock()), 1);
+        if (blockEsp) Render3D.blocks(g, espBlocks, espBlocks, p -> Esp.blockColor(), 1);
+        if (storageEsp) {
+            Render3D.blocks(g, storages, storages, p -> storGrayOpened && openedStorage.contains(p.asLong()) ? 0xFF808080
+                    : level.getBlockState(p).is(Blocks.SPAWNER) ? 0xFFFF6E4D : C_STORAGE, 1);
+        }
+        if (holeEsp) {
+            Render3D.blocks(g, holes, holes, p -> {
+                int grade = holeGrade(level, p);
+                if (holeOnlySafe && grade == 0) return 0;
+                return grade == 2 ? 0xFF4DFF88 : grade == 1 ? 0xFFFFD24D : C_HOLE;
+            }, 1);
+        }
+        if (voidEsp) Render3D.blocks(g, voids, voids, p -> C_VOID, 1);
+        if (lightOverlay) {
+            int n = 0;
+            for (BlockPos p : lights) {
+                if (++n > Render3D.PERF_MAX) break;
+                Vec3 ctr = new Vec3(p.getX() + 0.5, p.getY() + 0.02, p.getZ() + 0.5);
+                Render3D.label(g, Minecraft.getInstance(), ctr, "x", 0xFFFF3030, 0);
+            }
         }
     }
 
@@ -809,20 +980,26 @@ public final class RenderMods {
 
             if (e instanceof Player pl) {
                 if (cityEsp) drawCity(g, mc, pl);
-                if (tracers && tracersPlayers && dist <= (tracersChunks * 16)) {
-                    Render3D.tracer(g, center, tracer(Friends.tracerColor(pl, C_PLAYER)));
+                if (tracers && tracersPlayers && dist <= (tracersChunks * 16) && !(tracersNoFriends && Friends.is(pl))) {
+                    Render3D.tracer(g, center, tracer(Friends.tracerColor(pl, tracerBase(C_PLAYER, dist))));
                 }
                 if (nametags && dist <= (nametagsChunks * 16)) drawNametag(g, mc, pl, bb);
             } else if (e instanceof ItemEntity ie) {
-                if (itemHighlight && dist <= (itemHighlightChunks * 16)) {
+                if (itemHighlight && dist <= (itemHighlightChunks * 16) && (!itemValuable || valuable(ie.getItem()))) {
                     Render3D.outline(g, bb.inflate(0.1), C_ITEM, false);
                     int n = ie.getItem().getCount();
-                    Render3D.label(g, mc, bb.getCenter().add(0, 0.4, 0),
-                            ie.getItem().getHoverName().getString() + (n > 1 ? " x" + n : ""), C_ITEM, -10);
+                    if (itemNames) {
+                        Render3D.label(g, mc, bb.getCenter().add(0, 0.4, 0),
+                                ie.getItem().getHoverName().getString() + (n > 1 ? " x" + n : ""), C_ITEM, -10);
+                    }
                 }
-                if (tracers && tracersItems && dist <= (tracersChunks * 16)) Render3D.tracer(g, center, tracer(C_ITEM));
+                if (tracers && tracersItems && dist <= (tracersChunks * 16)) {
+                    Render3D.tracer(g, center, tracer(tracerBase(C_ITEM, dist)));
+                }
             } else if (e instanceof LivingEntity) {
-                if (tracers && tracersMobs && dist <= (tracersChunks * 16)) Render3D.tracer(g, center, tracer(C_MOB));
+                if (tracers && tracersMobs && dist <= (tracersChunks * 16)) {
+                    Render3D.tracer(g, center, tracer(tracerBase(C_MOB, dist)));
+                }
                 if (nametags && dist <= (nametagsChunks * 16)) drawNametag(g, mc, (LivingEntity) e, bb);
             }
 
@@ -835,11 +1012,54 @@ public final class RenderMods {
         return (color & 0x00FFFFFF) | 0xB0000000;
     }
 
+    /** Tracer-Farbe: normal oder nach Entfernung (rot = nah, gelb, gruen = weit weg). */
+    private static int tracerBase(int normal, double dist) {
+        if (!tracersByDistance) return normal;
+        float t = (float) Math.max(0, Math.min(1, (dist - 8) / 52.0));
+        int r = t < 0.5f ? 255 : (int) (255 * (1 - t) * 2);
+        int gr = t < 0.5f ? (int) (255 * t * 2) : 255;
+        return 0xFF000000 | (r << 16) | (gr << 8) | 0x40;
+    }
+
     private static void drawNametag(GuiGraphicsExtractor g, Minecraft mc, LivingEntity e, AABB bb) {
-        String name = e.getName().getString();
-        if (nametagsHealth) name += "  " + (int) Math.ceil(e.getHealth()) + "❤";
-        Render3D.label(g, mc, new Vec3(bb.getCenter().x, bb.maxY, bb.getCenter().z), name,
-                Friends.nametagColor(e, 0xFFFFFFFF), -12);
+        StringBuilder sb = new StringBuilder(e.getName().getString()); // Namen nie uebersetzen
+        if (nametagsHealth) sb.append("  ").append((int) Math.ceil(e.getHealth())).append('❤');
+        if (nametagsDistance) sb.append("  ").append(Math.round(mc.player.distanceTo(e))).append('m');
+        if (nametagsPing && e instanceof Player pl && mc.getConnection() != null) {
+            var info = mc.getConnection().getPlayerInfo(pl.getUUID());
+            if (info != null) sb.append("  ").append(info.getLatency()).append("ms");
+        }
+        String text = sb.toString();
+        double[] p = Render3D.project(bb.getCenter().x, bb.maxY, bb.getCenter().z);
+        if (p[2] <= 0.05) return; // hinter der Kamera
+        int color = (Friends.nametagColor(e, 0xFFFFFFFF) & 0x00FFFFFF) | 0xFF000000;
+        float s = Math.max(50, Math.min(200, nametagsSize)) / 100f;
+        var pose = g.pose();
+        pose.pushMatrix();
+        pose.translate((float) p[0], (float) p[1]);
+        pose.scale(s, s);
+        int tw = mc.font.width(text);
+        int x = -tw / 2;
+        int y = -12;
+        Ui.fill(g, x - 2, y - 1, x + tw + 2, y + 9, 0x90000000);
+        Ui.text(g, mc.font, text, x, y, color, true);
+        if (nametagsArmor) {
+            List<ItemStack> items = new ArrayList<>();
+            for (var slot : new net.minecraft.world.entity.EquipmentSlot[] {
+                    net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.entity.EquipmentSlot.HEAD,
+                    net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS,
+                    net.minecraft.world.entity.EquipmentSlot.FEET, net.minecraft.world.entity.EquipmentSlot.OFFHAND}) {
+                ItemStack st = e.getItemBySlot(slot);
+                if (!st.isEmpty()) items.add(st);
+            }
+            int ix = -items.size() * 8;
+            for (ItemStack st : items) {
+                g.fakeItem(st, ix, y - 18);
+                g.itemDecorations(mc.font, st, ix, y - 18);
+                ix += 16;
+            }
+        }
+        pose.popMatrix();
     }
 
     private static void drawOwner(GuiGraphicsExtractor g, Minecraft mc, Entity e, AABB bb) {
@@ -871,12 +1091,24 @@ public final class RenderMods {
         if (waypoints) drawPoints(g, mc, waypointList, 0xFFFFD24D, waypointsBeam);
     }
 
+    /** Kurzname der Dimension (overworld, the_nether, the_end) - steht als 5. Feld in neuen Wegpunkten. */
+    static String dimId(Level level) {
+        return level.dimension().identifier().getPath();
+    }
+
+    /** Wegpunkt aus einer anderen Dimension (und die Einstellung blendet sie aus)? */
+    static boolean otherDim(String[] f, Level level) {
+        return waypointsDimOnly && f.length >= 5 && !f[4].trim().equals(dimId(level));
+    }
+
     private static void drawPoints(GuiGraphicsExtractor g, Minecraft mc, String list, int color, boolean beam) {
         if (list == null || list.isEmpty()) return;
         Vec3 eye = mc.player.getEyePosition();
+        boolean wp = list == waypointList;
         for (String part : list.split(";")) {
             String[] f = part.split(",");
             if (f.length < 4) continue;
+            if (wp && otherDim(f, mc.level)) continue;
             try {
                 double x = Double.parseDouble(f[1]) + 0.5;
                 double y = Double.parseDouble(f[2]);
@@ -885,7 +1117,7 @@ public final class RenderMods {
                 if (beam) Render3D.worldLine(g, new Vec3(x, y, z), new Vec3(x, y + 3, z), color);
                 Render3D.dot(g, at, 2, color);
                 int dist = (int) eye.distanceTo(new Vec3(x, y, z));
-                Render3D.label(g, mc, at, f[0] + "  " + dist + "m", color, -12);
+                Render3D.label(g, mc, at, wp && !waypointsDistance ? f[0] : f[0] + "  " + dist + "m", color, -12);
             } catch (NumberFormatException ignored) {
                 // kaputter Eintrag
             }
@@ -952,7 +1184,8 @@ public final class RenderMods {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         BlockPos p = mc.player.blockPosition();
-        String entry = name.replaceAll("[,;]", " ") + "," + p.getX() + "," + p.getY() + "," + p.getZ();
+        String entry = name.replaceAll("[,;]", " ") + "," + p.getX() + "," + p.getY() + "," + p.getZ() + ","
+                + dimId(mc.level);
         if (waypoint) {
             waypointList = waypointList.isEmpty() ? entry : waypointList + ";" + entry;
         } else {

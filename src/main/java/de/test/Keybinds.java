@@ -175,7 +175,10 @@ public final class Keybinds {
                 Action a = e.getValue();
                 if (a.state() == null || !a.state().getAsBoolean()) continue;
                 // der Schutz selbst und die Freundesliste bleiben an
-                if (e.getKey().equals("Server-Schutz") || e.getKey().equals("Freunde")) continue;
+                if (e.getKey().equals("Server-Schutz") || e.getKey().equals("Join-Schutz")
+                        || e.getKey().equals("Freunde")) {
+                    continue;
+                }
                 a.run().run();
                 if (!a.state().getAsBoolean()) PANIC.add(e.getKey());
             }

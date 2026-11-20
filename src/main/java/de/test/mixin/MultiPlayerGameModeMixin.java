@@ -31,7 +31,6 @@ public abstract class MultiPlayerGameModeMixin {
             return;
         }
         Safe.run("Auto Weapon", () -> CombatMods.beforeAttack(player, target));
-        Safe.run("Schadenszahlen", () -> de.test.HudMods.noteAttack(target));
     }
 
     @Inject(method = "destroyBlock", at = @At("HEAD"), require = 0)

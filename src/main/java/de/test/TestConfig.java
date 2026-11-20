@@ -24,10 +24,13 @@ public final class TestConfig {
     private TestConfig() {}
 
     public static void load() {
-        if (!Files.exists(FILE)) {
-            Keybinds.load(new Properties()); // erster Start: Standardtasten (G, J, K) im 1912-Menue
-            return;
+        if (defaults == null) {
+            // Standardwerte merken (vor dem ersten Laden), fuer das Teilen als Text
+            Keybinds.load(new Properties()); // Standardtasten (G, J, K) im 1912-Menue
+            RenderMods.xrayDefaults();
+            defaults = snapshot();
         }
+        if (!Files.exists(FILE)) return;
         Properties p = new Properties();
         try (InputStream in = Files.newInputStream(FILE)) {
             p.load(in);
@@ -35,11 +38,19 @@ public final class TestConfig {
             System.err.println("[1912] Konnte Einstellungen nicht laden: " + e);
             return;
         }
+        apply(p);
+    }
+
+    /** Uebernimmt alle Einstellungen aus p (fehlende Eintraege behalten ihren jetzigen Wert). */
+    private static void apply(Properties p) {
         TestClient.sprint = bool(p, "sprint", TestClient.sprint);
         TestClient.sprintJump = bool(p, "sprintJump", TestClient.sprintJump);
         TestClient.autoMine = bool(p, "autoMine", TestClient.autoMine);
         TestClient.autoLogout = bool(p, "autoLogout", TestClient.autoLogout);
         TestClient.logoutHearts = Math.max(1, Math.min(10, num(p, "logoutHearts", TestClient.logoutHearts)));
+        TestClient.logoutOnHealth = bool(p, "logoutOnHealth", TestClient.logoutOnHealth);
+        TestClient.logoutPlayers = bool(p, "logoutPlayers", TestClient.logoutPlayers);
+        TestClient.logoutPlayerRange = Math.max(0, Math.min(256, num(p, "logoutPlayerRange", TestClient.logoutPlayerRange)));
         TestClient.autoDrop = bool(p, "autoDrop", TestClient.autoDrop);
         TestClient.autoClicker = bool(p, "autoClicker", TestClient.autoClicker);
         TestClient.clickerRandom = Math.max(0, Math.min(100, num(p, "clickerRandom", TestClient.clickerRandom)));
@@ -74,6 +85,17 @@ public final class TestConfig {
         Theme.hudListSize = Math.max(0, Math.min(3, num(p, "themeHudListSize", Theme.hudListSize)));
         // neue Spalten (Version 2): alte eingeklappte Spalten passen nicht mehr dazu
         Theme.collapsed = p.containsKey("menuColumns2") ? num(p, "menuCollapsed", Theme.collapsed) & 0xFFFF : 0;
+        // Menue anpassen: dazugeholte / ausgeblendete Module, Reihenfolge der Spalten
+        readNames(p.getProperty("menuShow"), Levels.shown);
+        readNames(p.getProperty("menuHide"), Levels.hidden);
+        TestScreen.ORDER.clear();
+        for (String part : p.getProperty("menuOrder", "").split(",")) {
+            try {
+                if (!part.isBlank()) TestScreen.ORDER.add(Integer.parseInt(part.trim()));
+            } catch (NumberFormatException ignored) {
+                // kaputter Eintrag
+            }
+        }
         Theme.clamp();
         Movement.highJump = bool(p, "highJump", Movement.highJump);
         Movement.jesus = bool(p, "jesus", Movement.jesus);
@@ -82,14 +104,17 @@ public final class TestConfig {
         Movement.noFall = bool(p, "noFall", Movement.noFall);
         Movement.noSlow = bool(p, "noSlow", Movement.noSlow);
         Movement.parkour = bool(p, "parkour", Movement.parkour);
-        Movement.reverseStep = bool(p, "reverseStep", Movement.reverseStep);
         Movement.safeWalk = bool(p, "safeWalk", Movement.safeWalk);
         Movement.scaffold = bool(p, "scaffold", Movement.scaffold);
         Movement.scaffoldLook = bool(p, "scaffoldLook", Movement.scaffoldLook);
         Movement.highJumpHeight = Math.max(2, Math.min(10, num(p, "highJumpHeight", Movement.highJumpHeight)));
         Movement.longJumpPower = Math.max(110, Math.min(500, num(p, "longJumpPower", Movement.longJumpPower)));
-        Movement.reverseStepHeight = Math.max(1, Math.min(5, num(p, "reverseStepHeight", Movement.reverseStepHeight)));
         Movement.scaffoldPerTick = Math.max(1, Math.min(3, num(p, "scaffoldPerTick", Movement.scaffoldPerTick)));
+        Movement.scaffoldTower = bool(p, "scaffoldTower", Movement.scaffoldTower);
+        readIds(p.getProperty("scaffoldSkip"), BuiltInRegistries.BLOCK, Movement.scaffoldSkip);
+        Movement.speedPauseLiquid = bool(p, "speedPauseLiquid", Movement.speedPauseLiquid);
+        Movement.speedSprintOnly = bool(p, "speedSprintOnly", Movement.speedSprintOnly);
+        Movement.stepSneakOff = bool(p, "stepSneakOff", Movement.stepSneakOff);
         Movement2.airJump = bool(p, "airJump", Movement2.airJump);
         Movement2.airJumpMax = Math.max(0, Math.min(10, num(p, "airJumpMax", Movement2.airJumpMax)));
         Movement2.airJumpPower = Math.max(20, Math.min(100, num(p, "airJumpPower", Movement2.airJumpPower)));
@@ -113,7 +138,6 @@ public final class TestConfig {
         Movement2.antiVoidMode = Math.max(0, Math.min(1, num(p, "antiVoidMode", Movement2.antiVoidMode)));
         Movement2.waspChunks = Math.max(1, Math.min(32, num(p, "waspChunks", Movement2.waspChunks)));
         Movement2.waspSpeed = Math.max(5, Math.min(80, num(p, "waspSpeed", Movement2.waspSpeed)));
-        Movement2.blinkAuto = Math.max(0, Math.min(30, num(p, "blinkAuto", Movement2.blinkAuto)));
         Movement2.clickTpRange = Math.max(1, Math.min(8, num(p, "clickTpRange", Movement2.clickTpRange)));
         Movement2.elytraBoostPower = Math.max(1, Math.min(10, num(p, "elytraBoostPower", Movement2.elytraBoostPower)));
         Movement2.elytraBoostMax = Math.max(10, Math.min(100, num(p, "elytraBoostMax", Movement2.elytraBoostMax)));
@@ -150,14 +174,12 @@ public final class TestConfig {
         Movement.stepHeight = Math.max(1, Math.min(5, num(p, "stepHeight", Movement.stepHeight)));
         Movement.trident = bool(p, "trident", Movement.trident);
         Movement.tridentPower = Math.max(100, Math.min(500, num(p, "tridentPower", Movement.tridentPower)));
-        Movement.velocity = bool(p, "velocity", Movement.velocity);
-        Movement.velocityH = Math.max(0, Math.min(100, num(p, "velocityH", Movement.velocityH)));
-        Movement.velocityV = Math.max(0, Math.min(100, num(p, "velocityV", Movement.velocityV)));
         loadStatics(p, PlayerMods.class, "pm.");
         readIds(p.getProperty("pm.noInteractBlocks"), BuiltInRegistries.BLOCK, PlayerMods.noInteractBlocks);
         readIds(p.getProperty("pm.noInteractEntities"), BuiltInRegistries.ENTITY_TYPE, PlayerMods.noInteractEntities);
         loadStatics(p, RenderMods.class, "rm.");
         readIds(p.getProperty("rm.blockEspBlocks"), BuiltInRegistries.BLOCK, RenderMods.blockEspBlocks);
+        readIds(p.getProperty("rm.xrayBlocks"), BuiltInRegistries.BLOCK, RenderMods.xrayBlocks);
         loadStatics(p, MiscMods.class, "mm.");
         // alter Name als Standardtext: auf den neuen Namen umstellen
         if ("1912 Client".equals(MiscMods.discordText)) MiscMods.discordText = "1912 Utilities";
@@ -167,7 +189,6 @@ public final class TestConfig {
         loadStatics(p, TunnelMiner.class, "tm.");
         loadStatics(p, Friends.class, "fr.");
         loadStatics(p, KillAura.class, "ka.");
-        loadStatics(p, BotGuard.class, "bg.");
         loadStatics(p, Survival.class, "sv.");
         loadStatics(p, InfoHud.class, "ih.");
         loadStatics(p, Extras.class, "ex.");
@@ -177,6 +198,7 @@ public final class TestConfig {
         loadStatics(p, HudMods.class, "hm.");
         loadStatics(p, BaseFinder.class, "bf.");
         readIds(p.getProperty("wo.nukerBlocks"), BuiltInRegistries.BLOCK, WorldMods.nukerBlocks);
+        readIds(p.getProperty("wo.stealItems"), BuiltInRegistries.ITEM, WorldMods.stealItems);
         Keybinds.load(p);
         InvLayout.load(p);
         Lang.language = Math.max(0, Math.min(Lang.NAMES.length - 1, num(p, "language", Lang.language)));
@@ -232,12 +254,28 @@ public final class TestConfig {
     }
 
     public static void save() {
+        Properties p = snapshot();
+        try {
+            Files.createDirectories(FILE.getParent());
+            try (OutputStream out = Files.newOutputStream(FILE)) {
+                p.store(out, "1912 Utilities Einstellungen");
+            }
+        } catch (IOException e) {
+            System.err.println("[1912] Konnte Einstellungen nicht speichern: " + e);
+        }
+    }
+
+    /** Alle Einstellungen, wie sie gespeichert werden. */
+    private static Properties snapshot() {
         Properties p = new Properties();
         p.setProperty("sprint", Boolean.toString(TestClient.sprint));
         p.setProperty("sprintJump", Boolean.toString(TestClient.sprintJump));
         p.setProperty("autoMine", Boolean.toString(TestClient.autoMine));
         p.setProperty("autoLogout", Boolean.toString(TestClient.autoLogout));
         p.setProperty("logoutHearts", Integer.toString(TestClient.logoutHearts));
+        p.setProperty("logoutOnHealth", Boolean.toString(TestClient.logoutOnHealth));
+        p.setProperty("logoutPlayers", Boolean.toString(TestClient.logoutPlayers));
+        p.setProperty("logoutPlayerRange", Integer.toString(TestClient.logoutPlayerRange));
         p.setProperty("autoDrop", Boolean.toString(TestClient.autoDrop));
         p.setProperty("autoClicker", Boolean.toString(TestClient.autoClicker));
         p.setProperty("clickerRandom", Integer.toString(TestClient.clickerRandom));
@@ -261,6 +299,11 @@ public final class TestConfig {
         p.setProperty("menuColumns2", "true");
         p.setProperty("themeMenuScale", Integer.toString(Theme.menuScale));
         p.setProperty("menuLevel", Integer.toString(Levels.level));
+        p.setProperty("menuShow", String.join(";", Levels.shown));
+        p.setProperty("menuHide", String.join(";", Levels.hidden));
+        StringBuilder order = new StringBuilder();
+        for (int bit : TestScreen.ORDER) order.append(order.length() > 0 ? "," : "").append(bit);
+        p.setProperty("menuOrder", order.toString());
         p.setProperty("themeHudList", Theme.hudList ? "1" : "0");
         p.setProperty("themeLowFx", Theme.lowFx ? "1" : "0");
         p.setProperty("themeHudCorner", Integer.toString(Theme.hudCorner));
@@ -277,14 +320,17 @@ public final class TestConfig {
         p.setProperty("noFall", Boolean.toString(Movement.noFall));
         p.setProperty("noSlow", Boolean.toString(Movement.noSlow));
         p.setProperty("parkour", Boolean.toString(Movement.parkour));
-        p.setProperty("reverseStep", Boolean.toString(Movement.reverseStep));
         p.setProperty("safeWalk", Boolean.toString(Movement.safeWalk));
         p.setProperty("scaffold", Boolean.toString(Movement.scaffold));
         p.setProperty("scaffoldLook", Boolean.toString(Movement.scaffoldLook));
         p.setProperty("highJumpHeight", Integer.toString(Movement.highJumpHeight));
         p.setProperty("longJumpPower", Integer.toString(Movement.longJumpPower));
-        p.setProperty("reverseStepHeight", Integer.toString(Movement.reverseStepHeight));
         p.setProperty("scaffoldPerTick", Integer.toString(Movement.scaffoldPerTick));
+        p.setProperty("scaffoldTower", Boolean.toString(Movement.scaffoldTower));
+        p.setProperty("scaffoldSkip", writeIds(Movement.scaffoldSkip, BuiltInRegistries.BLOCK));
+        p.setProperty("speedPauseLiquid", Boolean.toString(Movement.speedPauseLiquid));
+        p.setProperty("speedSprintOnly", Boolean.toString(Movement.speedSprintOnly));
+        p.setProperty("stepSneakOff", Boolean.toString(Movement.stepSneakOff));
         p.setProperty("airJump", Boolean.toString(Movement2.airJump));
         p.setProperty("airJumpMax", Integer.toString(Movement2.airJumpMax));
         p.setProperty("airJumpPower", Integer.toString(Movement2.airJumpPower));
@@ -308,7 +354,6 @@ public final class TestConfig {
         p.setProperty("antiVoidMode", Integer.toString(Movement2.antiVoidMode));
         p.setProperty("waspChunks", Integer.toString(Movement2.waspChunks));
         p.setProperty("waspSpeed", Integer.toString(Movement2.waspSpeed));
-        p.setProperty("blinkAuto", Integer.toString(Movement2.blinkAuto));
         p.setProperty("clickTpRange", Integer.toString(Movement2.clickTpRange));
         p.setProperty("elytraBoostPower", Integer.toString(Movement2.elytraBoostPower));
         p.setProperty("elytraBoostMax", Integer.toString(Movement2.elytraBoostMax));
@@ -345,20 +390,17 @@ public final class TestConfig {
         p.setProperty("stepHeight", Integer.toString(Movement.stepHeight));
         p.setProperty("trident", Boolean.toString(Movement.trident));
         p.setProperty("tridentPower", Integer.toString(Movement.tridentPower));
-        p.setProperty("velocity", Boolean.toString(Movement.velocity));
-        p.setProperty("velocityH", Integer.toString(Movement.velocityH));
-        p.setProperty("velocityV", Integer.toString(Movement.velocityV));
         saveStatics(p, PlayerMods.class, "pm.");
         p.setProperty("pm.noInteractBlocks", writeIds(PlayerMods.noInteractBlocks, BuiltInRegistries.BLOCK));
         p.setProperty("pm.noInteractEntities", writeIds(PlayerMods.noInteractEntities, BuiltInRegistries.ENTITY_TYPE));
         saveStatics(p, RenderMods.class, "rm.");
         p.setProperty("rm.blockEspBlocks", writeIds(RenderMods.blockEspBlocks, BuiltInRegistries.BLOCK));
+        p.setProperty("rm.xrayBlocks", writeIds(RenderMods.xrayBlocks, BuiltInRegistries.BLOCK));
         saveStatics(p, MiscMods.class, "mm.");
         saveStatics(p, DebrisMiner.class, "dm.");
         saveStatics(p, TunnelMiner.class, "tm.");
         saveStatics(p, Friends.class, "fr.");
         saveStatics(p, KillAura.class, "ka.");
-        saveStatics(p, BotGuard.class, "bg.");
         saveStatics(p, Survival.class, "sv.");
         saveStatics(p, InfoHud.class, "ih.");
         saveStatics(p, Extras.class, "ex.");
@@ -368,6 +410,7 @@ public final class TestConfig {
         saveStatics(p, HudMods.class, "hm.");
         saveStatics(p, BaseFinder.class, "bf.");
         p.setProperty("wo.nukerBlocks", writeIds(WorldMods.nukerBlocks, BuiltInRegistries.BLOCK));
+        p.setProperty("wo.stealItems", writeIds(WorldMods.stealItems, BuiltInRegistries.ITEM));
         Keybinds.save(p);
         InvLayout.save(p);
         p.setProperty("language", Integer.toString(Lang.language));
@@ -405,14 +448,105 @@ public final class TestConfig {
         p.setProperty("ax2", Integer.toString(TestClient.ax2));
         p.setProperty("ay2", Integer.toString(TestClient.ay2));
         p.setProperty("az2", Integer.toString(TestClient.az2));
-        try {
-            Files.createDirectories(FILE.getParent());
-            try (OutputStream out = Files.newOutputStream(FILE)) {
-                p.store(out, "1912 Utilities Einstellungen");
-            }
-        } catch (IOException e) {
-            System.err.println("[1912] Konnte Einstellungen nicht speichern: " + e);
+        return p;
+    }
+
+    // ---------- Teilen: alle Einstellungen als Text ----------
+
+    /** Standardwerte (beim Start vor dem Laden gemerkt). */
+    private static Properties defaults;
+    private static final String SHARE_PREFIX = "1912U1:";
+    static final String BACKUP_PROFILE = "Vor dem Import";
+
+    /**
+     * Alle Einstellungen als Text zum Kopieren. Drin steht nur, was vom Standard abweicht - so ist der Text
+     * kurz, und eine neuere Version nimmt fuer alles andere (auch neue Module) ihre eigenen Standardwerte.
+     */
+    static String exportText() {
+        save();
+        Properties now = snapshot();
+        Properties out = new Properties();
+        for (String k : now.stringPropertyNames()) {
+            String v = now.getProperty(k);
+            if (defaults == null || !v.equals(defaults.getProperty(k))) out.setProperty(k, v);
         }
+        if (defaults != null) {
+            for (String k : defaults.stringPropertyNames()) {
+                if (!now.containsKey(k)) out.setProperty(k, ""); // z.B. eine Standardtaste, die entfernt wurde
+            }
+        }
+        out.setProperty("_format", "1");
+        try {
+            if (TestClient.guiKey != null) out.setProperty("_menuKey", TestClient.guiKey.saveString());
+        } catch (RuntimeException ignored) {
+            // ohne Menue-Taste weiter
+        }
+        Path song = FabricLoader.getInstance().getConfigDir().resolve(Notebot.FILE_NAME);
+        try {
+            if (Files.exists(song)) out.setProperty("_song", Files.readString(song, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (IOException ignored) {
+            // ohne eigenes Lied weiter
+        }
+        try {
+            java.io.StringWriter w = new java.io.StringWriter();
+            out.store(w, null);
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            try (java.util.zip.GZIPOutputStream gz = new java.util.zip.GZIPOutputStream(bytes)) {
+                gz.write(w.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            return SHARE_PREFIX + java.util.Base64.getEncoder().encodeToString(bytes.toByteArray());
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Uebernimmt einen kopierten Text: erst alles auf Standard, dann die Werte aus dem Text. Unbekannte Eintraege
+     * (z.B. von Modulen, die es nicht mehr gibt) werden uebersprungen. Vorher wird alles als Profil
+     * „Vor dem Import“ gesichert. 0 = geklappt, 1 = Zwischenablage leer, 2 = kein 1912-Text, 3 = Text kaputt.
+     */
+    static int importText(String text) {
+        if (text == null || text.isBlank()) return 1;
+        String t = text.replaceAll("\\s", "");
+        int at = t.indexOf(SHARE_PREFIX);
+        if (at < 0) return 2;
+        Properties in = new Properties();
+        try {
+            byte[] raw = java.util.Base64.getDecoder().decode(t.substring(at + SHARE_PREFIX.length()));
+            try (java.util.zip.GZIPInputStream gz = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(raw))) {
+                in.load(new java.io.StringReader(new String(gz.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)));
+            }
+        } catch (IOException | IllegalArgumentException e) {
+            return 3;
+        }
+        saveProfile(BACKUP_PROFILE);
+        Properties merged = new Properties();
+        if (defaults != null) merged.putAll(defaults);
+        for (String k : in.stringPropertyNames()) {
+            if (!k.startsWith("_")) merged.setProperty(k, in.getProperty(k));
+        }
+        apply(merged);
+        save();
+        String menuKey = in.getProperty("_menuKey");
+        if (menuKey != null && !menuKey.isBlank() && TestClient.guiKey != null) {
+            try {
+                TestClient.guiKey.setKey(com.mojang.blaze3d.platform.InputConstants.getKey(menuKey));
+                net.minecraft.client.KeyMapping.resetMapping();
+                net.minecraft.client.Minecraft.getInstance().options.save();
+            } catch (RuntimeException ignored) {
+                // Taste unbekannt: alte Menue-Taste behalten
+            }
+        }
+        String song = in.getProperty("_song");
+        if (song != null) {
+            try {
+                Files.writeString(FabricLoader.getInstance().getConfigDir().resolve(Notebot.FILE_NAME), song,
+                        java.nio.charset.StandardCharsets.UTF_8);
+            } catch (IOException ignored) {
+                // Lied nicht schreibbar: egal
+            }
+        }
+        return 0;
     }
 
     // ---------- Profile ----------
@@ -552,6 +686,15 @@ public final class TestConfig {
             return v == null ? def : Integer.parseInt(v.trim());
         } catch (NumberFormatException e) {
             return def;
+        }
+    }
+
+    /** "Name1;Name2" -> Set (Namen der Module, wie im Menue auf Deutsch). */
+    private static void readNames(String raw, java.util.Set<String> into) {
+        into.clear();
+        if (raw == null) return;
+        for (String n : raw.split(";")) {
+            if (!n.isBlank()) into.add(n.trim());
         }
     }
 }

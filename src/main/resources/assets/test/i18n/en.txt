@@ -1406,3 +1406,132 @@
 1588	Report in the chat
 1589	Report from this many traces
 1590	These are hints, not proof: sugar cane can also be 3 high on its own, and fresh geodes already have a few clusters (they only count when there are more clusters than buds). Only many traces at once really mean something.
+1591	Customize menu
+1592	Done customizing
+1593	Reset customization
+1594	is now in the menu
+1595	Drag header: move
+1596	Customize: click adds a module to the menu or hides it
+1597	Drag header: move column
+1598	Click: show/hide
+1599	Click: show/hide
+1600	Auto-Logout – player nearby: 
+1601	Disconnects when things get dangerous – always, not only while a bot is running.
+1602	Other players
+1603	Disconnect when a player nearby is not a friend
+1604	Distance (blocks, 0 = any distance)
+1605	Friends (Menu → Friends) don't count. With 0, any player your game can see is enough (usually up to about 100 blocks). Auto Reconnect won't rejoin by itself afterwards.
+1606	Only when an enemy is nearby
+1607	Enemy within (blocks)
+1608	Also renew Strength, Speed and Fire Resistance
+1609	Only splash potions from the hotbar. Effects are thrown again as soon as they are missing or run out within 3 seconds. Healing always comes first. Your view only jumps down very briefly.
+1610	Player in sight: 
+1611	Max attempts (0 = keep trying)
+1612	Wait longer after each failed attempt
+1613	Reconnect after Auto-Logout after (minutes, 0 = never)
+1614	Wait longer: twice as long on the 2nd attempt, three times as long on the 3rd and so on (at most 5 minutes). Otherwise Auto-Logout and the miners' auto-log never reconnect by themselves.
+1615	Highlight messages from friends
+1616	Hide if it contains
+1617	Friends get a star in their color. For the filter, separate several words with commas - upper and lower case don't matter.
+1618	Players in sight (not friends)
+1619	Friends in sight are already reported by the friend list (Menu → Friends).
+1620	Skip invisible ones
+1621	Skip players without armor
+1622	Off in water, lava and cobwebs
+1623	Steps up higher ledges without jumping.
+1624	Off while sneaking
+1625	Tower (hold space: build straight up)
+1626	Never use (
+1627	Scaffold: never use
+1628	It never takes chests, shulker boxes, sand, gravel or TNT. Under "Never use" you can block more blocks, e.g. obsidian or diamond blocks.
+1629	Enchanted first
+1630	Normal first
+1631	Never
+1632	Glass and ice
+1633	Glass, ice and ores
+1634	Auto Fish: The rod is almost broken and there is no other one.
+1635	Already opened ones in gray
+1636	Chests and barrels
+1637	Shulker boxes
+1638	Ender chests
+1639	Furnaces, blast furnaces and smokers
+1640	Hoppers, droppers and dispensers
+1641	Brewing stands
+1642	Spawners
+1643	Spawners are red. It remembers which ones you have already opened until you leave the world.
+1644	Only holes made of obsidian and bedrock
+1645	Green = all bedrock (safest), yellow = obsidian or similarly strong, blue = other blocks that don't withstand explosions.
+1646	Appearance
+1647	Color by distance (red = close)
+1648	Hide friends
+1649	Armor and items in hands
+1650	Show ping
+1651	Only valuable items
+1652	Show name and count
+1653	Valuable: everything enchanted, diamond and netherite things, ancient debris, totems, elytras, golden apples, shulker boxes, emeralds, end crystals and the like.
+1654	Only waypoints of this dimension
+1655	Older waypoints don't know their dimension - those are shown everywhere.
+1656	Always clear weather
+1657	Only you no longer see rain and thunderstorms - on the server it still rains.
+1658	Also eat at health ≤ (0 = off)
+1659	Don't eat during combat
+1660	With an almost full hunger bar you heal faster - that's why it can also eat at low health. Combat means: you hit something or took damage in the last 5 seconds. It always leaves bad food like rotten flesh alone.
+1661	Swap rod before it breaks
+1662	With only 5 uses left it takes another rod from the inventory. If there is none, it stops instead of breaking it.
+1663	Eats a golden apple when health\nis low.
+1664	Order
+1665	Eat an enchanted golden apple when burning
+1666	Only enchanted golden apples give Fire Resistance - that's why it only eats those when burning, and only if you don't have Fire Resistance yet.
+1667	Offhand too
+1668	Send afterwards
+1669	For example /home or /kit. It sends it 2 seconds after respawning. Empty = nothing.
+1670	Silk Touch for
+1671	Cobwebs with the sword
+1672	Silk Touch: glass and ice don't break, ores stay whole (no Fortune bonus). The sword turns cobwebs into string, shears keep the cobweb.
+1673	Take out
+1674	Store
+1675	Only selected
+1676	All except selected
+1677	Paused: player nearby
+1678	Chest Stealer: chest full
+1679	Pause when a player who is not a friend is nearby
+1680	Friends (Menu → Friends) don't count. The distance applies to Nuker, Auto Farm and Tree Feller together.
+1681	Automatically takes everything out when you open a chest - or stores everything.
+1682	Which items
+1683	Chest Stealer: Items
+1684	If your inventory (or the chest when storing) is full, it stops. When storing, your hotbar stays as it is. Without "Only chests, barrels and shulker boxes" it also takes furnaces, hoppers and droppers.
+1685	Torch up to light level
+1686	Torches must be in the hotbar. At light level 0 it only places one where there is no light at all - so a few torches are enough for a whole cave, and monsters only spawn there. Higher = more torches, for example for brighter tunnels.
+1687	Mutes sounds sent by the server\n(mobs, portals, thunder, explosions and more).
+1688	Join Protection
+1689	Only on new servers
+1690	On every server
+1691	Join Protection: all modules off. 
+1692	Join Protection: new server - all modules off. 
+1693	Back on with: 
+1694	Turns all modules off when you join a server - exactly as if you had pressed the “All modules off / on” key (J). Press J to turn them back on.
+1695	When
+1696	Known servers: 
+1697	Forget known servers
+1698	New means: you have never been on this server with 1912 Utilities. Nothing happens after changing dimension or lobby. Friends, Server Protection and Join Protection stay on.
+1699	Share as text
+1700	Copy all settings as text
+1701	§cCopying failed
+1702	Copied (
+1703	 characters). Now paste it e.g. into a text file or send it to yourself.
+1704	Apply text from the clipboard
+1705	Applied! Your previous settings are in the profile “
+1706	§cThe clipboard is empty. Copy the text first.
+1707	§cThe clipboard doesn't contain a 1912 Utilities settings text.
+1708	§cThe text is incomplete or broken. Best copy it again completely.
+1709	The text contains everything: which modules are on, their settings, the keys, the menu and the design. It also works in newer versions - new modules keep their default there. Applying replaces your current settings.
+1710	Performance
+1711	Performance mode
+1712	For weak PCs: in Wall Hack, Block Esp, Storage Esp, Hole Esp, Tunnel Esp, Void Esp, Base Finder and the ESP blocks, connected blocks become one big box. At most 100 boxes are drawn, without scan line and fill, and the search runs slower.
+1713	Performance mode (for weak PCs)
+1715	Performance mode: ores that lie together become one big box - much less to draw. It applies to all block displays (also under Menu → Customize design).
+1716	Classic X-Ray: everything except the selected blocks becomes invisible - you look through stone and dirt straight at the ores.
+1717	Only ores (default)
+1718	Brighten (night vision)
+1719	Hide water
+1720	Default: all ores, ancient debris and spawners. You always see chests, shulker boxes and lava. You can't walk through the invisible blocks. On servers with anti-xray, ores often only show up when you get close.

@@ -1425,3 +1425,132 @@
 1588	Avisar en el chat
 1589	Avisar a partir de tantos rastros
 1590	Son pistas, no pruebas: la caña de azúcar también puede tener 3 de alto por sí sola, y las geodas nuevas ya tienen algunos racimos (solo cuentan si hay más racimos que brotes). Solo muchos rastros a la vez dicen algo de verdad.
+1591	Personalizar menú
+1592	Terminar personalización
+1593	Restablecer personalización
+1594	ahora está en el menú
+1595	Arrastrar título: mover
+1596	Personalizar: un clic añade un módulo al menú o lo oculta
+1597	Arrastrar título: mover columna
+1598	Clic: mostrar/ocultar
+1599	Clic: mostrar/ocultar
+1600	Auto-Logout – jugador cerca: 
+1601	Se desconecta cuando la cosa se pone peligrosa – siempre, no solo cuando un bot está activo.
+1602	Otros jugadores
+1603	Desconectar si hay cerca un jugador que no es amigo
+1604	Distancia (bloques, 0 = cualquiera)
+1605	Los amigos (Menú → Amigos) no cuentan. Con 0 basta cualquier jugador que tu juego vea (normalmente hasta unos 100 bloques). Después, Auto Reconnect no vuelve a conectar solo.
+1606	Solo si hay un enemigo cerca
+1607	Enemigo hasta (bloques)
+1608	Renovar también Fuerza, Velocidad y Resistencia al fuego
+1609	Solo pociones arrojadizas de la barra rápida. Los efectos se lanzan de nuevo en cuanto faltan o se acaban en 3 segundos. Curar siempre va primero. Tu vista solo baja un instante.
+1610	Jugador a la vista: 
+1611	Intentos máximos (0 = seguir siempre)
+1612	Esperar más tras cada intento fallido
+1613	Reconectar tras Auto-Logout después de (minutos, 0 = nunca)
+1614	Esperar más: el doble en el 2.º intento, el triple en el 3.º y así sucesivamente (como mucho 5 minutos). Si no, Auto-Logout y el auto-log de los mineros nunca reconectan solos.
+1615	Resaltar mensajes de amigos
+1616	Ocultar si contiene
+1617	Los amigos reciben una estrella en su color. En el filtro, separa varias palabras con comas: da igual mayúsculas o minúsculas.
+1618	Jugadores a la vista (no amigos)
+1619	Los amigos a la vista ya los avisa la lista de amigos (Menú → Amigos).
+1620	Ignorar invisibles
+1621	Ignorar jugadores sin armadura
+1622	Desactivado en agua, lava y telarañas
+1623	Sube escalones más altos sin saltar.
+1624	Desactivado al agacharse
+1625	Torre (mantén espacio: construir hacia arriba)
+1626	No usar nunca (
+1627	Scaffold: no usar nunca
+1628	Nunca usa cofres, cajas de shulker, arena, grava ni TNT. En «No usar nunca» puedes bloquear más bloques, p. ej. obsidiana o bloques de diamante.
+1629	Encantadas primero
+1630	Normales primero
+1631	Nunca
+1632	Vidrio y hielo
+1633	Vidrio, hielo y menas
+1634	Auto Fish: La caña está casi rota y no hay otra.
+1635	Los ya abiertos en gris
+1636	Cofres y barriles
+1637	Cajas de shulker
+1638	Cofres de Ender
+1639	Hornos, altos hornos y ahumadores
+1640	Tolvas, soltadores y dispensadores
+1641	Soportes para pociones
+1642	Generadores
+1643	Los generadores son rojos. Recuerda cuáles ya abriste hasta que salgas del mundo.
+1644	Solo agujeros de obsidiana y roca madre
+1645	Verde = todo roca madre (lo más seguro), amarillo = obsidiana o igual de resistente, azul = otros bloques que no resisten explosiones.
+1646	Aspecto
+1647	Color según distancia (rojo = cerca)
+1648	Ocultar amigos
+1649	Armadura y objetos en las manos
+1650	Mostrar ping
+1651	Solo objetos valiosos
+1652	Mostrar nombre y cantidad
+1653	Valioso: todo lo encantado, cosas de diamante y netherita, escombros ancestrales, tótems, élitros, manzanas doradas, cajas de shulker, esmeraldas, cristales del End y similares.
+1654	Solo puntos de ruta de esta dimensión
+1655	Los puntos de ruta antiguos no conocen su dimensión: esos se muestran en todas partes.
+1656	Tiempo siempre despejado
+1657	Solo tú dejas de ver la lluvia y las tormentas: en el servidor sigue lloviendo.
+1658	Comer también con vida ≤ (0 = desactivado)
+1659	No comer en combate
+1660	Con el hambre casi llena te curas más rápido; por eso también puede comer con poca vida. Combate significa: golpeaste o recibiste daño en los últimos 5 segundos. La comida mala como la carne podrida la deja siempre.
+1661	Cambiar la caña antes de que se rompa
+1662	Con solo 5 usos restantes toma otra caña del inventario. Si no hay, se detiene en vez de romperla.
+1663	Come una manzana dorada cuando la vida\nes baja.
+1664	Orden
+1665	Comer una manzana dorada encantada al arder
+1666	Solo las manzanas doradas encantadas dan Resistencia al fuego; por eso al arder solo come esas, y solo si aún no tienes Resistencia al fuego.
+1667	También la segunda mano
+1668	Enviar después
+1669	Por ejemplo /home o /kit. Lo envía 2 segundos después de reaparecer. Vacío = nada.
+1670	Toque de seda para
+1671	Telarañas con la espada
+1672	Toque de seda: el vidrio y el hielo no se rompen, las menas quedan enteras (sin bonus de Fortuna). La espada convierte las telarañas en hilo, las tijeras conservan la telaraña.
+1673	Sacar
+1674	Guardar
+1675	Solo seleccionados
+1676	Todos menos los seleccionados
+1677	Pausa: jugador cerca
+1678	Chest Stealer: cofre lleno
+1679	Pausar si cerca hay un jugador que no es amigo
+1680	Los amigos (Menú → Amigos) no cuentan. La distancia vale para Nuker, Auto Farm y Talador juntos.
+1681	Saca todo automáticamente al abrir un cofre, o lo guarda todo.
+1682	Qué objetos
+1683	Chest Stealer: objetos
+1684	Si tu inventario (o el cofre al guardar) está lleno, se detiene. Al guardar, tu barra rápida queda como está. Sin «Solo cofres, barriles y cajas de shulker» también usa hornos, tolvas y soltadores.
+1685	Antorcha hasta nivel de luz
+1686	Las antorchas deben estar en la barra rápida. Con nivel de luz 0 solo pone una donde no hay nada de luz: así bastan pocas antorchas para toda una cueva, y los monstruos solo aparecen ahí. Más alto = más antorchas, por ejemplo para pasillos más claros.
+1687	Silencia los sonidos que envía el servidor\n(mobs, portales, tormentas, explosiones y más).
+1688	Protección al entrar
+1689	Solo en servidores nuevos
+1690	En cada servidor
+1691	Protección al entrar: todos los módulos desactivados. 
+1692	Protección al entrar: servidor nuevo - todos los módulos desactivados. 
+1693	Reactivar con: 
+1694	Desactiva todos los módulos al entrar en un servidor, igual que si hubieras pulsado la tecla «Desactivar / activar todo» (J). Con J vuelven a activarse.
+1695	Cuándo
+1696	Servidores conocidos: 
+1697	Olvidar servidores conocidos
+1698	Nuevo significa: nunca has estado en este servidor con 1912 Utilities. Al cambiar de dimensión o de lobby no pasa nada. Amigos, Protección de servidor y Protección al entrar siguen activos.
+1699	Compartir como texto
+1700	Copiar toda la configuración como texto
+1701	§cNo se pudo copiar
+1702	Copiado (
+1703	 caracteres). Ahora pégalo p. ej. en un archivo de texto o envíatelo a ti mismo.
+1704	Aplicar texto del portapapeles
+1705	¡Aplicado! Tu configuración anterior está en el perfil “
+1706	§cEl portapapeles está vacío. Copia primero el texto.
+1707	§cEn el portapapeles no hay un texto de configuración de 1912 Utilities.
+1708	§cEl texto está incompleto o dañado. Lo mejor es copiarlo de nuevo entero.
+1709	El texto lo contiene todo: qué módulos están activos, sus ajustes, las teclas, el menú y el diseño. También funciona en versiones más nuevas: allí los módulos nuevos mantienen su valor por defecto. Aplicar reemplaza tu configuración actual.
+1710	Rendimiento
+1711	Modo rendimiento
+1712	Para PCs débiles: en Wall Hack, Block Esp, Storage Esp, Hole Esp, Tunnel Esp, Void Esp, Base Finder y los bloques del ESP, los bloques conectados se convierten en una caja grande. Se dibujan como mucho 100 cajas, sin línea de escaneo ni relleno, y la búsqueda va más lenta.
+1713	Modo rendimiento (para PCs débiles)
+1715	Modo rendimiento: las menas que están juntas se convierten en una caja grande, mucho menos que dibujar. Vale para todas las vistas de bloques (también en Menú → Personalizar diseño).
+1716	X-Ray clásico: todo excepto los bloques elegidos se vuelve invisible; ves a través de la piedra y la tierra directamente las menas.
+1717	Solo menas (por defecto)
+1718	Iluminar (visión nocturna)
+1719	Ocultar agua
+1720	Por defecto: todas las menas, escombros ancestrales y generadores. Cofres, cajas de shulker y lava se ven siempre. No puedes atravesar los bloques invisibles. En servidores con anti-xray, las menas suelen aparecer solo cuando estás cerca.

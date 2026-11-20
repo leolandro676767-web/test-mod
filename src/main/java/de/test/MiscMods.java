@@ -31,6 +31,9 @@ public final class MiscMods {
 
     public static boolean autoReconnect = false;
     public static int autoReconnectDelay = 5;       // Sekunden
+    public static int autoReconnectMax = 0;         // hoechstens so viele Versuche hintereinander, 0 = unbegrenzt
+    public static boolean autoReconnectBackoff = false; // nach jedem Fehlversuch laenger warten
+    public static int autoReconnectAfterLogout = 0; // Minuten nach einem Auto-Logout doch neu verbinden, 0 = nie
 
     public static boolean betterBeacons = false;
     public static int beaconPrimary = 4;     // Index in BEACON_NAMES (Staerke)
@@ -40,6 +43,8 @@ public final class MiscMods {
     public static boolean betterChatDedup = true;   // gleiche Nachricht buendeln (x2, x3)
     public static boolean betterChatTime = false;   // Uhrzeit davor
     public static int betterChatWindow = 10;        // Sekunden, in denen Wiederholungen ausgeblendet werden
+    public static boolean betterChatFriends = false; // Nachrichten von Freunden hervorheben
+    public static String betterChatFilter = "";     // Woerter, mit Komma getrennt: solche Nachrichten ausblenden
 
     public static boolean bookBot = false;          // einmalig: schreibt das Buch und schaltet sich aus
     public static String bookBotText = "1912 Utilities";
@@ -71,6 +76,10 @@ public final class MiscMods {
     public static boolean notifyDurability = true;
     public static int notifyDurabilityAt = 10;      // Prozent
     public static boolean notifyTotem = true;
+    public static boolean notifyHealth = false;
+    public static int notifyHealthAt = 6;           // Lebenspunkte (2 = 1 Herz)
+    public static boolean notifyFullInv = false;
+    public static boolean notifyPlayers = false;    // Spieler (keine Freunde) kommen in Sichtweite
 
     public static boolean packetCanceller = false;
     public static boolean cancelSwing = false;
@@ -90,6 +99,12 @@ public final class MiscMods {
     public static String spamText = "1912 Utilities";
 
     public static boolean serverGuard = false;
+
+    // Join-Schutz: beim Betreten eines (neuen) Servers alle Module aus, wie mit der Taste J
+    public static boolean joinGuard = true;
+    public static int joinGuardMode = 0;            // 0 nur neue Server, 1 jeder Server
+    public static String joinKnown = "";            // Server, auf denen man schon war (mit Komma getrennt)
+    static final String[] JOIN_MODES = {"Nur auf neuen Servern", "Bei jedem Server"};
     /** Server-Adressen (Teile reichen), mit Komma getrennt, z.B. "hypixel, gommehd". */
     public static String serverGuardList = "hypixel, gommehd";
 
@@ -106,6 +121,8 @@ public final class MiscMods {
 
     private static int packetsThisTick = 0;
     private static int reconnectTicks = 0;
+    private static int reconnectTries = 0;          // Versuche seit der letzten Verbindung
+    private static long holdSince = 0;              // seit wann holdReconnect gilt (ms)
     /** Nach einem Auto-Log (Debris Miner) nicht automatisch neu verbinden; gilt bis zur naechsten Verbindung. */
     static boolean holdReconnect = false;
     private static ServerData lastServer = null;
@@ -124,8 +141,47 @@ public final class MiscMods {
     private static long lastChatTime = 0;
     private static final java.util.Map<String, Integer> auraCooldown = new java.util.HashMap<>();
 
+    /** Better Chat: Nachricht enthaelt ein Wort aus dem Filter? */
+    private static boolean filtered(Component message) {
+        if (!betterChat || betterChatFilter == null || betterChatFilter.isBlank()) return false;
+        String text = message.getString().toLowerCase(java.util.Locale.ROOT);
+        for (String part : betterChatFilter.toLowerCase(java.util.Locale.ROOT).split(",")) {
+            String w = part.trim();
+            if (!w.isEmpty() && text.contains(w)) return true;
+        }
+        return false;
+    }
+
+    /** Better Chat: Stern in der Freundesfarbe vor die Nachricht. */
+    private static Component highlight(Component message) {
+        int col = Friends.color() & 0xFFFFFF;
+        return Component.literal("★ ").withStyle(s -> s.withColor(col)).append(message);
+    }
+
+    /** Kommt in einer Server-Nachricht ein Freund als ganzes Wort vor? */
+    private static boolean mentionsFriend(Component message) {
+        String text = message.getString().toLowerCase(java.util.Locale.ROOT);
+        for (String name : Friends.all()) {
+            String n = name.toLowerCase(java.util.Locale.ROOT);
+            if (n.isEmpty()) continue;
+            for (int i = text.indexOf(n); i >= 0; i = text.indexOf(n, i + 1)) {
+                int end = i + n.length();
+                boolean before = i == 0 || !nameChar(text.charAt(i - 1));
+                boolean after = end >= text.length() || !nameChar(text.charAt(end));
+                if (before && after) return true;
+            }
+        }
+        return false;
+    }
+
+    /** Zeichen, die in Minecraft-Namen vorkommen (Buchstaben, Ziffern, Unterstrich). */
+    private static boolean nameChar(char c) {
+        return c == '_' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9';
+    }
+
     /** Better Chat: dieselbe Nachricht innerhalb des Zeitfensters nur einmal zeigen. */
     private static boolean allowRepeat(Component message) {
+        if (filtered(message)) return false;
         if (!betterChat || !betterChatDedup) return true;
         String text = message.getString();
         long now = System.currentTimeMillis();
@@ -137,13 +193,29 @@ public final class MiscMods {
 
     public static void register() {
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> overlay || allowRepeat(message));
-        ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signed, sender, params, time) -> allowRepeat(message));
-        ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> {
-            if (betterChat && betterChatTime && !overlay) {
-                String t = java.time.LocalTime.now().toString().substring(0, 5);
-                return Component.literal("§7[" + t + "] §r").append(message);
+        ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signed, sender, params, time) -> {
+            if (!allowRepeat(message)) return false;
+            if (betterChat && betterChatFriends && sender != null && Friends.listed(sender.name())) {
+                // Spieler-Nachrichten lassen sich nicht aendern: selbst hervorgehoben einfuegen, das Original weglassen
+                try {
+                    Minecraft.getInstance().gui.hud.getChat().addPlayerMessage(highlight(message),
+                            signed != null ? signed.signature() : null, null);
+                    return false;
+                } catch (RuntimeException e) {
+                    return true;
+                }
             }
-            return message;
+            return true;
+        });
+        ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> {
+            if (overlay || !betterChat) return message;
+            Component out = message;
+            if (betterChatFriends && mentionsFriend(message)) out = highlight(out);
+            if (betterChatTime) {
+                String t = java.time.LocalTime.now().toString().substring(0, 5);
+                out = Component.literal("§7[" + t + "] §r").append(out);
+            }
+            return out;
         });
     }
 
@@ -202,10 +274,11 @@ public final class MiscMods {
         if (mc.getCurrentServer() != null) lastServer = mc.getCurrentServer();
 
         holdReconnect = false; // wieder verbunden
+        holdSince = 0;
+        if (mc.player != null && mc.player.tickCount > 100) reconnectTries = 0; // Verbindung haelt
         if (autoReconnect) runAutoReconnect(mc);
         else reconnectTicks = 0;
 
-        runServerGuard(mc);
         Notebot.tick(mc);
         Swarm.tick(mc);
         if (discordPresence) {
@@ -266,6 +339,66 @@ public final class MiscMods {
      * Server-Schutz: beim Betreten eines Servers von der Liste alle Module ausschalten (wie die
      * J-Taste - mit J kommen sie zurueck, wenn man das wirklich will).
      */
+    private static Object joinLastConnection;
+
+    /**
+     * Gleich nach dem Betreten einer Welt, noch vor den Modulen (aus TestClient): Server-Schutz und
+     * Join-Schutz schalten bei Bedarf alle Module aus.
+     */
+    static void joinTick(Minecraft mc) {
+        runServerGuard(mc);
+        runJoinGuard(mc);
+    }
+
+    /** Adresse ohne Standard-Port, klein geschrieben. */
+    private static String serverKey(String ip) {
+        String s = ip == null ? "" : ip.strip().toLowerCase(java.util.Locale.ROOT);
+        if (s.endsWith(":25565")) s = s.substring(0, s.length() - 6);
+        while (s.endsWith(".")) s = s.substring(0, s.length() - 1);
+        return s.replace(",", "");
+    }
+
+    static int knownServers() {
+        int n = 0;
+        for (String part : joinKnown.split(",")) {
+            if (!part.isBlank()) n++;
+        }
+        return n;
+    }
+
+    private static void runJoinGuard(Minecraft mc) {
+        var conn = mc.getConnection();
+        if (conn == null || mc.player == null || mc.level == null) {
+            joinLastConnection = null;
+            return;
+        }
+        if (conn == joinLastConnection) return; // nur einmal pro Verbindung (auch bei Dimensionswechsel)
+        joinLastConnection = conn;
+        ServerData sd = mc.getCurrentServer();
+        if (sd == null) return; // Einzelspieler
+        String key = serverKey(sd.ip);
+        if (key.isEmpty()) return;
+        boolean known = false;
+        for (String part : joinKnown.split(",")) {
+            if (part.strip().equals(key)) {
+                known = true;
+                break;
+            }
+        }
+        if (!known) {
+            joinKnown = joinKnown.isBlank() ? key : joinKnown + "," + key; // auch merken, wenn der Schutz aus ist
+            TestConfig.save();
+        }
+        if (!joinGuard || (joinGuardMode == 0 && known)) return;
+        if (!Keybinds.PANIC.isEmpty()) return; // schon alles aus (z.B. vom Server-Schutz)
+        Keybinds.panic();
+        if (Keybinds.PANIC.isEmpty()) return; // es war nichts an
+        Integer code = Keybinds.get(Keybinds.PANIC_NAME);
+        String k = code != null ? Keybinds.keyName(code) : Lang.t(Keybinds.PANIC_NAME);
+        mc.player.sendSystemMessage(Lang.literal("§e1912: " + Lang.t(known ? "Join-Schutz: alle Module aus. "
+                : "Join-Schutz: neuer Server - alle Module aus. ") + Lang.t("Wieder an mit: ") + k));
+    }
+
     private static void runServerGuard(Minecraft mc) {
         if (mc.level == null || mc.player == null) {
             guardLastServer = null;
@@ -325,7 +458,10 @@ public final class MiscMods {
 
     /** Ohne Welt (z.B. nach einem Rauswurf): nur Auto Reconnect. */
     public static void tickOffline(Minecraft mc) {
-        if (autoReconnect && !holdReconnect) runAutoReconnect(mc);
+        if (holdReconnect && holdSince == 0) holdSince = System.currentTimeMillis();
+        boolean waited = holdReconnect && autoReconnectAfterLogout > 0
+                && System.currentTimeMillis() - holdSince >= autoReconnectAfterLogout * 60_000L;
+        if (autoReconnect && (!holdReconnect || waited)) runAutoReconnect(mc);
         else reconnectTicks = 0;
     }
 
@@ -336,8 +472,12 @@ public final class MiscMods {
             return;
         }
         if (lastServer == null) return;
-        if (++reconnectTicks < autoReconnectDelay * 20) return;
+        if (autoReconnectMax > 0 && reconnectTries >= autoReconnectMax) return; // genug versucht
+        int delay = autoReconnectDelay;
+        if (autoReconnectBackoff) delay = Math.min(300, autoReconnectDelay * (1 + reconnectTries));
+        if (++reconnectTicks < delay * 20) return;
         reconnectTicks = 0;
+        reconnectTries++;
         try {
             net.minecraft.client.gui.screens.ConnectScreen.startConnecting(
                     current, mc, net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(lastServer.ip),
@@ -348,8 +488,57 @@ public final class MiscMods {
         }
     }
 
+    private static boolean healthWarned;
+    private static boolean invWarned;
+    private static java.util.Map<Integer, String> seenPlayers = new java.util.HashMap<>();
+    private static Object seenLevel;
+
     private static void runNotifier(Minecraft mc) {
         var p = mc.player;
+        if (notifyHealth) {
+            if (p.getHealth() <= notifyHealthAt && p.isAlive()) {
+                if (!healthWarned) {
+                    healthWarned = true;
+                    p.sendSystemMessage(Lang.literal("§c1912: " + Lang.t("Wenig Leben: ")
+                            + String.format(java.util.Locale.ROOT, "%.1f", p.getHealth() / 2f).replace(".0", "")
+                            + " ❤"));
+                }
+            } else if (p.getHealth() > notifyHealthAt + 2) {
+                healthWarned = false;
+            }
+        }
+        if (notifyFullInv) {
+            boolean full = true;
+            for (int i = 0; i < 36; i++) {
+                if (p.getInventory().getItem(i).isEmpty()) {
+                    full = false;
+                    break;
+                }
+            }
+            if (full && !invWarned) {
+                invWarned = true;
+                p.sendSystemMessage(Lang.literal("§e1912: " + Lang.t("Inventar voll")));
+            } else if (!full) {
+                invWarned = false;
+            }
+        }
+        if (notifyPlayers) {
+            java.util.Map<Integer, String> now = new java.util.HashMap<>();
+            for (var o : mc.level.players()) {
+                if (o == p || PlayerMods.isFake(o) || Friends.listed(o.getGameProfile().name())) continue;
+                now.put(o.getId(), o.getGameProfile().name());
+                // erst nach einem Welt- oder Dimensionswechsel nicht gleich alle melden
+                if (seenLevel == mc.level && !seenPlayers.containsKey(o.getId())) {
+                    p.sendSystemMessage(Lang.literal("§e1912: " + Lang.t("Spieler in Sichtweite: ")
+                            + o.getGameProfile().name() + " (" + Math.round(p.distanceTo(o)) + "m)"));
+                }
+            }
+            seenPlayers = now;
+            seenLevel = mc.level;
+        } else {
+            seenPlayers.clear();
+            seenLevel = null;
+        }
         if (notifyDurability) {
             ItemStack main = p.getMainHandItem();
             if (main.isDamageableItem()) {
@@ -405,6 +594,15 @@ public final class MiscMods {
                 f.description("Verbindet nach einem Rauswurf automatisch\nneu zum letzten Server.");
                 f.section("Allgemein");
                 f.slider("Verzögerung (s)", 1, 60, () -> autoReconnectDelay, v -> autoReconnectDelay = v, 5);
+                f.slider("Höchstens Versuche (0 = immer weiter)", 0, 50, () -> autoReconnectMax,
+                        v -> autoReconnectMax = v, 0);
+                f.toggle("Nach jedem Fehlversuch länger warten", () -> autoReconnectBackoff,
+                        v -> autoReconnectBackoff = v, false);
+                f.slider("Nach Auto-Logout neu verbinden nach (Minuten, 0 = nie)", 0, 120,
+                        () -> autoReconnectAfterLogout, v -> autoReconnectAfterLogout = v, 0);
+                f.note("Länger warten: beim 2. Versuch doppelt so lange, beim 3. dreimal so lange und so weiter "
+                        + "(höchstens 5 Minuten). Auto-Logout und der Auto-Log der Miner verbinden sonst nie von "
+                        + "selbst neu.");
                 f.footer(() -> autoReconnect, v -> autoReconnect = v);
             });
             case "Better Beacons" -> new ModuleScreen(parent, module, f -> {
@@ -421,6 +619,12 @@ public final class MiscMods {
                 f.toggle("Uhrzeit davor", () -> betterChatTime, v -> betterChatTime = v, false);
                 f.toggle("Wiederholungen ausblenden", () -> betterChatDedup, v -> betterChatDedup = v, true);
                 f.slider("Zeitfenster (s)", 1, 60, () -> betterChatWindow, v -> betterChatWindow = v, 10);
+                f.toggle("Nachrichten von Freunden hervorheben", () -> betterChatFriends, v -> betterChatFriends = v,
+                        false);
+                f.text("Ausblenden, wenn darin vorkommt", () -> betterChatFilter, v -> betterChatFilter = v, "", 200,
+                        null);
+                f.note("Freunde bekommen einen Stern in ihrer Farbe. Beim Filter mehrere Wörter mit Komma "
+                        + "trennen - Groß- und Kleinschreibung ist egal.");
                 f.footer(() -> betterChat, v -> betterChat = v);
             });
             case "Book Bot" -> new ModuleScreen(parent, module, f -> {
@@ -479,6 +683,11 @@ public final class MiscMods {
                 f.toggle("Haltbarkeit", () -> notifyDurability, v -> notifyDurability = v, true);
                 f.slider("Warnen bei (%)", 1, 50, () -> notifyDurabilityAt, v -> notifyDurabilityAt = v, 10);
                 f.toggle("Totem verbraucht", () -> notifyTotem, v -> notifyTotem = v, true);
+                f.toggle("Wenig Leben", () -> notifyHealth, v -> notifyHealth = v, false);
+                f.slider("Leben ≤ (2 = 1 Herz)", 2, 19, () -> notifyHealthAt, v -> notifyHealthAt = v, 6);
+                f.toggle("Inventar voll", () -> notifyFullInv, v -> notifyFullInv = v, false);
+                f.toggle("Spieler in Sichtweite (keine Freunde)", () -> notifyPlayers, v -> notifyPlayers = v, false);
+                f.note("Freunde in Sichtweite meldet schon die Freundesliste (Menü → Freunde).");
                 f.footer(() -> notifier, v -> notifier = v);
             });
             case "Packet Canceller" -> new ModuleScreen(parent, module, f -> {
@@ -497,7 +706,7 @@ public final class MiscMods {
                 f.footer(() -> serverSpoof, v -> serverSpoof = v);
             });
             case "Sound Blocker" -> new ModuleScreen(parent, module, f -> {
-                f.description("Stummt Ger\u00e4usche, die der Server schickt\n(Mobs, Portale, Gewitter, Explosionen ...).");
+                f.description("Stummt Ger\u00e4usche, die der Server schickt\n(Mobs, Portale, Gewitter, Explosionen und mehr).");
                 f.section("Allgemein");
                 f.text("Ger\u00e4usche", () -> soundBlockList, v -> soundBlockList = v, "portal, thunder");
                 f.note("Teile des Namens, mit Komma getrennt - z.B. ghast, portal, thunder, explode, villager.");
@@ -509,6 +718,19 @@ public final class MiscMods {
                 f.text("Text", () -> spamText, v -> spamText = v, "1912 Utilities");
                 f.slider("Abstand (s)", 1, 60, () -> spamDelay, v -> spamDelay = v, 5);
                 f.footer(() -> spam, v -> spam = v);
+            });
+            case "Join-Schutz" -> new ModuleScreen(parent, module, f -> {
+                f.description("Schaltet beim Betreten eines Servers alle Module aus - genau so, als hättest du die "
+                        + "Taste „Alle Module aus / an“ (J) gedrückt. Mit J gehen sie wieder an.");
+                f.choice("Wann", JOIN_MODES, () -> joinGuardMode, v -> joinGuardMode = v, 0);
+                f.note(() -> "Bekannte Server: " + knownServers());
+                f.wideButton("Bekannte Server vergessen", false, () -> {
+                    joinKnown = "";
+                    TestConfig.save();
+                });
+                f.note("Neu heißt: Auf diesem Server warst du mit 1912 Utilities noch nie. Nach einem Wechsel der "
+                        + "Dimension oder Lobby passiert nichts. Freunde, Server-Schutz und Join-Schutz bleiben an.");
+                f.footer(() -> joinGuard, v -> joinGuard = v);
             });
             case "Server-Schutz" -> new ModuleScreen(parent, module, f -> {
                 f.description("Schaltet beim Betreten bestimmter Server automatisch alle Module aus - "

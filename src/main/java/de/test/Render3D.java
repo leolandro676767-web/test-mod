@@ -156,8 +156,104 @@ public final class Render3D {
             case 1 -> wire(g, bb, color);
             default -> {
                 wire(g, bb, color);
-                scan(g, bb, color);
+                if (!RenderMods.perfMode) scan(g, bb, color); // Leistungs-Modus: ohne Scan-Linie
             }
+        }
+    }
+
+    // ---------- Leistungs-Modus: viele Bloecke als wenige Kaesten ----------
+
+    /** So viele Kaesten zeichnet eine Liste im Leistungs-Modus hoechstens (die naechsten). */
+    public static final int PERF_MAX = 100;
+
+    private static final class Merged {
+        long hash = Long.MIN_VALUE;
+        long at;
+        final java.util.List<AABB> boxes = new java.util.ArrayList<>();
+        int[] colors = new int[0];
+    }
+
+    private static final java.util.Map<Object, Merged> MERGED = new java.util.IdentityHashMap<>();
+
+    /**
+     * Zeichnet eine Liste von Bloecken (je height hoch) im Leistungs-Modus: zusammenhaengende Bloecke derselben
+     * Farbe werden zu einem grossen Kasten, berechnet nur, wenn sich die Liste aendert (sonst einmal pro Sekunde
+     * fuer die Entfernung), und es werden hoechstens {@link #PERF_MAX} Kaesten gezeichnet - ohne Scan-Linie und
+     * Fuellung. Farbe 0 = Block auslassen.
+     */
+    public static void blocks(GuiGraphicsExtractor g, Object key, java.util.List<BlockPos> list,
+            java.util.function.ToIntFunction<BlockPos> color, int height) {
+        Merged m = MERGED.computeIfAbsent(key, k -> new Merged());
+        long h = list.size();
+        for (int i = 0; i < list.size(); i++) h = h * 31 + list.get(i).asLong();
+        long now = System.currentTimeMillis();
+        if (h != m.hash || now - m.at > 1000) {
+            m.hash = h;
+            m.at = now;
+            merge(list, color, height, m);
+        }
+        for (int i = 0; i < m.boxes.size(); i++) {
+            if (RenderMods.outlineStyle == 0) {
+                box(g, m.boxes.get(i), m.colors[i], false);
+            } else {
+                wire(g, m.boxes.get(i), m.colors[i]);
+            }
+        }
+    }
+
+    /** Zusammenhaengende Gruppen (auch ueber Ecken) gleicher Farbe -> umschliessender Kasten. */
+    private static void merge(java.util.List<BlockPos> list, java.util.function.ToIntFunction<BlockPos> color,
+            int height, Merged m) {
+        java.util.Map<Long, Integer> col = new java.util.HashMap<>();
+        for (BlockPos p : list) {
+            int c = color.applyAsInt(p);
+            if (c != 0) col.put(p.asLong(), c);
+        }
+        java.util.List<double[]> found = new java.util.ArrayList<>();
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        java.util.ArrayDeque<Long> queue = new java.util.ArrayDeque<>();
+        for (var e : col.entrySet()) {
+            long start = e.getKey();
+            if (!seen.add(start)) continue;
+            int c = e.getValue();
+            int x1 = Integer.MAX_VALUE, y1 = Integer.MAX_VALUE, z1 = Integer.MAX_VALUE;
+            int x2 = Integer.MIN_VALUE, y2 = Integer.MIN_VALUE, z2 = Integer.MIN_VALUE;
+            queue.add(start);
+            while (!queue.isEmpty()) {
+                long cur = queue.poll();
+                int x = BlockPos.getX(cur);
+                int y = BlockPos.getY(cur);
+                int z = BlockPos.getZ(cur);
+                x1 = Math.min(x1, x);
+                y1 = Math.min(y1, y);
+                z1 = Math.min(z1, z);
+                x2 = Math.max(x2, x);
+                y2 = Math.max(y2, y);
+                z2 = Math.max(z2, z);
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            if ((dx | dy | dz) == 0) continue;
+                            long n = BlockPos.asLong(x + dx, y + dy, z + dz);
+                            Integer nc = col.get(n);
+                            if (nc != null && nc == c && seen.add(n)) queue.add(n);
+                        }
+                    }
+                }
+            }
+            double cx = (x1 + x2 + 1) / 2.0 - camX;
+            double cy = (y1 + y2 + height) / 2.0 - camY;
+            double cz = (z1 + z2 + 1) / 2.0 - camZ;
+            found.add(new double[] {x1, y1, z1, x2 + 1, y2 + height, z2 + 1, c, cx * cx + cy * cy + cz * cz});
+        }
+        found.sort(java.util.Comparator.comparingDouble(a -> a[7]));
+        int n = Math.min(found.size(), PERF_MAX);
+        m.boxes.clear();
+        m.colors = new int[n];
+        for (int i = 0; i < n; i++) {
+            double[] f = found.get(i);
+            m.boxes.add(new AABB(f[0], f[1], f[2], f[3], f[4], f[5]));
+            m.colors[i] = (int) f[6];
         }
     }
 

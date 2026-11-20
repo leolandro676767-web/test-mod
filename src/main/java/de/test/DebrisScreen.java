@@ -191,10 +191,6 @@ public class DebrisScreen extends Form {
                 + "oben; „Bei Spieler in der Nähe“ und „Nach Totem“ greifen nur, wenn das Trennen dort aus ist. "
                 + "„Wenn er feststeckt“: Lava ringsum, Weg blockiert oder kein Rückweg.");
 
-        section("Verteidigung");
-        toggle("Mobs abwehren", () -> BotGuard.forDebris, v -> BotGuard.forDebris = v, true);
-        wideButton("Einstellungen der Bot-Verteidigung", false,
-                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
 
         section("Anzeige");
         toggle("Zustand im Bild anzeigen", () -> DebrisMiner.showStatus, v -> DebrisMiner.showStatus = v, true);
@@ -326,10 +322,6 @@ class TunnelScreen extends Form {
         note("Gilt, solange der Tunnel Miner läuft. Danach verbindet Auto Reconnect nicht von selbst neu. Unabhängig "
                 + "davon gibt es im Menü unter „Welt“ das allgemeine Auto-Logout (immer aktiv, eigene Herzen).");
 
-        section("Verteidigung");
-        toggle("Mobs abwehren", () -> BotGuard.forTunnel, v -> BotGuard.forTunnel = v, true);
-        wideButton("Einstellungen der Bot-Verteidigung", false,
-                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
 
         section("Anzeige");
         toggle("Zustand im Bild anzeigen", () -> TunnelMiner.showStatus, v -> TunnelMiner.showStatus = v, true);
@@ -396,10 +388,6 @@ class GotoScreen extends Form {
         }, false);
         toggle("Ziel hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
         choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
-        section("Verteidigung");
-        toggle("Mobs abwehren", () -> BotGuard.forGoto, v -> BotGuard.forGoto = v, true);
-        wideButton("Einstellungen der Bot-Verteidigung", false,
-                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
         footer(null, null);
     }
 
@@ -463,10 +451,6 @@ class BlockScreen extends Form {
         section("Anzeige");
         toggle("Ziele hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
         choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
-        section("Verteidigung");
-        toggle("Mobs abwehren", () -> BotGuard.forBlock, v -> BotGuard.forBlock = v, true);
-        wideButton("Einstellungen der Bot-Verteidigung", false,
-                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
         footer(null, null);
     }
 
@@ -533,10 +517,6 @@ class AreaScreen extends Form {
         toggle("Ziele hervorheben", () -> RenderMods.miningHighlight, v -> RenderMods.miningHighlight = v, true);
         toggle("Bereichsrahmen", () -> RenderMods.miningShowArea, v -> RenderMods.miningShowArea = v, true);
         choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
-        section("Verteidigung");
-        toggle("Mobs abwehren", () -> BotGuard.forArea, v -> BotGuard.forArea = v, true);
-        wideButton("Einstellungen der Bot-Verteidigung", false,
-                () -> this.minecraft.gui.setScreen(new BotGuardScreen(this)), true);
         footer(null, null);
     }
 

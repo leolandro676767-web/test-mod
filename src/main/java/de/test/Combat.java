@@ -11,7 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-/** Gemeinsame Kampf-Hilfen fuer Kill Aura und Bot-Verteidigung: Reichweite, Zielen, Waffen. */
+/** Gemeinsame Kampf-Hilfen: Reichweite, Zielen, Waffen. */
 final class Combat {
     private Combat() {
     }

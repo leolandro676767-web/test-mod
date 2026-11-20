@@ -40,6 +40,8 @@ public final class KillAura {
     public static boolean hostile = true;
     public static boolean passive = false;
     public static boolean neutralOnlyAngry = true;  // Zombie-Piglins, Endermen, Piglins nur, wenn sie angreifen
+    public static boolean skipInvisible = false;   // unsichtbare Wesen auslassen
+    public static boolean skipNaked = false;       // Spieler ganz ohne Ruestung auslassen
     public static boolean skipPets = true;          // gezaehmte und benannte Tiere auslassen
     public static int range = 30;                   // Zehntel-Bloecke (30 = 3,0)
     public static boolean throughWalls = false;
@@ -119,10 +121,6 @@ public final class KillAura {
             return;
         }
 
-        if (BotGuard.fighting()) {
-            target = null; // die Bot-Verteidigung kaempft gerade - nicht doppelt schlagen
-            return;
-        }
         target = pick(mc, p);
         if (target == null) {
             cpsBudget = 0;
@@ -189,9 +187,11 @@ public final class KillAura {
     /** Darf dieses Wesen ueberhaupt angegriffen werden? */
     static boolean valid(LocalPlayer self, LivingEntity le) {
         if (le == self || !le.isAlive() || le.getHealth() <= 0) return false;
+        if (skipInvisible && le.isInvisible()) return false;
         if (le instanceof Player pl) {
             if (!players || pl.isSpectator() || pl.isCreative()) return false;
             if (PlayerMods.isFake(pl)) return false;
+            if (skipNaked && naked(pl)) return false;
             return !Friends.protect(pl); // Freunde nie
         }
         MobCategory cat = le.getType().getCategory();
@@ -204,6 +204,14 @@ public final class KillAura {
         if (!passive) return false;
         if (skipPets && (le.hasCustomName() || le instanceof TamableAnimal ta && ta.isTame())) return false;
         return true;
+    }
+
+    /** Traegt der Spieler gar keine Ruestung? */
+    private static boolean naked(Player pl) {
+        return pl.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()
+                && pl.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).isEmpty()
+                && pl.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS).isEmpty()
+                && pl.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET).isEmpty();
     }
 
     /** Monster, die erst angreifen, wenn man sie reizt (und dann oft in Gruppen). */
@@ -249,17 +257,16 @@ public final class KillAura {
 
     private static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
-        boolean guard = BotGuard.fighting() && BotGuard.highlight;
-        LivingEntity t = guard ? BotGuard.target() : enabled ? target : null;
+        LivingEntity t = enabled ? target : null;
         if (t == null || mc.player == null || !t.isAlive()) return;
         if (mc.gui.screen() != null) return;
         float oldAlpha = Ui.alpha;
         Ui.alpha = 1f;
         try {
-            if ((guard || highlight) && Render3D.begin(mc, delta.getGameTimeDeltaPartialTick(true))) {
-                Render3D.wire(g, Render3D.smoothBox(t), guard ? BotGuard.COLOR : color());
+            if (highlight && Render3D.begin(mc, delta.getGameTimeDeltaPartialTick(true))) {
+                Render3D.wire(g, Render3D.smoothBox(t), color());
             }
-            if (guard || targetInfo) drawInfo(g, mc, t);
+            if (targetInfo) drawInfo(g, mc, t);
         } finally {
             Ui.alpha = oldAlpha;
         }

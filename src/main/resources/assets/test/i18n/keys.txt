@@ -1590,3 +1590,133 @@
 1588	Im Chat melden
 1589	Ab so vielen Spuren melden
 1590	Das sind Hinweise, keine Beweise: Zuckerrohr kann auch von selbst 3 hoch stehen, und frische Geoden haben schon ein paar Cluster (die zählen erst, wenn es mehr Cluster als Knospen sind). Erst viele Spuren auf einmal sagen wirklich etwas.
+1591	Menü anpassen
+1592	Anpassen fertig
+1593	Anpassen zurücksetzen
+1594	steht jetzt im Menü
+1595	~Überschrift ziehen: verschieben
+1596	~Anpassen: Klick holt ein Modul ins Menü oder blendet es aus
+1597	~Überschrift ziehen: Spalte verschieben
+1598	~Klick: ein-/ausblenden
+1599	Klick: ein-/ausblenden
+1600	~Auto-Logout – Spieler in der Nähe: 
+1601	Trennt die Verbindung, wenn es gefährlich wird – immer, nicht nur, wenn ein Bot läuft.
+1602	Fremde Spieler
+1603	Trennen, wenn ein Spieler in der Nähe ist, der kein Freund ist
+1604	Abstand (Blöcke, 0 = egal wie weit)
+1605	Freunde (Menü → Freunde) zählen nicht. Mit 0 reicht jeder Spieler, den dein Spiel sieht (meist bis etwa 100 Blöcke). Danach verbindet Auto Reconnect nicht von selbst neu.
+1606	Nur, wenn ein Gegner in der Nähe ist
+1607	Gegner bis (Blöcke)
+1608	Auch Stärke, Tempo und Feuerschutz erneuern
+1609	Nur Wurftränke aus der Hotbar. Wirkungen wirft er neu, sobald sie fehlen oder in 3 Sekunden ablaufen. Heilen geht immer vor. Dein Blick springt dafür nur ganz kurz nach unten.
+1610	~Spieler in Sichtweite: 
+1611	Höchstens Versuche (0 = immer weiter)
+1612	Nach jedem Fehlversuch länger warten
+1613	Nach Auto-Logout neu verbinden nach (Minuten, 0 = nie)
+1614	Länger warten: beim 2. Versuch doppelt so lange, beim 3. dreimal so lange und so weiter (höchstens 5 Minuten). Auto-Logout und der Auto-Log der Miner verbinden sonst nie von selbst neu.
+1615	Nachrichten von Freunden hervorheben
+1616	Ausblenden, wenn darin vorkommt
+1617	Freunde bekommen einen Stern in ihrer Farbe. Beim Filter mehrere Wörter mit Komma trennen - Groß- und Kleinschreibung ist egal.
+1618	Spieler in Sichtweite (keine Freunde)
+1619	Freunde in Sichtweite meldet schon die Freundesliste (Menü → Freunde).
+1620	Unsichtbare auslassen
+1621	Spieler ohne Rüstung auslassen
+1622	Aus in Wasser, Lava und Spinnweben
+1623	Steigt höhere Stufen ohne Springen hoch.
+1624	Beim Schleichen aus
+1625	Turm (Leertaste halten: gerade nach oben bauen)
+1626	~Nie benutzen (
+1627	Scaffold: nie benutzen
+1628	Truhen, Shulker-Kisten, Sand, Kies und TNT nimmt er nie. Unter „Nie benutzen“ kannst du weitere Blöcke sperren, z. B. Obsidian oder Diamantblöcke.
+1629	Verzauberte zuerst
+1630	Normale zuerst
+1631	Nie
+1632	Glas und Eis
+1633	Glas, Eis und Erze
+1634	Auto Fish: Die Angel ist fast kaputt und es gibt keine andere.
+1635	Schon geöffnete grau
+1636	Truhen und Fässer
+1637	Shulker-Kisten
+1638	Endertruhen
+1639	Öfen, Schmelzöfen und Räucheröfen
+1640	Trichter, Werfer und Spender
+1641	Braustände
+1642	Spawner
+1643	Spawner sind rot. Welche du schon geöffnet hast, merkt er sich, bis du die Welt verlässt.
+1644	Nur Löcher aus Obsidian und Grundgestein
+1645	Grün = ganz aus Grundgestein (am sichersten), gelb = Obsidian oder ähnlich fest, blau = andere Blöcke, die Explosionen nicht standhalten.
+1646	Aussehen
+1647	Farbe nach Entfernung (rot = nah)
+1648	Freunde ausblenden
+1649	Rüstung und Items in den Händen
+1650	Ping zeigen
+1651	Nur wertvolle Items
+1652	Name und Anzahl zeigen
+1653	Wertvoll: alles Verzauberte, Diamant- und Netherit-Sachen, Antiker Schrott, Totems, Elytren, Goldäpfel, Shulker-Kisten, Smaragde, Endkristalle und Ähnliches.
+1654	Nur Wegpunkte dieser Dimension
+1655	Wegpunkte von früher kennen ihre Dimension nicht - die zeigt er überall.
+1656	Wetter immer klar
+1657	Regen und Gewitter siehst nur du nicht mehr - auf dem Server regnet es trotzdem.
+1658	Auch essen bei Leben ≤ (0 = aus)
+1659	Nicht im Kampf essen
+1660	Mit fast vollem Hunger heilt man schneller - deshalb kann er auch bei wenig Leben essen. Kampf heißt: du hast in den letzten 5 Sekunden geschlagen oder Schaden bekommen. Schlechtes Essen wie verrottetes Fleisch lässt er immer liegen.
+1661	Angel wechseln, bevor sie kaputtgeht
+1662	Bei nur noch 5 Einsätzen nimmt er eine andere Angel aus dem Inventar. Gibt es keine, hört er auf, statt sie kaputt zu machen.
+1663	Isst einen Goldapfel, wenn das Leben\nniedrig ist.
+1664	Reihenfolge
+1665	Beim Brennen verzauberten Goldapfel essen
+1666	Nur verzauberte Goldäpfel geben Feuerschutz - deshalb isst er beim Brennen nur die, und nur, wenn du noch keinen Feuerschutz hast.
+1667	Auch die zweite Hand
+1668	Danach senden
+1669	Zum Beispiel /home oder /kit. Er sendet es 2 Sekunden nach dem Wiederbeleben. Leer = nichts.
+1670	Behutsamkeit für
+1671	Spinnweben mit dem Schwert
+1672	Behutsamkeit: Glas und Eis gehen dann nicht kaputt, Erze bleiben ganz (ohne Glück-Bonus). Spinnweben gibt das Schwert als Faden, die Schere als Netz.
+1673	Herausnehmen
+1674	Einlagern
+1675	Nur ausgewählte
+1676	Alle außer ausgewählten
+1677	Pause: Spieler in der Nähe
+1678	Chest Stealer: Truhe voll
+1679	Pause, wenn ein Spieler in der Nähe ist, der kein Freund ist
+1680	Freunde (Menü → Freunde) zählen nicht. Der Abstand gilt für Nuker, Auto Farm und Baum-Fäller zusammen.
+1681	Nimmt beim Öffnen einer Truhe automatisch alles heraus - oder lagert alles ein.
+1682	Welche Items
+1683	Chest Stealer: Items
+1684	Ist dein Inventar (oder beim Einlagern die Truhe) voll, hört er auf. Beim Einlagern bleibt deine Hotbar, wie sie ist. Ohne „Nur Truhen, Fässer und Shulker-Kisten“ nimmt er auch Öfen, Trichter und Werfer.
+1685	Fackel bis Lichtstufe
+1686	Fackeln müssen in der Hotbar sein. Bei Lichtstufe 0 setzt er nur dort eine, wo noch gar kein Licht ist - so reichen wenige Fackeln für eine ganze Höhle, und Monster entstehen nur dort. Höher = mehr Fackeln, zum Beispiel für hellere Gänge.
+1687	Stummt Geräusche, die der Server schickt\n(Mobs, Portale, Gewitter, Explosionen und mehr).
+1688	Join-Schutz
+1689	Nur auf neuen Servern
+1690	Bei jedem Server
+1691	~Join-Schutz: alle Module aus. 
+1692	~Join-Schutz: neuer Server - alle Module aus. 
+1693	~Wieder an mit: 
+1694	Schaltet beim Betreten eines Servers alle Module aus - genau so, als hättest du die Taste „Alle Module aus / an“ (J) gedrückt. Mit J gehen sie wieder an.
+1695	Wann
+1696	~Bekannte Server: 
+1697	Bekannte Server vergessen
+1698	Neu heißt: Auf diesem Server warst du mit 1912 Utilities noch nie. Nach einem Wechsel der Dimension oder Lobby passiert nichts. Freunde, Server-Schutz und Join-Schutz bleiben an.
+1699	Als Text teilen
+1700	Alle Einstellungen als Text kopieren
+1701	§cKopieren fehlgeschlagen
+1702	~Kopiert (
+1703	~ Zeichen). Jetzt z. B. in eine Textdatei oder an dich selbst schicken.
+1704	Text aus der Zwischenablage übernehmen
+1705	~Übernommen! Deine Einstellungen von vorher liegen im Profil „
+1706	§cDie Zwischenablage ist leer. Erst den Text kopieren.
+1707	§cIn der Zwischenablage ist kein Einstellungs-Text von 1912 Utilities.
+1708	§cDer Text ist unvollständig oder kaputt. Am besten noch einmal ganz kopieren.
+1709	Der Text enthält alles: welche Module an sind, ihre Einstellungen, die Tasten, das Menü und das Design. Er funktioniert auch in neueren Versionen - neue Module behalten dort ihren Standard. Übernehmen ersetzt deine jetzigen Einstellungen.
+1710	Leistung
+1711	Leistungs-Modus
+1712	Für schwache PCs: Bei Wall Hack, Block Esp, Storage Esp, Hole Esp, Tunnel Esp, Void Esp, Base Finder und den ESP-Blöcken werden zusammenhängende Blöcke zu einem großen Kasten. Es werden höchstens 100 Kästen gezeichnet, ohne Scan-Linie und Füllung, und die Suche läuft langsamer.
+1713	Leistungs-Modus (für schwache PCs)
+1714	X-Ray
+1715	Leistungs-Modus: Erze, die zusammenliegen, werden ein großer Kasten - viel weniger zu zeichnen. Er gilt für alle Block-Anzeigen (auch unter Menü → Design anpassen).
+1716	Klassisches X-Ray: Alles außer den gewählten Blöcken wird unsichtbar - du schaust durch Stein und Erde direkt auf die Erze.
+1717	Nur Erze (Standard)
+1718	Hell machen (Nachtsicht)
+1719	Wasser ausblenden
+1720	Standard: alle Erze, Antiker Schrott und Spawner. Truhen, Shulker-Kisten und Lava siehst du immer. Durch die unsichtbaren Blöcke laufen kannst du nicht. Auf Servern mit Anti-Xray tauchen Erze oft erst auf, wenn du nah dran bist.

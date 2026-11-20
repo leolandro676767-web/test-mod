@@ -174,6 +174,12 @@ class DesignScreen extends Form {
         note("Animationen aus = alles erscheint sofort. Weniger Effekte = ruhigerer Hintergrund "
                 + "ohne Partikel, f\u00fcr schw\u00e4chere PCs.");
 
+        section("Leistung");
+        toggle("Leistungs-Modus", () -> RenderMods.perfMode, v -> RenderMods.perfMode = v, false);
+        note("Für schwache PCs: Bei Wall Hack, Block Esp, Storage Esp, Hole Esp, Tunnel Esp, Void Esp, Base Finder "
+                + "und den ESP-Blöcken werden zusammenhängende Blöcke zu einem großen Kasten. Es werden höchstens "
+                + "100 Kästen gezeichnet, ohne Scan-Linie und Füllung, und die Suche läuft langsamer.");
+
         wideButton("Alles auf Standard zurücksetzen", false, () -> {
             Theme.reset();
             TestConfig.save();
@@ -450,6 +456,7 @@ class EspScreen extends Form {
         choice("Umriss-Stil", Render3D.STYLES, () -> RenderMods.outlineStyle, v -> RenderMods.outlineStyle = v, 2);
         slider("Scan-Tempo", 1, 10, () -> RenderMods.outlineScanSpeed, v -> RenderMods.outlineScanSpeed = v, 4);
         toggle("Welle", () -> RenderMods.outlineWave, v -> RenderMods.outlineWave = v, true);
+        toggle("Leistungs-Modus (für schwache PCs)", () -> RenderMods.perfMode, v -> RenderMods.perfMode = v, false);
         toggle("Linien", () -> Esp.tracers, v -> Esp.tracers = v, false);
         toggle("Name + Entfernung", () -> Esp.labels, v -> Esp.labels = v, true);
 

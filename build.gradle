@@ -43,10 +43,18 @@ sourceSets {
                     'de/test/BlockScan.java',
                     'de/test/PathWorld.java',
                     'de/test/SwarmNet.java',
-                    'de/test/PlayerScreens.java'
+                    'de/test/PlayerScreens.java',
+                    // entfernte Module
+                    'de/test/BossStack.java',
+                    'de/test/BotGuard.java'
             )
         }
     }
+}
+
+// Dateiname ohne Versionsnummer: 1912-Utilities.jar (statt 1912-Utilities-1.0.0.jar)
+tasks.withType(Jar).configureEach {
+    archiveVersion.set('')
 }
 
 processResources {
