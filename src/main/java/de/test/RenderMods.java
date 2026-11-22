@@ -119,6 +119,7 @@ public final class RenderMods {
     public static int itemHighlightChunks = 6; // Chunks (1 Chunk = 16 Bloecke)
     public static boolean itemValuable = false;     // nur wertvolle Items
     public static boolean itemNames = true;         // Name und Anzahl
+    public static String itemHideNames = "";        // Items mit diesen Namen (Teilwoerter, mit Komma) nie zeigen
 
     public static boolean marker = false;
     public static String markerList = "";           // "name,x,y,z;..."
@@ -634,7 +635,34 @@ public final class RenderMods {
         return min >= 3_000_000f ? 2 : min >= 600f ? 1 : 0;
     }
 
-    /** Item Highlight: lohnt es sich, das aufzuheben? */
+    private static String hideRaw = null;
+    private static String[] hideTerms = new String[0];
+
+    /**
+     * Item Esp (auch Tracers und ESP): steht eines der Woerter aus „Ausblenden“ im Namen des Items? Geprueft
+     * werden der angezeigte Name (auch umbenannte Items) und der englische Name aus der ID (cobblestone).
+     */
+    static boolean itemHidden(ItemStack st) {
+        String raw = itemHideNames == null ? "" : itemHideNames;
+        if (!raw.equals(hideRaw)) {
+            hideRaw = raw;
+            java.util.List<String> terms = new java.util.ArrayList<>();
+            for (String part : raw.toLowerCase(java.util.Locale.ROOT).split(",")) {
+                if (!part.isBlank()) terms.add(part.strip());
+            }
+            hideTerms = terms.toArray(new String[0]);
+        }
+        if (hideTerms.length == 0) return false;
+        String shown = st.getHoverName().getString().toLowerCase(java.util.Locale.ROOT);
+        String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath();
+        String idSpaced = id.replace('_', ' ');
+        for (String t : hideTerms) {
+            if (shown.contains(t) || id.contains(t) || idSpaced.contains(t)) return true;
+        }
+        return false;
+    }
+
+    /** Item Esp: lohnt es sich, das aufzuheben? */
     private static boolean valuable(ItemStack st) {
         if (st.isEnchanted()) return true;
         String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath();
@@ -883,6 +911,7 @@ public final class RenderMods {
         for (Entity e : mc.level.getEntities(self, self.getBoundingBox().inflate((chamsChunks * 16)))) {
             if (drawn >= MAX_DRAW) break;
             if (!(e instanceof LivingEntity le) || !e.isAlive()) continue;
+            if (e instanceof Player sp && sp.isSpectator() && !Esp.spectators) continue; // Zuschauer
             boolean player = e instanceof Player;
             if (player ? !chamsPlayers : !chamsMobs) continue;
             AABB bb = Render3D.smoothBox(e);
@@ -974,6 +1003,8 @@ public final class RenderMods {
         for (Entity e : mc.level.getEntities(self, area)) {
             if (drawn >= MAX_DRAW) break;
             if (!e.isAlive()) continue;
+            // Zuschauer (Spectator) sind fuer alle unsichtbar und stehen oft genau bei dem, dem sie zuschauen
+            if (e instanceof Player sp && sp.isSpectator() && !Esp.spectators) continue;
             AABB bb = Render3D.smoothBox(e);
             Vec3 center = bb.getCenter();
             double dist = self.getEyePosition().distanceTo(center);
@@ -985,7 +1016,9 @@ public final class RenderMods {
                 }
                 if (nametags && dist <= (nametagsChunks * 16)) drawNametag(g, mc, pl, bb);
             } else if (e instanceof ItemEntity ie) {
-                if (itemHighlight && dist <= (itemHighlightChunks * 16) && (!itemValuable || valuable(ie.getItem()))) {
+                boolean hiddenItem = itemHidden(ie.getItem());
+                if (itemHighlight && !hiddenItem && dist <= (itemHighlightChunks * 16)
+                        && (!itemValuable || valuable(ie.getItem()))) {
                     Render3D.outline(g, bb.inflate(0.1), C_ITEM, false);
                     int n = ie.getItem().getCount();
                     if (itemNames) {
@@ -993,7 +1026,7 @@ public final class RenderMods {
                                 ie.getItem().getHoverName().getString() + (n > 1 ? " x" + n : ""), C_ITEM, -10);
                     }
                 }
-                if (tracers && tracersItems && dist <= (tracersChunks * 16)) {
+                if (tracers && tracersItems && !hiddenItem && dist <= (tracersChunks * 16)) {
                     Render3D.tracer(g, center, tracer(tracerBase(C_ITEM, dist)));
                 }
             } else if (e instanceof LivingEntity) {
@@ -1023,6 +1056,11 @@ public final class RenderMods {
 
     private static void drawNametag(GuiGraphicsExtractor g, Minecraft mc, LivingEntity e, AABB bb) {
         StringBuilder sb = new StringBuilder(e.getName().getString()); // Namen nie uebersetzen
+        if (e instanceof Player pz && pz.isSpectator()) {
+            sb.append(' ').append(Lang.t("(Zuschauer)"));
+        } else if (e instanceof Player && e.isInvisible()) {
+            sb.append(' ').append(Lang.t("(unsichtbar)"));
+        }
         if (nametagsHealth) sb.append("  ").append((int) Math.ceil(e.getHealth())).append('❤');
         if (nametagsDistance) sb.append("  ").append(Math.round(mc.player.distanceTo(e))).append('m');
         if (nametagsPing && e instanceof Player pl && mc.getConnection() != null) {

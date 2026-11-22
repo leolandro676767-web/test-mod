@@ -1554,3 +1554,11 @@
 1718	Iluminar (visión nocturna)
 1719	Ocultar agua
 1720	Por defecto: todas las menas, escombros ancestrales y generadores. Cofres, cajas de shulker y lava se ven siempre. No puedes atravesar los bloques invisibles. En servidores con anti-xray, las menas suelen aparecer solo cuando estás cerca.
+1721	(invisible)
+1722	No mostrar nunca objetos cuyo nombre contenga
+1723	Piedra labrada, Tierra, Semillas
+1725	Ocultar
+1726	No mostrar nunca si el nombre contiene
+1727	Separa varios nombres con comas. Basta con una parte del nombre, da igual mayúsculas o minúsculas. También funcionan objetos renombrados y nombres en inglés (p. ej. cobblestone). También vale para Tracers y los objetos del ESP.
+1728	(espectador)
+1729	Mostrar espectadores

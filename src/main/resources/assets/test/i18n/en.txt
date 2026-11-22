@@ -1535,3 +1535,11 @@
 1718	Brighten (night vision)
 1719	Hide water
 1720	Default: all ores, ancient debris and spawners. You always see chests, shulker boxes and lava. You can't walk through the invisible blocks. On servers with anti-xray, ores often only show up when you get close.
+1721	(invisible)
+1722	Never show items whose name contains
+1723	Cobblestone, Dirt, Seeds
+1725	Hide
+1726	Never show if the name contains
+1727	Separate several names with commas. Part of the name is enough, upper and lower case don't matter. Renamed items and English names (e.g. cobblestone) work too. Also applies to Tracers and the items in the ESP.
+1728	(spectator)
+1729	Show spectators

@@ -444,6 +444,7 @@ class EspScreen extends Form {
 
         section("Ziele");
         toggle("Spieler", () -> Esp.players, v -> Esp.players = v, true);
+        toggle("Zuschauer zeigen", () -> Esp.spectators, v -> Esp.spectators = v, true);
         toggle("Mobs", () -> Esp.mobs, v -> Esp.mobs = v, true);
         toggle("Items am Boden", () -> Esp.items, v -> Esp.items = v, false);
         toggle("Blöcke", () -> Esp.blocks, v -> {
@@ -479,6 +480,8 @@ class EspScreen extends Form {
         wideButton("Items wählen (" + count(Esp.itemTypes.size(), Lang.t("alle")) + ")", false,
                 () -> this.minecraft.gui.setScreen(new PickerScreen(this, "ESP: Items",
                         PickerScreen.Kind.ITEM, PickerScreen.ofSet(Esp.itemTypes), null, null)));
+        text("Items nie zeigen, wenn der Name enthält", () -> RenderMods.itemHideNames,
+                v -> RenderMods.itemHideNames = v, "", 400, () -> "Bruchstein, Erde, Samen");
         wideButton("Blöcke wählen (" + count(Esp.blockTypes.size(), Lang.t("keine")) + ")", false,
                 () -> this.minecraft.gui.setScreen(new PickerScreen(this, "ESP: Blöcke",
                         PickerScreen.Kind.BLOCK, PickerScreen.ofSet(Esp.blockTypes), null, null)));

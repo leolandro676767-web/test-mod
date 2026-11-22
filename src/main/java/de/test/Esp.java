@@ -34,6 +34,7 @@ public final class Esp {
 
     public static boolean enabled = false;
     public static boolean players = true;
+    public static boolean spectators = true;   // Zuschauer (Spectator) zeigen - auch bei Tracers, Chams, Nametags
     public static boolean mobs = true;
     public static boolean items = false;
     public static boolean blocks = false;
@@ -149,13 +150,19 @@ public final class Esp {
                     if (!e.isAlive()) continue;
                     int color;
                     String name;
-                    if (e instanceof Player) {
-                        if (!players) continue;
+                    if (e instanceof Player pl) {
+                        if (!players || pl.isSpectator() && !spectators) continue;
                         color = Friends.espColor(e, playerColor());
                         name = e.getName().getString();
+                        if (pl.isSpectator()) {
+                            name += " " + Lang.t("(Zuschauer)");
+                        } else if (pl.isInvisible()) {
+                            name += " " + Lang.t("(unsichtbar)");
+                        }
                     } else if (e instanceof ItemEntity ie) {
                         if (!items) continue;
                         if (!itemTypes.isEmpty() && !itemTypes.contains(ie.getItem().getItem())) continue;
+                        if (RenderMods.itemHidden(ie.getItem())) continue; // „Ausblenden“ vom Item Esp
                         color = itemColor();
                         int n = ie.getItem().getCount();
                         name = ie.getItem().getHoverName().getString() + (n > 1 ? " x" + n : "");

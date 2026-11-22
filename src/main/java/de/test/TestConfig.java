@@ -208,6 +208,7 @@ public final class TestConfig {
         Esp.colItem = color(num(p, "espColItem", Esp.colItem));
         Esp.colBlock = color(num(p, "espColBlock", Esp.colBlock));
         Esp.players = bool(p, "espPlayers", Esp.players);
+        Esp.spectators = bool(p, "espSpectators", Esp.spectators);
         Esp.mobs = bool(p, "espMobs", Esp.mobs);
         Esp.items = bool(p, "espItems", Esp.items);
         Esp.blocks = bool(p, "espBlocks", Esp.blocks);
@@ -420,6 +421,7 @@ public final class TestConfig {
         p.setProperty("espColItem", Integer.toString(Esp.colItem));
         p.setProperty("espColBlock", Integer.toString(Esp.colBlock));
         p.setProperty("espPlayers", Boolean.toString(Esp.players));
+        p.setProperty("espSpectators", Boolean.toString(Esp.spectators));
         p.setProperty("espMobs", Boolean.toString(Esp.mobs));
         p.setProperty("espItems", Boolean.toString(Esp.items));
         p.setProperty("espBlocks", Boolean.toString(Esp.blocks));
@@ -694,7 +696,7 @@ public final class TestConfig {
         into.clear();
         if (raw == null) return;
         for (String n : raw.split(";")) {
-            if (!n.isBlank()) into.add(n.trim());
+            if (!n.isBlank()) into.add(Keybinds.current(n.trim()));
         }
     }
 }

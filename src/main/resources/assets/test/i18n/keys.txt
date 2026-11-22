@@ -1720,3 +1720,12 @@
 1718	Hell machen (Nachtsicht)
 1719	Wasser ausblenden
 1720	Standard: alle Erze, Antiker Schrott und Spawner. Truhen, Shulker-Kisten und Lava siehst du immer. Durch die unsichtbaren Blöcke laufen kannst du nicht. Auf Servern mit Anti-Xray tauchen Erze oft erst auf, wenn du nah dran bist.
+1721	(unsichtbar)
+1722	Items nie zeigen, wenn der Name enthält
+1723	Bruchstein, Erde, Samen
+1724	Item Esp
+1725	Ausblenden
+1726	Nie zeigen, wenn der Name enthält
+1727	Mehrere Namen mit Komma trennen. Ein Teil des Namens reicht, Groß- und Kleinschreibung ist egal. Umbenannte Items und englische Namen (z. B. cobblestone) gehen auch. Gilt auch für Tracers und die Items im ESP.
+1728	(Zuschauer)
+1729	Zuschauer zeigen

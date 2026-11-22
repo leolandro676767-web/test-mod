@@ -59,22 +59,27 @@ public final class Keybinds {
 
     // ---------- Speichern ----------
 
+    /** Umbenannte Module: alter Name -> neuer Name (fuer alte Einstellungen und kopierte Texte). */
+    static String current(String name) {
+        return "Item Highlight".equals(name) ? "Item Esp" : name;
+    }
+
     static void load(Properties p) {
         PANIC.clear();
         String saved = p.getProperty("panicSaved", "");
         for (String n : saved.split("\\|")) {
-            if (!n.isBlank()) PANIC.add(n);
+            if (!n.isBlank()) PANIC.add(current(n));
         }
         BINDS.clear();
         HOLD.clear();
         for (String n : p.getProperty("bindHold", "").split("\\|")) {
-            if (!n.isBlank()) HOLD.add(n);
+            if (!n.isBlank()) HOLD.add(current(n));
         }
         for (String k : p.stringPropertyNames()) {
             if (!k.startsWith("bind.")) continue;
             try {
                 int code = Integer.parseInt(p.getProperty(k).trim());
-                if (code > 0) BINDS.put(k.substring(5), code);
+                if (code > 0) BINDS.put(current(k.substring(5)), code);
             } catch (NumberFormatException e) {
                 // kaputter Eintrag: ignorieren
             }

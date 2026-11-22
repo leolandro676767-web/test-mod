@@ -112,7 +112,7 @@ final class RenderScreens {
                 f.slider("Reichweite (Chunks)", 1, 32, () -> ownerChunks, v -> ownerChunks = v, 6);
                 f.footer(() -> entityOwner, v -> entityOwner = v);
             });
-            case "Item Highlight" -> new ModuleScreen(parent, module, f -> {
+            case "Item Esp" -> new ModuleScreen(parent, module, f -> {
                 f.description("Rahmt am Boden liegende Items ein.");
                 f.section("Allgemein");
                 f.slider("Reichweite (Chunks)", 1, 32, () -> itemHighlightChunks, v -> itemHighlightChunks = v, 6);
@@ -120,6 +120,12 @@ final class RenderScreens {
                 f.toggle("Name und Anzahl zeigen", () -> itemNames, v -> itemNames = v, true);
                 f.note("Wertvoll: alles Verzauberte, Diamant- und Netherit-Sachen, Antiker Schrott, Totems, Elytren, "
                         + "Goldäpfel, Shulker-Kisten, Smaragde, Endkristalle und Ähnliches.");
+                f.section("Ausblenden");
+                f.text("Nie zeigen, wenn der Name enthält", () -> itemHideNames, v -> itemHideNames = v, "", 400,
+                        () -> "Bruchstein, Erde, Samen");
+                f.note("Mehrere Namen mit Komma trennen. Ein Teil des Namens reicht, Groß- und Kleinschreibung ist "
+                        + "egal. Umbenannte Items und englische Namen (z. B. cobblestone) gehen auch. Gilt auch für "
+                        + "Tracers und die Items im ESP.");
                 f.footer(() -> itemHighlight, v -> itemHighlight = v);
             });
             case "Marker" -> pointScreen(parent, module, false, () -> marker, v -> marker = v);

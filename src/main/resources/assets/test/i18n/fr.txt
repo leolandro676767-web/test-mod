@@ -1550,3 +1550,11 @@
 1718	Éclaircir (vision nocturne)
 1719	Masquer l'eau
 1720	Par défaut : tous les minerais, les débris antiques et les générateurs. Tu vois toujours les coffres, les boîtes de Shulker et la lave. Tu ne peux pas traverser les blocs invisibles. Sur les serveurs avec anti-xray, les minerais n'apparaissent souvent que quand tu es tout près.
+1721	(invisible)
+1722	Ne jamais afficher les objets dont le nom contient
+1723	Pierre taillée, Terre, Graines
+1725	Masquer
+1726	Ne jamais afficher si le nom contient
+1727	Sépare plusieurs noms par des virgules. Une partie du nom suffit, majuscules et minuscules n'importent pas. Les objets renommés et les noms anglais (p. ex. cobblestone) marchent aussi. Vaut aussi pour Tracers et les objets de l'ESP.
+1728	(spectateur)
+1729	Afficher les spectateurs

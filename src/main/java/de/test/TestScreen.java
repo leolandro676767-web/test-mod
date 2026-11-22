@@ -321,8 +321,8 @@ public class TestScreen extends Screen {
                 () -> RenderMods.holeEsp = !RenderMods.holeEsp, () -> RenderMods.screen("Hole Esp", this)));
         render.entries.add(module("Info-Anzeige", () -> InfoHud.enabled,
                 () -> InfoHud.enabled = !InfoHud.enabled, () -> InfoHud.screen(this)));
-        render.entries.add(module("Item Highlight", () -> RenderMods.itemHighlight,
-                () -> RenderMods.itemHighlight = !RenderMods.itemHighlight, () -> RenderMods.screen("Item Highlight", this)));
+        render.entries.add(module("Item Esp", () -> RenderMods.itemHighlight,
+                () -> RenderMods.itemHighlight = !RenderMods.itemHighlight, () -> RenderMods.screen("Item Esp", this)));
         render.entries.add(module("Item Physics", () -> RenderMods.itemPhysics,
                 () -> RenderMods.itemPhysics = !RenderMods.itemPhysics, () -> RenderMods.screen("Item Physics", this)));
         render.entries.add(module("Light Overlay", () -> RenderMods.lightOverlay,
@@ -570,7 +570,7 @@ public class TestScreen extends Screen {
             "Entity Owner", "Fadenkreuz", "Free Look", "Fullbright", "Hand View", "Info-Anzeige", "Item Physics",
             "Light Overlay", "Marker", "Minimap", "No Render", "Tasten-Anzeige", "Time Changer", "Trail", "Waypoints"},
         {"ESP", "Base Finder", "Block Esp", "Break Indicators", "Chams", "City Esp", "ESP", "Freecam", "Hole Esp",
-            "Item Highlight", "Logout Spots", "Nametags", "Pop Chams", "Spieler-Radar", "Storage Esp", "Tracers",
+            "Item Esp", "Logout Spots", "Nametags", "Pop Chams", "Spieler-Radar", "Storage Esp", "Tracers",
             "Trajectories", "Tunnel Esp", "Void Esp", "Wall Hack", "X-Ray"},
         {"Inventar", "AutoDrop", "Auto Replenish", "Auto Smelt", "Chest Stealer", "Chest Swap", "Inventory Tweaks"},
         {"Misc", "Anti Packet Kick", "Auto Reconnect", "Better Beacons", "Better Chat", "Book Bot",
